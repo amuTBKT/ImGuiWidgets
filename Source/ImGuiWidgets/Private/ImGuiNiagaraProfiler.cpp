@@ -11,8 +11,6 @@
 #include "ImGuiCommonWidgets.h"
 #include "NiagaraGPUProfilerInterface.h"
 
-//UE_DISABLE_OPTIMIZATION
-
 namespace ImGuiNiagaraProfiler
 {
 	struct FSimStageStatData
@@ -197,7 +195,5 @@ namespace ImGuiNiagaraProfiler
 
 	IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
 }
-
-//UE_ENABLE_OPTIMIZATION
 
 #endif //#if STATS

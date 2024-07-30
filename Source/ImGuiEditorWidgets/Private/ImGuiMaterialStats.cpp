@@ -12,8 +12,6 @@
 #include "Materials/MaterialInstance.h"
 #include "DataDrivenShaderPlatformInfo.h"
 
-UE_DISABLE_OPTIMIZATION
-
 namespace ImGuiMaterialStats
 {
 	static const EShaderPlatform PreviewShaderPlatform = EShaderPlatform::SP_PCD3D_SM6;
@@ -413,7 +411,5 @@ namespace ImGuiMaterialStats
 
 	IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
 }
-
-UE_ENABLE_OPTIMIZATION
 
 #endif //#if WITH_IMGUI

@@ -17,8 +17,6 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 
-UE_DISABLE_OPTIMIZATION
-
 template <typename TAssetType>
 struct FImGuiAssetPicker : FNoncopyable
 {
@@ -399,7 +397,5 @@ private:
 	float BrowseIconTint = 0.75f;
 	float UseSelectedAssetIconTint = 0.75f;
 };
-
-UE_ENABLE_OPTIMIZATION
 
 #endif //#if WITH_IMGUI
