@@ -244,7 +244,7 @@ struct FImGuiAssetPicker : FNoncopyable
 				{
 					TextFilter.Reset();
 				}
-				TextFilter.Draw("Filter", /*bSetFocus*/!bWasAssetViewerVisible, AssetViewerWidth);
+				TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bWasAssetViewerVisible, AssetViewerWidth);
 
 				if (ImGui::BeginListBox("###AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
 				{

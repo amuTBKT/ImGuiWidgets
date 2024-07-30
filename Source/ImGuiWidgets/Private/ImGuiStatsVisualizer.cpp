@@ -626,7 +626,7 @@ namespace ImGuiStatsVizualizer
 
 		ImGui::Separator();
 
-		StatFilter.Draw("FilterLabel");
+		StatFilter.Draw("FilterLabel", "Filter Stats");
 		
 		ImGui::Separator();
 	}

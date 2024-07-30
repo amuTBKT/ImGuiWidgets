@@ -71,7 +71,7 @@ namespace ImGuiNiagaraProfiler
 			NiagaraGPUProfilerListener->SetEnabled(bIsCapturing);
 			if (bIsCapturing)
 			{
-				StatFilter.Draw("NiagaraStats");
+				StatFilter.Draw("NiagaraStats", "Filter SimStages");
 
 				ImGui::Separator();
 

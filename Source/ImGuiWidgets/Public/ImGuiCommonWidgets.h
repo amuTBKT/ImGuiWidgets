@@ -46,13 +46,13 @@ struct FImGuiTextFilter : FNoncopyable
 		return PassFilter(FString(ANSI_TO_TCHAR(StringToCheck)));
 	}
 
-	FORCEINLINE bool Draw(const char* Label, bool bSetFocus = false, float WidgetWidth = 0.f)
+	FORCEINLINE bool Draw(const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f)
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
 		const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.X"), FVector2D(ImGui::GetFontSize()), 1.f);
 
-		FImGuiNamedWidgetScope WidgetScope{ Label };
+		FImGuiNamedWidgetScope WidgetScope{ WidgetName };
 
 		bool bFilterChanged = false;
 		bool bSearchBoxHasFocus = false;
@@ -93,7 +93,8 @@ struct FImGuiTextFilter : FNoncopyable
 			{
 				ImGui::SetKeyboardFocusHere();
 			}
-			if (ImGui::InputText("###Filter", FilterString, sizeof(FilterString)))
+			const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("###Filter", HintText, FilterString, sizeof(FilterString)) : ImGui::InputText("###Filter", FilterString, sizeof(FilterString));
+			if (bInputTextChanged)
 			{
 				bFilterChanged = true;
 				FString(ANSI_TO_TCHAR(FilterString)).ParseIntoArray(FilterKeywords, TEXT(" "));
