@@ -4,10 +4,8 @@
 
 #if WITH_IMGUI && STATS
 
-#include <string>
 #include "Engine/World.h"
 #include "NiagaraSystem.h"
-#include "Styling/AppStyle.h"
 #include "ImGuiCommonWidgets.h"
 #include "NiagaraGPUProfilerInterface.h"
 
@@ -15,8 +13,8 @@ namespace ImGuiNiagaraProfiler
 {
 	struct FSimStageStatData
 	{
-		FName StageName;
-		float Time;
+		FName StageName = NAME_None;
+		float Time = 0.f;
 	};
 	struct FEmitterStatData
 	{
@@ -115,7 +113,7 @@ namespace ImGuiNiagaraProfiler
 
 					struct FAccumulatedStat
 					{
-						FName StageName;
+						FName StageName = NAME_None;
 						float Time = 0.f;
 						int32 Count = 0;
 					};
@@ -145,22 +143,21 @@ namespace ImGuiNiagaraProfiler
 					ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 					if (ImGui::TreeNode(TCHAR_TO_ANSI(*EmitterName), "%s - %f", TCHAR_TO_ANSI(*EmitterName), EmitterSimTime))
 					{
+						FImGuiNamedWidgetScope Scope{ TCHAR_TO_ANSI(*EmitterName) };
+
 						static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-						char ScratchTableIdBuffer[128];
-						sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_SimStages", TCHAR_TO_ANSI(*EmitterName));
-						if (ImGui::BeginTable(ScratchTableIdBuffer, 3, TableFlags))
+						if (ImGui::BeginTable("SimStages", 3, TableFlags))
 						{
 							ImGui::TableSetupColumn("Stage Name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
 							ImGui::TableSetupColumn("Calls", ImGuiTableColumnFlags_WidthFixed);
 							ImGui::TableSetupColumn("Duration(ms)", ImGuiTableColumnFlags_WidthFixed);
-							ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
+							ImGui::TableSetupScrollFreeze(0, 1);
 
-							static constexpr float TableRowHeight = 0.f; //autosize, having issues setting center alignment for text
-							ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
-							for (int32 column = 0; column < 3; column++)
+							ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+							for (int32 ColumnIndex = 0; ColumnIndex < 3; ColumnIndex++)
 							{
-								ImGui::TableSetColumnIndex(column);
-								ImGui::TableHeader(ImGui::TableGetColumnName(column));
+								ImGui::TableSetColumnIndex(ColumnIndex);
+								ImGui::TableHeader(ImGui::TableGetColumnName(ColumnIndex));
 							}
 
 							for (const auto& Stat : AccumulatedStats)
@@ -169,13 +166,11 @@ namespace ImGuiNiagaraProfiler
 
 								if (SimStageFilter.PassFilter(SimStageName))
 								{
-									std::string StageName = std::string(TCHAR_TO_ANSI(*SimStageName));
-									
-									ImGui::TableNextRow(ImGuiTableRowFlags_None, TableRowHeight);
+									ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 									ImGui::TableSetColumnIndex(0);
 									{
-										ImGui::TextUnformatted(StageName.c_str());
+										ImGui::TextUnformatted(TCHAR_TO_ANSI(*SimStageName));
 									}
 
 									ImGui::TableSetColumnIndex(1);

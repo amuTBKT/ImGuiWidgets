@@ -121,10 +121,10 @@ namespace ImGuiStatsVizualizer
 
 		//ImGui::TableHeadersRow();
 		ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
-		for (int32 column = 0; column < GetCycleStatsColumnCount(); column++)
+		for (int32 ColumnIndex = 0; ColumnIndex < GetCycleStatsColumnCount(); ColumnIndex++)
 		{
-			ImGui::TableSetColumnIndex(column);
-			ImGui::TableHeader(ImGui::TableGetColumnName(column));
+			ImGui::TableSetColumnIndex(ColumnIndex);
+			ImGui::TableHeader(ImGui::TableGetColumnName(ColumnIndex));
 		}
 	}
 

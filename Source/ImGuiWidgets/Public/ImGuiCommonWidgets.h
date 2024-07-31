@@ -44,6 +44,7 @@ public:
 
 	FORCEINLINE bool PassFilter(const char* StringToCheck) const
 	{
+		// TODO: could maintain a ANSI version of FilterKeywords
 		return PassFilter(FString(ANSI_TO_TCHAR(StringToCheck)));
 	}
 
