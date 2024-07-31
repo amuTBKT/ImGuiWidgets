@@ -18,14 +18,43 @@ namespace ImGuiNiagaraProfiler
 		FName StageName;
 		float Time;
 	};
+	struct FEmitterStatData
+	{
+		TWeakObjectPtr<UNiagaraEmitter> Emitter;
+		TArray<FSimStageStatData> SimStageStats;
+	};
+	struct FSystemStatData
+	{
+		TWeakObjectPtr<UNiagaraSystem> System;
+		TArray<FEmitterStatData> EmitterStats;
+	};
 	struct FWorldStatData
 	{
-		TMap<TWeakObjectPtr<UNiagaraSystem>, TMap<FVersionedNiagaraEmitterWeakPtr, TArray<FSimStageStatData>>> CapturedStats;
+		TArray<FSystemStatData> SystemStats;
+
+		void AddStat(UNiagaraSystem* InSystem, UNiagaraEmitter* InEmitter, FSimStageStatData&& InSimStageData)
+		{
+			FSystemStatData* SystemStat = SystemStats.FindByPredicate([InSystem](const auto& Stat) { return Stat.System.Get() == InSystem; });
+			if (!SystemStat)
+			{
+				SystemStat = &SystemStats.Emplace_GetRef();
+				SystemStat->System = InSystem;
+			}
+
+			FEmitterStatData* EmitterStat = SystemStat->EmitterStats.FindByPredicate([InEmitter](const auto& Stat) { return Stat.Emitter.Get() == InEmitter; });
+			if (!EmitterStat)
+			{
+				EmitterStat = &SystemStat->EmitterStats.Emplace_GetRef();
+				EmitterStat->Emitter = InEmitter;
+			}
+
+			EmitterStat->SimStageStats.Add(MoveTemp(InSimStageData));
+		}
 	};
 
 	static TMap<TWeakObjectPtr<UWorld>, FWorldStatData> WorldStatData;
 	static TUniquePtr<FNiagaraGpuProfilerListener> NiagaraGPUProfilerListener;
-	static FImGuiTextFilter<128> StatFilter;
+	static FImGuiTextFilter<128> SimStageFilter;
 	static bool bIsCapturing = false;
 
 	static void Initialize()
@@ -44,15 +73,18 @@ namespace ImGuiNiagaraProfiler
 
 				for (const auto& DispatchResult : FrameResults->DispatchResults)
 				{
-					UWorld* OwnerWorld = DispatchResult.OwnerComponent.IsValid() ? DispatchResult.OwnerComponent->GetWorld() : nullptr;
-					UNiagaraEmitter* OwnerEmitter = DispatchResult.OwnerEmitter.Emitter.IsExplicitlyNull() ? nullptr : DispatchResult.OwnerEmitter.Emitter.Get();
-					UNiagaraSystem* OwnerSystem = OwnerEmitter ? OwnerEmitter->GetTypedOuter<UNiagaraSystem>() : nullptr;
-						
-					if (OwnerWorld && OwnerSystem)
+					UWorld* OwnerWorld = DispatchResult.OwnerComponent.IsValid() ? DispatchResult.OwnerComponent->GetWorld() : nullptr;						
+					if (OwnerWorld)
 					{
-						auto& CapturedStats = WorldStatData.FindOrAdd(OwnerWorld).CapturedStats;
-						auto& EmitterStats = CapturedStats.FindOrAdd(OwnerSystem).FindOrAdd(DispatchResult.OwnerEmitter);
-						EmitterStats.Add({ DispatchResult.StageName, (float)DispatchResult.DurationMicroseconds / 1000.f });
+						UNiagaraEmitter* OwnerEmitter = DispatchResult.OwnerEmitter.Emitter.IsExplicitlyNull() ? nullptr : DispatchResult.OwnerEmitter.Emitter.Get();
+						UNiagaraSystem* OwnerSystem = OwnerEmitter ? OwnerEmitter->GetTypedOuter<UNiagaraSystem>() : nullptr;
+						if (OwnerSystem)
+						{
+							FSimStageStatData SimStageData;
+							SimStageData.StageName = DispatchResult.StageName;
+							SimStageData.Time = (float)DispatchResult.DurationMicroseconds / 1000.f;
+							WorldStatData.FindOrAdd(OwnerWorld).AddStat(OwnerSystem, OwnerEmitter, MoveTemp(SimStageData));
+						}
 					}
 				}
 			}
@@ -69,124 +101,150 @@ namespace ImGuiNiagaraProfiler
 			NiagaraGPUProfilerListener->SetEnabled(bIsCapturing);
 			if (bIsCapturing)
 			{
-				StatFilter.Draw("NiagaraStats", "Filter SimStages");
-
+				SimStageFilter.Draw("SimStageFilter", "Filter Simulation Stages");
 				ImGui::Separator();
 
-				if (WorldStatData.Num() > 0)
+				auto AddEmitterStatsFunc = [](UNiagaraEmitter* Emitter, const TArray<FSimStageStatData>& SimStageStats)
 				{
-					if (ImGui::BeginTabBar("Stats"))
+					if (!Emitter)
 					{
-						for (const auto& [World, WorldData] : WorldStatData)
+						return;
+					}
+
+					const FString EmitterName = Emitter->GetUniqueEmitterName();
+
+					struct FAccumulatedStat
+					{
+						FName StageName;
+						float Time = 0.f;
+						int32 Count = 0;
+					};
+
+					float EmitterSimTime = 0.f;
+					TArray<FAccumulatedStat, TInlineAllocator<16>> AccumulatedStats;
+					// accumlate stats and prepare data for displaying
+					{						
+						AccumulatedStats.Reserve(SimStageStats.Num());
+						for (const auto& Stat : SimStageStats)
 						{
-							if (World.IsValid() && ImGui::BeginTabItem(TCHAR_TO_ANSI(*World->GetName())))
+							FAccumulatedStat* AccumStat = AccumulatedStats.FindByPredicate([StageName = Stat.StageName](auto& S) { return S.StageName == StageName; });
+							if (!AccumStat)
 							{
-								for (auto& [System, EmitterStats] : WorldData.CapturedStats)
+								AccumStat = &AccumulatedStats.Emplace_GetRef();
+								AccumStat->StageName = Stat.StageName;
+							}
+							check(AccumStat);
+
+							AccumStat->Time += Stat.Time;
+							AccumStat->Count += 1;
+
+							EmitterSimTime += Stat.Time;
+						}
+					}
+
+					ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+					if (ImGui::TreeNode(TCHAR_TO_ANSI(*EmitterName), "%s - %f", TCHAR_TO_ANSI(*EmitterName), EmitterSimTime))
+					{
+						static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+						char ScratchTableIdBuffer[128];
+						sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_SimStages", TCHAR_TO_ANSI(*EmitterName));
+						if (ImGui::BeginTable(ScratchTableIdBuffer, 3, TableFlags))
+						{
+							ImGui::TableSetupColumn("Stage Name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
+							ImGui::TableSetupColumn("Calls", ImGuiTableColumnFlags_WidthFixed);
+							ImGui::TableSetupColumn("Duration(ms)", ImGuiTableColumnFlags_WidthFixed);
+							ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
+
+							static constexpr float TableRowHeight = 0.f; //autosize, having issues setting center alignment for text
+							ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
+							for (int32 column = 0; column < 3; column++)
+							{
+								ImGui::TableSetColumnIndex(column);
+								ImGui::TableHeader(ImGui::TableGetColumnName(column));
+							}
+
+							for (const auto& Stat : AccumulatedStats)
+							{
+								const FString SimStageName = Stat.StageName.ToString();
+
+								if (SimStageFilter.PassFilter(SimStageName))
 								{
-									if (!System.IsValid())
+									std::string StageName = std::string(TCHAR_TO_ANSI(*SimStageName));
+									
+									ImGui::TableNextRow(ImGuiTableRowFlags_None, TableRowHeight);
+
+									ImGui::TableSetColumnIndex(0);
 									{
-										continue;
+										ImGui::TextUnformatted(StageName.c_str());
 									}
 
-									const FString SystemName = System->GetFName().ToString();
-									ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-									if (ImGui::CollapsingHeader(TCHAR_TO_ANSI(*SystemName)))
+									ImGui::TableSetColumnIndex(1);
 									{
-										for (auto& [VerEmitterWeakPtr, Stats] : EmitterStats)
-										{
-											UNiagaraEmitter* OwnerEmitter = !VerEmitterWeakPtr.Emitter.IsExplicitlyNull() ? VerEmitterWeakPtr.Emitter.Get() : nullptr;
-											if (!OwnerEmitter)
-											{
-												continue;
-											}
+										ImGui::Text("%i", Stat.Count);
+									}
 
-											const FString EmitterName = OwnerEmitter->GetUniqueEmitterName();
-											float EmitterSimTime = 0.f;
-
-											struct FAccumulatedStat
-											{
-												FName StageName;
-												float Time = 0.f;
-												int32 Count = 0;
-											};
-											TArray<FAccumulatedStat, TInlineAllocator<16>> AccumulatedStats;
-											AccumulatedStats.Reserve(Stats.Num());
-											for (auto& Stat : Stats)
-											{
-												FAccumulatedStat* AccumStat = AccumulatedStats.FindByPredicate([StageName = Stat.StageName](auto& S) { return S.StageName == StageName; });
-												if (!AccumStat)
-												{
-													AccumStat = &AccumulatedStats.Emplace_GetRef();
-													AccumStat->StageName = Stat.StageName;
-												}
-												check(AccumStat);
-
-												AccumStat->Time += Stat.Time;
-												AccumStat->Count += 1;
-
-												EmitterSimTime += Stat.Time;
-											}
-
-											ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-											if (ImGui::TreeNode(TCHAR_TO_ANSI(*FString::Printf(TEXT("%s-%s"), *SystemName, *EmitterName)), "%s - %f", TCHAR_TO_ANSI(*EmitterName), EmitterSimTime))
-											{
-												static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-												char ScratchTableIdBuffer[128];
-												sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_SimStages", TCHAR_TO_ANSI(*EmitterName));
-												if (ImGui::BeginTable(ScratchTableIdBuffer, 3, TableFlags))
-												{
-													ImGui::TableSetupColumn("Stage Name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
-													ImGui::TableSetupColumn("Calls", ImGuiTableColumnFlags_WidthFixed);
-													ImGui::TableSetupColumn("Duration(ms)", ImGuiTableColumnFlags_WidthFixed);
-													ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
-
-													static constexpr float TableRowHeight = 0.f; //autosize, having issues setting center alignment for text
-													ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
-													for (int32 column = 0; column < 3; column++)
-													{
-														ImGui::TableSetColumnIndex(column);
-														ImGui::TableHeader(ImGui::TableGetColumnName(column));
-													}
-
-													for (auto& Stat : AccumulatedStats)
-													{
-														const FString N = Stat.StageName.ToString();
-														std::string StageName = std::string(TCHAR_TO_ANSI(*N));
-
-														if (StatFilter.PassFilter(StageName.c_str()))
-														{
-															ImGui::TableNextRow(ImGuiTableRowFlags_None, TableRowHeight);
-
-															ImGui::TableSetColumnIndex(0);
-															{
-																ImGui::TextUnformatted(StageName.c_str());
-															}
-
-															ImGui::TableSetColumnIndex(1);
-															{
-																ImGui::Text("%i", Stat.Count);
-															}
-
-															ImGui::TableSetColumnIndex(2);
-															{
-																ImGui::Text("%f", Stat.Time);
-															}
-														}
-													}
-
-													ImGui::EndTable();
-												}
-
-												ImGui::TreePop();
-											}
-										}
+									ImGui::TableSetColumnIndex(2);
+									{
+										ImGui::Text("%f", Stat.Time);
 									}
 								}
-								ImGui::EndTabItem();
 							}
+
+							ImGui::EndTable();
 						}
-						ImGui::EndTabBar();
+
+						ImGui::TreePop();
 					}
+				};
+
+				auto AddSystemStatsFunc = [&AddEmitterStatsFunc](UNiagaraSystem* System, const TArray<FEmitterStatData>& EmitterStats)
+				{
+					if (!System || EmitterStats.IsEmpty())
+					{
+						return;
+					}
+
+					const FString SystemName = System->GetFName().ToString();
+
+					ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+					if (ImGui::CollapsingHeader(TCHAR_TO_ANSI(*SystemName)))
+					{
+						FImGuiNamedWidgetScope Scope{ TCHAR_TO_ANSI(*SystemName) };
+
+						for (const auto& EmitterStat : EmitterStats)
+						{
+							AddEmitterStatsFunc(EmitterStat.Emitter.Get(), EmitterStat.SimStageStats);
+						}
+					}
+				};
+
+				auto AddWorldStatsFunc = [&AddSystemStatsFunc](UWorld* World, const FWorldStatData& WorldStats)
+				{
+					if (!World || WorldStats.SystemStats.IsEmpty())
+					{
+						return;
+					}
+
+					if (ImGui::BeginTabItem(TCHAR_TO_ANSI(*World->GetName())))
+					{
+						FImGuiNamedWidgetScope Scope{ TCHAR_TO_ANSI(*World->GetName()) };
+
+						for (const auto& SystemStat : WorldStats.SystemStats)
+						{
+							AddSystemStatsFunc(SystemStat.System.Get(), SystemStat.EmitterStats);
+						}
+
+						ImGui::EndTabItem();
+					}
+				};
+
+				if ((WorldStatData.Num() > 0) && ImGui::BeginTabBar("Stats"))
+				{
+					for (const auto& [World, WorldStats] : WorldStatData)
+					{
+						AddWorldStatsFunc(World.Get(), WorldStats);
+					}
+					ImGui::EndTabBar();
 				}
 			}			
 		}
