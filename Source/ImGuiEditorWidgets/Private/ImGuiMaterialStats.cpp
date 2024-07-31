@@ -9,6 +9,7 @@
 #include "ShaderCompiler.h"
 #include "Materials/Material.h"
 #include "MaterialStatsCommon.h"
+#include "ShaderCompilerCommon.h"
 #include "Materials/MaterialInstance.h"
 #include "DataDrivenShaderPlatformInfo.h"
 
@@ -18,10 +19,11 @@ namespace ImGuiMaterialStats
 
 	struct FShaderStatsData
 	{
-		FString EntryName;
-		FString ShaderName;
-		FString ShaderDumpFilePath;
-		int32	NumInstructions;
+		FString			 EntryName;
+		FString			 ShaderName;
+		FString			 ShaderDumpFilePath;
+		int32			 NumInstructions;
+		EShaderFrequency ShaderType;
 	};
 
 	struct FMaterialStatsData
@@ -180,6 +182,7 @@ namespace ImGuiMaterialStats
 						Shaders[ShaderIndex].ShaderName = ShaderName;
 						Shaders[ShaderIndex].ShaderDumpFilePath = ShaderDumpFilePath;
 						Shaders[ShaderIndex].NumInstructions = Entry.Value.GetShader()->GetNumInstructions();
+						Shaders[ShaderIndex].ShaderType = EntryShader->GetFrequency();
 						
 						ShaderVFLookup.FindOrAdd(VertexFactoryName).Add(ShaderIndex);
 
@@ -359,46 +362,77 @@ namespace ImGuiMaterialStats
 					{
 						if (ImGui::BeginTabItem(TCHAR_TO_ANSI(*VFName)))
 						{
-							for (int32 ShaderIndex : ShaderIndices)
+							FImGuiNamedWidgetScope VF_Scope{ TCHAR_TO_ANSI(*VFName) };
+
+							static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+							if (ImGui::BeginTable("ShaderTable", 4, TableFlags))
 							{
-								const auto& Shader = MaterialStats.Shaders[ShaderIndex];
+								ImGui::TableSetupColumn("Shader Name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
+								ImGui::TableSetupColumn("Shader Type", ImGuiTableColumnFlags_WidthFixed);
+								ImGui::TableSetupColumn("Instruction Count", ImGuiTableColumnFlags_WidthFixed);
+								ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed);
+								ImGui::TableSetupScrollFreeze(0, 1);
 
-								ImGui::TextUnformatted(TCHAR_TO_ANSI(*Shader.EntryName));
-
-								IPlatformFile& PlatformFile = IPlatformFile::GetPlatformPhysical();
-								if (MaterialStats.ActiveShaderIndices.Contains(ShaderIndex))
+								ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+								for (int32 ColumnIndex = 0; ColumnIndex < 4; ColumnIndex++)
 								{
-									ImGui::SameLine();
-
-									ImGui::PushID(HashCombine(GetTypeHash(Shader.ShaderName), PointerHash("Browse")));
-									if (ImGui::ImageButton("BrowseToDir", BrowseIcon.Id, BrowseIcon.Size, BrowseIcon.UV0, BrowseIcon.UV1))
-									{
-										FPlatformProcess::ExploreFolder(*Shader.ShaderDumpFilePath);
-									}
-									if (ImGui::IsItemHovered())
-									{
-										ImGui::SetTooltip("Browse to shader file");
-									}
-									ImGui::PopID();
-
-									ImGui::SameLine();
-
-									ImGui::PushID(HashCombine(GetTypeHash(Shader.ShaderName), PointerHash("Edit")));
-									if (ImGui::ImageButton("EditFile", EditIcon.Id, EditIcon.Size, EditIcon.UV0, EditIcon.UV1))
-									{
-										FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderDumpFilePath);
-									}
-									if (ImGui::IsItemHovered())
-									{
-										ImGui::SetTooltip("Edit shader file");
-									}
-									ImGui::PopID();
-
-									ImGui::SameLine();
-
-									ImGui::Text("NumInstructions: %i", Shader.NumInstructions);
+									ImGui::TableSetColumnIndex(ColumnIndex);
+									ImGui::TableHeader(ImGui::TableGetColumnName(ColumnIndex));
 								}
+
+								for (int32 ShaderIndex : ShaderIndices)
+								{
+									const auto& Shader = MaterialStats.Shaders[ShaderIndex];
+
+									FImGuiNamedWidgetScope Shader_Scope{ TCHAR_TO_ANSI(*Shader.EntryName) };
+
+									ImGui::TableNextRow(ImGuiTableRowFlags_None);
+
+									ImGui::TableSetColumnIndex(0);
+									{
+										ImGui::TextUnformatted(TCHAR_TO_ANSI(*Shader.EntryName));
+									}
+
+									ImGui::TableSetColumnIndex(1);
+									{
+										ImGui::TextUnformatted(TCHAR_TO_ANSI(CrossCompiler::GetFrequencyName(Shader.ShaderType)));
+									}
+
+									ImGui::TableSetColumnIndex(2);
+									{
+										ImGui::Text("%i", Shader.NumInstructions);
+									}
+
+									ImGui::TableSetColumnIndex(3);
+									{
+										if (MaterialStats.ActiveShaderIndices.Contains(ShaderIndex))
+										{
+											if (ImGui::ImageButton("BrowseToDir", BrowseIcon.Id, BrowseIcon.Size, BrowseIcon.UV0, BrowseIcon.UV1))
+											{
+												FPlatformProcess::ExploreFolder(*Shader.ShaderDumpFilePath);
+											}
+											if (ImGui::IsItemHovered())
+											{
+												ImGui::SetTooltip("Browse to shader file");
+											}
+
+											ImGui::SameLine();
+
+											if (ImGui::ImageButton("EditFile", EditIcon.Id, EditIcon.Size, EditIcon.UV0, EditIcon.UV1))
+											{
+												FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderDumpFilePath);
+											}
+											if (ImGui::IsItemHovered())
+											{
+												ImGui::SetTooltip("Edit shader file");
+											}
+										}
+									}
+								}
+
+								ImGui::EndTable();
 							}
+
 							ImGui::EndTabItem();
 						}
 					}

@@ -18,24 +18,17 @@ public class ImGuiEditorWidgets : ModuleRules
 				"SlateCore",
 				"RenderCore",
 				"CoreUObject",
-			}
+
+                "UnrealEd",
+                "Blutility",
+                "AssetRegistry",
+                "MaterialEditor",
+                "ShaderCompilerCommon",
+            }
 		);
 
 		// for using ImGui
 		PrivateDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime" });
 		PublicDependencyModuleNames.AddRange(new string[] { "ImGuiWidgets" });
-
-		if (Target.bBuildEditor)
-		{
-			PrivateDependencyModuleNames.AddRange(
-				new string[]
-				{
-					"UnrealEd",
-					"AssetRegistry",
-					"MaterialEditor",
-					"Blutility",
-				}
-			);
-		}
 	}
 }
