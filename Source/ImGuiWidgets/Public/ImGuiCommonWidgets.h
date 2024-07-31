@@ -47,7 +47,7 @@ public:
 		return PassFilter(FString(ANSI_TO_TCHAR(StringToCheck)));
 	}
 
-	FORCEINLINE bool Draw(const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f)
+	bool Draw(const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f)
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
@@ -110,14 +110,8 @@ public:
 
 		if (bSearchBoxHasFocus)
 		{
-			const ImVec2 BorderRectSize = ImGui::GetItemRectSize();
-			const ImVec2 CursorPosition = ImGui::GetCursorScreenPos();
-
-			const ImVec2 p0 = ImVec2(CursorPosition.x, CursorPosition.y - BorderRectSize.y - 4.f);
-			const ImVec2 p1 = ImVec2(CursorPosition.x + BorderRectSize.x, CursorPosition.y - 4.f);
-
 			ImDrawList* DrawList = ImGui::GetWindowDrawList();
-			DrawList->AddRect(p0, p1, ImColor(ImVec4(0.26f, 0.59f, 0.98f, 0.67f)), 0.f, ImDrawFlags_None, 1.f);
+			DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor(ImVec4(0.26f, 0.59f, 0.98f, 0.67f)), 0.f, ImDrawFlags_None, 1.f);
 		}
 
 		return bFilterChanged;
