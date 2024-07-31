@@ -14,12 +14,22 @@
 #include "EditorUtilityLibrary.h"
 #include "Styling/SlateIconFinder.h"
 #include "AssetRegistry/AssetData.h"
+#include "Blueprint/BlueprintSupport.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 
-template <typename TAssetType>
-struct FImGuiAssetPicker : FNoncopyable
+template <typename... Types>
+class FImGuiAssetPicker : FNoncopyable
 {
+	// validation for generic asset types
+	static_assert(sizeof...(Types) > 0, "Asset type missing, expected FImGuiAssetPicker<UAssetType>");
+	using TAssetType = std::tuple_element<0, std::tuple<Types...>>::type;
+	
+	// validation for blueprints
+	static constexpr bool bUsedWithBlueprintAsset = std::is_same<TAssetType, UBlueprint>::value;
+	static_assert(!bUsedWithBlueprintAsset || (sizeof...(Types) == 2), "BlueprintClass type missing, expected FImGuiAssetPicker<UBlueprint, UClassType>");
+
+public:
 	FImGuiAssetPicker() = default;
 
 	~FImGuiAssetPicker()
@@ -30,37 +40,6 @@ struct FImGuiAssetPicker : FNoncopyable
 			AssetRegistry.OnAssetAdded().RemoveAll(this);
 			AssetRegistry.OnAssetAdded().RemoveAll(this);
 		}
-	}
-
-	FORCEINLINE void Initialize()
-	{
-		if (bInitialized)
-		{
-			return;
-		}
-		bInitialized = true;
-
-		ClassIconBrush = FClassIconFinder::FindThumbnailForClass(TAssetType::StaticClass(), NAME_None);
-
-		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
-		AssetRegistry.GetAssetsByClass(TAssetType::StaticClass()->GetClassPathName(), AvailableAssets);
-		AssetRegistry.OnAssetAdded().AddRaw(this, &FImGuiAssetPicker::OnAssetAdded);
-		AssetRegistry.OnAssetAdded().AddRaw(this, &FImGuiAssetPicker::OnAssetRemoved);
-	}
-
-	void OnAssetAdded(const FAssetData& AssetData)
-	{
-		if (AssetData.GetClass() && AssetData.GetClass()->IsChildOf(TAssetType::StaticClass()))
-		{
-			bAssetListChanged = true;
-			AvailableAssets.Add(AssetData);
-		}
-	}
-
-	void OnAssetRemoved(const FAssetData& AssetData)
-	{
-		bAssetListChanged = true;
-		AvailableAssets.Remove(AssetData);
 	}
 
 	bool Draw(const char* Label, TWeakObjectPtr<TAssetType>& SelectedAssetPtr)
@@ -225,7 +204,7 @@ struct FImGuiAssetPicker : FNoncopyable
 
 			const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;			
 			const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
-			const float PopupHeight = std::min(std::max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeight * (AvailableAssets.Num() + 1));
+			const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeight * (AvailableAssets.Num() + 1));
 			if (AvailableSpaceBelow > AvailableSpaceAbove)
 			{
 				ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
@@ -352,7 +331,7 @@ struct FImGuiAssetPicker : FNoncopyable
 
 			ImGui::BeginGroup();
 			{
-				// combo box				 
+				// combo box
 				Add_AssetViewer(SelectedAsset);
 
 				// icons
@@ -377,6 +356,74 @@ struct FImGuiAssetPicker : FNoncopyable
 			LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(SelectedAsset);
 		}
 		return bSelectionChanged;
+	}
+
+private:
+	FORCEINLINE void GatherAssets(IAssetRegistry& AssetRegistry)
+	{
+		FARFilter Filter;
+		Filter.ClassPaths.Add(TAssetType::StaticClass()->GetClassPathName());
+		Filter.bRecursiveClasses = true; // TODO: expose filter settings
+		
+		if constexpr (bUsedWithBlueprintAsset)
+		{
+			using TBlueprintClassType = std::tuple_element<1, std::tuple<Types...>>::type;
+			Filter.TagsAndValues.Add(FBlueprintTags::NativeParentClassPath, FObjectPropertyBase::GetExportPath(TBlueprintClassType::StaticClass()));
+		}
+
+		AssetRegistry.GetAssets(Filter, AvailableAssets);
+	}
+
+	FORCEINLINE void Initialize()
+	{
+		if (bInitialized)
+		{
+			return;
+		}
+		bInitialized = true;
+
+		ClassIconBrush = FClassIconFinder::FindThumbnailForClass(TAssetType::StaticClass(), NAME_None);
+
+		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+		GatherAssets(AssetRegistry);
+		AssetRegistry.OnAssetAdded().AddRaw(this, &FImGuiAssetPicker::OnAssetAdded);
+		AssetRegistry.OnAssetRemoved().AddRaw(this, &FImGuiAssetPicker::OnAssetRemoved);
+	}
+
+	FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
+	{
+		if constexpr (bUsedWithBlueprintAsset)
+		{
+			using TBlueprintClassType = std::tuple_element<1, std::tuple<Types...>>::type;
+			FAssetDataTagMapSharedView::FFindTagResult NativeClassPathTag = AssetData.TagsAndValues.FindTag(FBlueprintTags::NativeParentClassPath);
+			if (!NativeClassPathTag.IsSet() || (!NativeClassPathTag.Equals(FObjectPropertyBase::GetExportPath(TBlueprintClassType::StaticClass()))))
+			{
+				return false;
+			}
+			return true;
+		}
+		else
+		{
+			return AssetData.GetClass() && AssetData.GetClass()->IsChildOf(TAssetType::StaticClass());
+		}
+	}
+
+	void OnAssetAdded(const FAssetData& AssetData)
+	{
+		if (FilterAsset(AssetData))
+		{
+			bAssetListChanged = true;
+			AvailableAssets.AddUnique(AssetData);
+		}
+	}
+
+	void OnAssetRemoved(const FAssetData& AssetData)
+	{
+		if (FilterAsset(AssetData))
+		{
+			bAssetListChanged = true;
+			AvailableAssets.Remove(AssetData);
+		}
 	}
 
 private:

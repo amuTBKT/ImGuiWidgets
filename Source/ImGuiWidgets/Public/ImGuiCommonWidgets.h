@@ -10,8 +10,9 @@
 #include "Styling/AppStyle.h"
 
 template <size_t MaxLength = 64>
-struct FImGuiTextFilter : FNoncopyable
+class FImGuiTextFilter : FNoncopyable
 {
+public:
 	FORCEINLINE void Reset()
 	{
 		FilterString[0] = '\0';
