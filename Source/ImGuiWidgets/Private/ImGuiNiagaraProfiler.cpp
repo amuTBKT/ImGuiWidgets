@@ -93,15 +93,24 @@ namespace ImGuiNiagaraProfiler
 	{
 		FImGuiTickScope Scope{ Context };
 
-		if (ImGui::Begin("Niagara Profiler", nullptr, ImGuiWindowFlags_None))
+		if (ImGui::Begin("Niagara Profiler", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
-			ImGui::Checkbox("Enable profiling", &bIsCapturing);
+			constexpr float HeaderSizeY = 50.f; // TODO: auto resize header
+			if (ImGui::BeginChild("Header", ImVec2(0.f, HeaderSizeY * 0.5f + HeaderSizeY * ImGui::GetIO().FontGlobalScale * 0.5f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+			{
+				ImGui::Checkbox("Enable profiling", &bIsCapturing);
+				
+				ImGui::BeginDisabled(!bIsCapturing);
+				SimStageFilter.Draw("SimStageFilter", "Filter Simulation Stages");
+				ImGui::EndDisabled();
+				
+				ImGui::Separator();
+			}
+			ImGui::EndChild();
+
 			NiagaraGPUProfilerListener->SetEnabled(bIsCapturing);
 			if (bIsCapturing)
 			{
-				SimStageFilter.Draw("SimStageFilter", "Filter Simulation Stages");
-				ImGui::Separator();
-
 				auto AddEmitterStatsFunc = [](UNiagaraEmitter* Emitter, const TArray<FSimStageStatData>& SimStageStats)
 				{
 					if (!Emitter)
@@ -224,10 +233,14 @@ namespace ImGuiNiagaraProfiler
 					{
 						FImGuiNamedWidgetScope Scope{ TCHAR_TO_ANSI(*World->GetName()) };
 
-						for (const auto& SystemStat : WorldStats.SystemStats)
+						if (ImGui::BeginChild("ScrollingArea"))
 						{
-							AddSystemStatsFunc(SystemStat.System.Get(), SystemStat.EmitterStats);
+							for (const auto& SystemStat : WorldStats.SystemStats)
+							{
+								AddSystemStatsFunc(SystemStat.System.Get(), SystemStat.EmitterStats);
+							}
 						}
+						ImGui::EndChild();
 
 						ImGui::EndTabItem();
 					}

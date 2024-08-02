@@ -247,7 +247,7 @@ namespace ImGuiMaterialStats
 	{
 		FImGuiTickScope Scope{ Context };
 
-		if (ImGui::Begin("Material Stats", nullptr, ImGuiWindowFlags_None))
+		if (ImGui::Begin("Material Stats", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
 			static IConsoleVariable* DumpShaderInfoCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DumpShaderDebugInfo"));
 			static IConsoleVariable* DumpShaderShortNamesCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DumpShaderDebugShortNames"));
@@ -263,27 +263,39 @@ namespace ImGuiMaterialStats
 			const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
 			const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Edit"), FVector2D(ImGui::GetFontSize()), 1.f);
 
-			if (DumpShaderInfoCVar)
+			// warning messages
 			{
-				if (DumpShaderInfoCVar->GetInt() == 1)
+				bool bAddSeparator = false;
+				
+				if (DumpShaderInfoCVar)
 				{
-					ImGui::Image(WarningIcon.Id, WarningIcon.Size, WarningIcon.UV0, WarningIcon.UV1, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
-					ImGui::SameLine();
-					ImGui::TextUnformatted("Shader debug data enabled...");
-				}
-			}
+					if (DumpShaderInfoCVar->GetInt() == 1)
+					{
+						ImGui::Image(WarningIcon.Id, WarningIcon.Size, WarningIcon.UV0, WarningIcon.UV1, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
+						ImGui::SameLine();
+						ImGui::TextUnformatted("Shader debug data enabled...");
 
-			if (DumpShaderShortNamesCVar)
-			{
-				if (DumpShaderShortNamesCVar->GetInt() == 0)
+						bAddSeparator = true;
+					}
+				}
+
+				if (DumpShaderShortNamesCVar)
 				{
-					ImGui::Image(WarningIcon.Id, WarningIcon.Size, WarningIcon.UV0, WarningIcon.UV1, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
-					ImGui::SameLine();
-					ImGui::TextUnformatted("Browse/Edit functions maybe not work properly without 'r.DumpShaderDebugShortNames' enabled");
+					if (DumpShaderShortNamesCVar->GetInt() == 0)
+					{
+						ImGui::Image(WarningIcon.Id, WarningIcon.Size, WarningIcon.UV0, WarningIcon.UV1, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
+						ImGui::SameLine();
+						ImGui::TextUnformatted("Browse/Edit functions maybe not work properly without 'r.DumpShaderDebugShortNames' enabled");
+
+						bAddSeparator = true;
+					}
+				}
+
+				if (bAddSeparator)
+				{
+					ImGui::Separator();
 				}
 			}
-			
-			ImGui::Separator();
 			
 			if (MaterialPicker.Draw("Selected Material", SelectedMaterial))
 			{
@@ -293,11 +305,8 @@ namespace ImGuiMaterialStats
 			// stats collection
 			{
 				bool bButtonDisabled = (bIsCompilingPermutations || !SelectedMaterial.IsValid());
-				if (bButtonDisabled)
-				{
-					ImGui::BeginDisabled();
-				}
-
+				
+				ImGui::BeginDisabled(bButtonDisabled);
 				if (ImGui::Button(bIsCompilingPermutations ? "Compiling..." : "Gather Stats"))
 				{
 					Reset();
@@ -325,11 +334,7 @@ namespace ImGuiMaterialStats
 					Resource->SetMaterial(MaterialToUse, nullptr, ERHIFeatureLevel::SM6, EMaterialQualityLevel::Num);
 					Resource->CacheShaders(PreviewShaderPlatform, EMaterialShaderPrecompileMode::Default);
 				}
-
-				if (bButtonDisabled)
-				{
-					ImGui::EndDisabled();
-				}
+				ImGui::EndDisabled();
 			}
 
 			if (bIsCompilingPermutations)
@@ -370,7 +375,7 @@ namespace ImGuiMaterialStats
 						{
 							FImGuiNamedWidgetScope VF_Scope{ TCHAR_TO_ANSI(*VFName) };
 
-							static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+							static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
 							if (ImGui::BeginTable("ShaderTable", 4, TableFlags))
 							{
 								ImGui::TableSetupColumn("Shader Name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);

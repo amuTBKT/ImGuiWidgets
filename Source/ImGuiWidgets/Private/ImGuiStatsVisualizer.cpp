@@ -24,8 +24,6 @@ namespace ImGuiStatsVizualizer
 	static constexpr float TableRowHeight = 0.f; //autosize, having issues setting center alignment for text
 	static const FVector2D TableItemIconSize = FVector2D{ 8., 8. }; //icon size to use for row item, should use >=12 to make the image clear but doesn't fit properly with default row size
 
-	static constexpr float HeaderSizeY = 52.f; //TODO: is there a way to auto size child window?
-
 	struct FStatGroupData
 	{
 		const std::string DisplayName = "None";
@@ -136,7 +134,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetupColumn("MemPool", ImGuiTableColumnFlags_WidthFixed);
 		ImGui::TableSetupColumn("Pool Capacity", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
-    
+	
 		//ImGui::TableHeadersRow();
 		ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
 		for (int column = 0; column < GetMemoryStatsColumnCount(); column++)
@@ -156,7 +154,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetupColumn("Max", ImGuiTableColumnFlags_WidthFixed);
 		ImGui::TableSetupColumn("Min", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
-    
+	
 		//ImGui::TableHeadersRow();
 		ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
 		for (int column = 0; column < GetCounterStatsColumnCount(); column++)
@@ -185,7 +183,7 @@ namespace ImGuiStatsVizualizer
 			}
 
 			ImGui::TableNextRow(ImGuiTableRowFlags_None, TableRowHeight);
-        
+		
 			ImGui::TableSetColumnIndex(0);
 			{
 				AddSelectableRow(StatDescription, RawStatName);
@@ -329,7 +327,7 @@ namespace ImGuiStatsVizualizer
 		// Now append the max value of the stat
 		ImGui::TableSetColumnIndex(1);
 		ImGui::Text("%.2f MB", float(MaxMemUsed / (1024.0 * 1024.0)));
-    
+	
 		ImGui::TableSetColumnIndex(2);
 		if (ViewData.PoolCapacity.Contains(Region))
 		{
@@ -339,7 +337,7 @@ namespace ImGuiStatsVizualizer
 		{
 			//ImGui::Text(""); leave the column empty?
 		}
-    
+	
 		ImGui::TableSetColumnIndex(3);
 		if (ViewData.PoolAbbreviation.Contains(Region))
 		{
@@ -349,7 +347,7 @@ namespace ImGuiStatsVizualizer
 		{
 			//ImGui::Text(""); leave the column empty?
 		}
-    
+	
 		ImGui::TableSetColumnIndex(4);
 		if (ViewData.PoolCapacity.Contains(Region))
 		{
@@ -381,7 +379,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableNextRow(ImGuiTableRowFlags_None, TableRowHeight);
 
 		const bool bDisplayAll = Item.NameAndInfo.GetFlag(EStatMetaFlags::ShouldClearEveryFrame);
-    
+	
 		ImGui::TableSetColumnIndex(0);
 		{
 			AddSelectableRow(StatDescription, Item.NameAndInfo.GetRawName());
@@ -408,7 +406,7 @@ namespace ImGuiStatsVizualizer
 		{
 			//ImGui::Text(""); leave the column empty?
 		}
-    
+	
 		// Append the maximum.
 		ImGui::TableSetColumnIndex(2);
 		if (Item.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double)
@@ -487,12 +485,12 @@ namespace ImGuiStatsVizualizer
 			// If the stat isn't enabled for this particular viewport, skip
 			const FName& StatGroupFName = ViewData.GroupNames[GroupIndex];
 			const FName& GroupName = ViewData.GroupNames[GroupIndex];
-        
+		
 			FStatGroupData* StatGroupData = StatGroups.Find(StatGroupFName);
 			if (!StatGroupData)
 			{
 				const FString& GroupDesc = ViewData.GroupDescriptions[GroupIndex];
-            
+			
 				FString StatName = GroupName.ToString();
 				StatName.RemoveFromStart(TEXT("STATGROUP_"), ESearchCase::CaseSensitive);
 
@@ -521,7 +519,7 @@ namespace ImGuiStatsVizualizer
 								const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.HierAggregate, ViewData, RenderFlatCycle);							
 								CullNextSection = LastRowDisplayed < StatGroup.HierAggregate.Num();
 							}
-                        
+						
 							if (!CullNextSection && bHasFlat)
 							{
 								const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.FlatAggregate, ViewData, RenderFlatCycle);
@@ -628,67 +626,68 @@ namespace ImGuiStatsVizualizer
 		ImGui::Separator();
 	}
 
-    static void Initialize()
-    {
-        StatGroups.Add(FName(TEXT("STATGROUP_GPU")),             { "GPU",              TEXT("GPU"),               false });
-        StatGroups.Add(FName(TEXT("STATGROUP_SceneRendering")),  { "Scene Rendering",  TEXT("SceneRendering"),    false });
-        StatGroups.Add(FName(TEXT("STATGROUP_Niagara")),         { "Niagara",          TEXT("Niagara"),           false });
-        StatGroups.Add(FName(TEXT("STATGROUP_NiagaraSystems")),  { "Niagara Systems",  TEXT("NiagaraSystems"),    false });
-        StatGroups.Add(FName(TEXT("STATGROUP_NiagaraEmitters")), { "Niagara Emitters", TEXT("NiagaraEmitters"),   false });
-        StatGroups.Add(FName(TEXT("STATGROUP_ImGui")),           { "ImGui",            TEXT("ImGui"),             false });
-    }
+	static void Initialize()
+	{
+		StatGroups.Add(FName(TEXT("STATGROUP_GPU")),             { "GPU",              TEXT("GPU"),               false });
+		StatGroups.Add(FName(TEXT("STATGROUP_SceneRendering")),  { "Scene Rendering",  TEXT("SceneRendering"),    false });
+		StatGroups.Add(FName(TEXT("STATGROUP_Niagara")),         { "Niagara",          TEXT("Niagara"),           false });
+		StatGroups.Add(FName(TEXT("STATGROUP_NiagaraSystems")),  { "Niagara Systems",  TEXT("NiagaraSystems"),    false });
+		StatGroups.Add(FName(TEXT("STATGROUP_NiagaraEmitters")), { "Niagara Emitters", TEXT("NiagaraEmitters"),   false });
+		StatGroups.Add(FName(TEXT("STATGROUP_ImGui")),           { "ImGui",            TEXT("ImGui"),             false });
+	}
 
-    static void RegisterOneFrameResources()
-    {
+	static void RegisterOneFrameResources()
+	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), TableItemIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
 		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Edit"), TableItemIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
-    }
+	}
 
-    static void Tick(ImGuiContext* Context)
-    {
+	static void Tick(ImGuiContext* Context)
+	{
 		FImGuiTickScope Scope{ Context };
 
-	    if (ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
-	    {
-            RegisterOneFrameResources();
-            
-            if (ImGui::BeginChild("Header", ImVec2(0.f, HeaderSizeY * 0.5f + HeaderSizeY * ImGui::GetIO().FontGlobalScale * 0.5f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
-            {
-                RenderStatsHeader();
-            }
-            ImGui::EndChild();
+		if (ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+		{
+			RegisterOneFrameResources();
+			
+			constexpr float HeaderSizeY = 52.f; // TODO: auto resize header
+			if (ImGui::BeginChild("Header", ImVec2(0.f, HeaderSizeY * 0.5f + HeaderSizeY * ImGui::GetIO().FontGlobalScale * 0.5f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+			{
+				RenderStatsHeader();
+			}
+			ImGui::EndChild();
 
-            if (ImGui::BeginChild("Body"))
-            {
-                FGameThreadStatsData* ViewData = FLatestGameThreadStatsData::Get().Latest;
-                if (ViewData/* || !ViewData->bRenderStats*/)
-                {
-                    if (!ViewData->RootFilter.IsEmpty())
-                    {
-                        ImGui::Text("Root filter is active. ROOT=%s", TCHAR_TO_ANSI(*ViewData->RootFilter));
-                        
-                        ImGui::Separator();
-                    }
+			if (ImGui::BeginChild("Body"))
+			{
+				FGameThreadStatsData* ViewData = FLatestGameThreadStatsData::Get().Latest;
+				if (ViewData/* || !ViewData->bRenderStats*/)
+				{
+					if (!ViewData->RootFilter.IsEmpty())
+					{
+						ImGui::Text("Root filter is active. ROOT=%s", TCHAR_TO_ANSI(*ViewData->RootFilter));
+						
+						ImGui::Separator();
+					}
 
-                    if (!ViewData->bDrawOnlyRawStats)
-                    {
-                        RenderGroupedWithHierarchy(*ViewData);
-                    }
-                }
-                else
-                {
-                    ImGui::TextUnformatted("Not recording stats...");
-                }
+					if (!ViewData->bDrawOnlyRawStats)
+					{
+						RenderGroupedWithHierarchy(*ViewData);
+					}
+				}
+				else
+				{
+					ImGui::TextUnformatted("Not recording stats...");
+				}
 
-            }
-            ImGui::EndChild();
+			}
+			ImGui::EndChild();
 
-	    }
-        ImGui::End();
-    }
-    
-    IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
+		}
+		ImGui::End();
+	}
+	
+	IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
 }
 
 #endif //#if WITH_IMGUI && STATS
