@@ -34,17 +34,26 @@ public:
 			return true;
 		}
 
-		bool bPassedFilter = true;
 		for (const FString& Keyword : FilterKeywords)
 		{
-			bPassedFilter &= StringToCheck.Contains(Keyword, ESearchCase::IgnoreCase);
+			if ((Keyword[0] == TCHAR('!') && (Keyword.Len() > 1)))
+			{
+				if (StringToCheck.Contains(&Keyword[1], Keyword.Len() - 1, ESearchCase::IgnoreCase))
+				{
+					return false;
+				}
+			}
+			else if (!StringToCheck.Contains(&Keyword[0], Keyword.Len(), ESearchCase::IgnoreCase))
+			{
+				return false;
+			}
 		}
-		return bPassedFilter;
+		return true;
 	}
 
 	FORCEINLINE bool PassFilter(const char* StringToCheck) const
 	{
-		// TODO: could maintain a ANSI version of FilterKeywords
+		// TODO: could maintain an ANSI version of FilterKeywords
 		return PassFilter(FString(ANSI_TO_TCHAR(StringToCheck)));
 	}
 
@@ -61,6 +70,7 @@ public:
 
 		ImGui::BeginGroup();
 		{
+			// blend button with input text widget
 			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
@@ -68,6 +78,7 @@ public:
 
 			if (FilterKeywords.IsEmpty())
 			{
+				// TODO: doesn't need to be a button
 				ImGui::ImageButton("Search", SearchIcon.Id, SearchIcon.Size, SearchIcon.UV0, SearchIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f));
 			}
 			else
