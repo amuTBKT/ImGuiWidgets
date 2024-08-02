@@ -4,11 +4,11 @@
 
 #if WITH_IMGUI && STATS
 
+#include "ImGuiCommonWidgets.h"
+
 #include <string>
 #include "Engine/Engine.h"
 #include "Stats/StatsData.h"
-#include "Textures/SlateIcon.h"
-#include "ImGuiCommonWidgets.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -26,8 +26,6 @@ namespace ImGuiStatsVizualizer
 
 	static constexpr float HeaderSizeY = 52.f; //TODO: is there a way to auto size child window?
 
-	static const FVector2D ClearIconSize = FVector2D{ 13., 13. };
-	
 	struct FStatGroupData
 	{
 		const std::string DisplayName = "None";
@@ -38,7 +36,6 @@ namespace ImGuiStatsVizualizer
 
 	static FImGuiTextFilter<128> StatFilter;
 
-	static FImGuiImageBindingParams ClearTextIcon;
 	static FImGuiImageBindingParams BrowseAssetIcon;
 	static FImGuiImageBindingParams EditAssetIcon;
 
@@ -644,9 +641,8 @@ namespace ImGuiStatsVizualizer
     static void RegisterOneFrameResources()
     {
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		ClearTextIcon = ImGuiSubsystem->RegisterOneFrameResource(FSlateIcon(FAppStyle::Get().GetStyleSetName(), "Icons.X").GetIcon(), ClearIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FSlateIcon(FAppStyle::Get().GetStyleSetName(), "Icons.Search").GetIcon(), TableItemIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FSlateIcon(FAppStyle::Get().GetStyleSetName(), "Icons.Edit").GetIcon(), TableItemIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), TableItemIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Edit"), TableItemIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
     }
 
     static void Tick(ImGuiContext* Context)

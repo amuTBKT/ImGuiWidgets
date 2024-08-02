@@ -21,6 +21,7 @@ namespace ImGuiMaterialStats
 	{
 		FString			 EntryName;
 		FString			 ShaderName;
+		FString			 FunctionName;
 		FString			 ShaderDumpFilePath;
 		int32			 NumInstructions;
 		EShaderFrequency ShaderType;
@@ -180,6 +181,7 @@ namespace ImGuiMaterialStats
 						const int32 ShaderIndex = Shaders.AddDefaulted();
 						Shaders[ShaderIndex].EntryName = ShaderEntryName;
 						Shaders[ShaderIndex].ShaderName = ShaderName;
+						Shaders[ShaderIndex].FunctionName = EntryShader->GetFunctionName();
 						Shaders[ShaderIndex].ShaderDumpFilePath = ShaderDumpFilePath;
 						Shaders[ShaderIndex].NumInstructions = Entry.Value.GetShader()->GetNumInstructions();
 						Shaders[ShaderIndex].ShaderType = EntryShader->GetFrequency();
@@ -254,11 +256,12 @@ namespace ImGuiMaterialStats
 			
 			static FImGuiAssetPicker<UMaterial> MaterialPicker;
 			static TWeakObjectPtr<UMaterial> SelectedMaterial;
+			static FImGuiTextFilter<128> ShaderFilter;
 
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-			const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(FSlateIcon(FAppStyle::Get().GetStyleSetName(), "Icons.Warning").GetIcon(), FVector2D(ImGui::GetFontSize()), 1.f);
-			const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(FSlateIcon(FAppStyle::Get().GetStyleSetName(), "Icons.Search").GetIcon(), FVector2D(ImGui::GetFontSize()), 1.f);
-			const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(FSlateIcon(FAppStyle::Get().GetStyleSetName(), "Icons.Edit").GetIcon(), FVector2D(ImGui::GetFontSize()), 1.f);
+			const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Warning"), FVector2D(ImGui::GetFontSize()), 1.f);
+			const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
+			const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Edit"), FVector2D(ImGui::GetFontSize()), 1.f);
 
 			if (DumpShaderInfoCVar)
 			{
@@ -286,8 +289,6 @@ namespace ImGuiMaterialStats
 			{
 				Reset();
 			}
-
-			ImGui::Separator();
 
 			// stats collection
 			{
@@ -356,6 +357,11 @@ namespace ImGuiMaterialStats
 
 			if (!bIsCompilingPermutations && !MaterialStats.ShaderVFLookup.IsEmpty())
 			{
+				ImGui::SameLine();
+				ShaderFilter.Draw("FilterShaders", "Filter Shaders");
+
+				ImGui::Separator();
+
 				if (ImGui::BeginTabBar("Shader"))
 				{
 					for (const auto& [VFName, ShaderIndices] : MaterialStats.ShaderVFLookup)
@@ -383,6 +389,11 @@ namespace ImGuiMaterialStats
 								for (int32 ShaderIndex : ShaderIndices)
 								{
 									const auto& Shader = MaterialStats.Shaders[ShaderIndex];
+
+									if (!ShaderFilter.PassFilter(Shader.EntryName))
+									{
+										continue;
+									}
 
 									FImGuiNamedWidgetScope Shader_Scope{ TCHAR_TO_ANSI(*Shader.EntryName) };
 
