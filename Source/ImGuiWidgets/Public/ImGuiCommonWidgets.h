@@ -57,6 +57,11 @@ public:
 		return PassFilter(FString(ANSI_TO_TCHAR(StringToCheck)));
 	}
 
+	FORCEINLINE const TArray<FString>& GetFilterKeywords() const
+	{
+		return FilterKeywords;
+	}
+
 	bool Draw(const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f)
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();

@@ -182,17 +182,27 @@ public:
 
 		auto Add_AssetViewer = [&](TAssetType*& InOutAsset)
 		{
-			int32 NewSelectedIndex = INDEX_NONE;
-			const FString PreviewText = InOutAsset ? InOutAsset->GetName() : FString(TEXT("None"));
-
+			// configuration
 			const float AssetViewerWidth = 400.f * GlobalScale;
 			const char* AssetViewerPopupName = "AssetViewerPopup";
-			const float AssetViewerPopupPosX = ImGui::GetCursorPosX();
 			const float AssetViewerRowHeight = 36.f * GlobalScale;
+			const int32 PreviewTextMaxLength = 32;
+
+			FString PreviewText = InOutAsset ? InOutAsset->GetName() : FString(TEXT("None"));
+			if (PreviewText.Len() >= PreviewTextMaxLength)
+			{
+				PreviewText.MidInline(0, PreviewTextMaxLength);
+				
+				// PreviewTextMaxLen...
+				PreviewText[PreviewTextMaxLength - 1] = TCHAR('.');
+				PreviewText[PreviewTextMaxLength - 2] = TCHAR('.');
+				PreviewText[PreviewTextMaxLength - 3] = TCHAR('.');
+			}
+			
 			const bool bWasAssetViewerVisible = ImGui::IsPopupOpen(AssetViewerPopupName);
 
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-			if (ImGui::Button(TCHAR_TO_ANSI(*PreviewText), ImVec2(256.f, 0.f)))
+			if (ImGui::Button(TCHAR_TO_ANSI(*PreviewText), ImVec2(AssetViewerWidth * 0.65f, 0.f)))
 			{
 				ImGui::OpenPopup(AssetViewerPopupName);
 			}
@@ -202,7 +212,8 @@ public:
 			ImGui::Image(ComboboxDownArrowIcon.Id, ComboboxDownArrowIcon.Size, ComboboxDownArrowIcon.UV0, ComboboxDownArrowIcon.UV1);
 			ImGui::PopStyleVar(1);
 
-			const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;			
+			const float AssetViewerPopupPosX = ImGui::GetCursorPosX();
+			const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;
 			const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
 			const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeight * (AvailableAssets.Num() + 1));
 			if (AvailableSpaceBelow > AvailableSpaceAbove)
@@ -214,6 +225,8 @@ public:
 				const float OffsetY = ComboBoxHeight + ImGui::GetStyle().ItemSpacing.y * 2.f * GlobalScale;
 				ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y - OffsetY), ImGuiCond_Always, ImVec2(0.f, 1.f));
 			}
+
+			int32 NewSelectedIndex = INDEX_NONE;
 			if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 			{
 				// reset filter text and set focus when asset viewer is triggered
@@ -226,7 +239,7 @@ public:
 				if (ImGui::BeginListBox("###AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
 				{
 					auto DisplayAsset = [&](int32 AssetIndex)
-					{						
+					{
 						const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
 						const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
 						{
