@@ -302,6 +302,8 @@ namespace ImGuiMaterialStats
 				Reset();
 			}
 
+			ImGui::Separator();
+
 			// stats collection
 			{
 				bool bButtonDisabled = (bIsCompilingPermutations || !SelectedMaterial.IsValid());

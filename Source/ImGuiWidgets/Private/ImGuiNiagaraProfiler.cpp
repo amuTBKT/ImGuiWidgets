@@ -95,11 +95,13 @@ namespace ImGuiNiagaraProfiler
 
 		if (ImGui::Begin("Niagara Profiler", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
-			constexpr float HeaderSizeY = 50.f; // TODO: auto resize header
+			constexpr float HeaderSizeY = 52.f; // TODO: auto resize header
 			if (ImGui::BeginChild("Header", ImVec2(0.f, HeaderSizeY * 0.5f + HeaderSizeY * ImGui::GetIO().FontGlobalScale * 0.5f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 			{
 				ImGui::Checkbox("Enable profiling", &bIsCapturing);
 				
+				ImGui::Separator();
+
 				ImGui::BeginDisabled(!bIsCapturing);
 				SimStageFilter.Draw("SimStageFilter", "Filter Simulation Stages");
 				ImGui::EndDisabled();
