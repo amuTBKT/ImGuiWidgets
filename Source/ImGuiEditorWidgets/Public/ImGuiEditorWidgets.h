@@ -38,7 +38,7 @@ public:
 		{
 			IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
 			AssetRegistry.OnAssetAdded().RemoveAll(this);
-			AssetRegistry.OnAssetAdded().RemoveAll(this);
+			AssetRegistry.OnAssetRemoved().RemoveAll(this);
 		}
 	}
 
@@ -238,7 +238,7 @@ public:
 
 				if (ImGui::BeginListBox("###AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
 				{
-					auto DisplayAsset = [&](int32 AssetIndex)
+					auto Add_AssetListEntry = [&](int32 AssetIndex)
 					{
 						const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
 						const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
@@ -294,7 +294,7 @@ public:
 						{
 							for (int32 AssetIndex = Clipper.DisplayStart; AssetIndex < Clipper.DisplayEnd; AssetIndex++)
 							{
-								DisplayAsset(AssetIndex);
+								Add_AssetListEntry(AssetIndex);
 							}
 						}
 					}
@@ -305,7 +305,7 @@ public:
 							const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
 							if (TextFilter.PassFilter(AssetName))
 							{
-								DisplayAsset(AssetIndex);
+								Add_AssetListEntry(AssetIndex);
 							}
 						}
 					}
