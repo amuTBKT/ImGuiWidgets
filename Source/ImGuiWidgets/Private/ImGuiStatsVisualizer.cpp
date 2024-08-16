@@ -19,11 +19,6 @@
 
 namespace ImGuiStatsVizualizer
 {
-	// config
-	static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-	static constexpr float TableRowHeight = 0.f; //autosize, having issues setting center alignment for text
-	static const FVector2D TableItemIconSize = FVector2D{ 8., 8. }; //icon size to use for row item, should use >=12 to make the image clear but doesn't fit properly with default row size
-
 	struct FStatGroupData
 	{
 		const std::string DisplayName = "None";
@@ -33,9 +28,8 @@ namespace ImGuiStatsVizualizer
 	static TMap<FName, FStatGroupData> StatGroups;
 
 	static FImGuiTextFilter<128> StatFilter;
-
-	static FImGuiImageBindingParams BrowseAssetIcon;
 	static FImGuiImageBindingParams EditAssetIcon;
+	static FImGuiImageBindingParams BrowseAssetIcon;
 
 	FORCEINLINE static const char* GetStatDescription(const FComplexStatMessage& Stat)
 	{
@@ -60,7 +54,7 @@ namespace ImGuiStatsVizualizer
 
 		bool WasSelected = SelectedItems.Contains(ItemName);
 
-		bool IsSelected = ImGui::Selectable(Label, WasSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, TableRowHeight));
+		bool IsSelected = ImGui::Selectable(Label, WasSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
 	
 		if (IsSelected)
 		{
@@ -115,7 +109,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 
 		//ImGui::TableHeadersRow();
-		ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
+		ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
 		for (int32 ColumnIndex = 0; ColumnIndex < GetCycleStatsColumnCount(); ColumnIndex++)
 		{
 			ImGui::TableSetColumnIndex(ColumnIndex);
@@ -136,7 +130,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 	
 		//ImGui::TableHeadersRow();
-		ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
+		ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
 		for (int column = 0; column < GetMemoryStatsColumnCount(); column++)
 		{
 			ImGui::TableSetColumnIndex(column);
@@ -156,7 +150,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 	
 		//ImGui::TableHeadersRow();
-		ImGui::TableNextRow(ImGuiTableRowFlags_Headers, TableRowHeight);
+		ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
 		for (int column = 0; column < GetCounterStatsColumnCount(); column++)
 		{
 			ImGui::TableSetColumnIndex(column);
@@ -182,7 +176,7 @@ namespace ImGuiStatsVizualizer
 				return;
 			}
 
-			ImGui::TableNextRow(ImGuiTableRowFlags_None, TableRowHeight);
+			ImGui::TableNextRow(ImGuiTableRowFlags_None);
 		
 			ImGui::TableSetColumnIndex(0);
 			{
@@ -308,7 +302,7 @@ namespace ImGuiStatsVizualizer
 			return;
 		}
 
-		ImGui::TableNextRow(ImGuiTableRowFlags_None, TableRowHeight);
+		ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 		FPlatformMemory::EMemoryCounterRegion Region = FPlatformMemory::EMemoryCounterRegion(Item.NameAndInfo.GetField<EMemoryRegion>());
 		// At this moment we only have memory stats that are marked as non frame stats, so can't be cleared every frame.
@@ -376,7 +370,7 @@ namespace ImGuiStatsVizualizer
 			return;
 		}
 
-		ImGui::TableNextRow(ImGuiTableRowFlags_None, TableRowHeight);
+		ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 		const bool bDisplayAll = Item.NameAndInfo.GetFlag(EStatMetaFlags::ShouldClearEveryFrame);
 	
@@ -444,7 +438,7 @@ namespace ImGuiStatsVizualizer
 		int32 RowIndex = 0;
 
 		// Render all counters.
-		if (!StatFilter.IsActive()) // clipper does not work properly with filter :(
+		if (!StatFilter.IsActive()) // TODO: clipping doesn't work with JIT filtering
 		{        
 			ImGuiListClipper clipper;
 			clipper.Begin(Aggregates.Num());
@@ -500,6 +494,7 @@ namespace ImGuiStatsVizualizer
 
 			if (!CullNextSection && ImGui::CollapsingHeader(StatGroupData->DisplayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
 				char ScratchTableIdBuffer[128];
 
 				// Render cycles.
@@ -585,24 +580,25 @@ namespace ImGuiStatsVizualizer
 			ImGui::PopItemWidth();
 		}
 
-		int32 Index = -1;
 		for (auto& Itr : StatGroups)
 		{
-			++Index;
-
-			ImGui::SameLine();
-
 			const bool bApplyStyle = Itr.Value.IsActive;
 			if (bApplyStyle)
 			{
-				ImGui::PushID(Index);
-
 				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f));
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.7f, 0.7f));
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
 			}
 
 			const char* GroupName = Itr.Value.DisplayName.c_str();
+
+			// TODO: maybe there's a better way to wrap widgets to window width?
+			ImGui::SameLine();
+			if ((ImGui::GetCursorPosX() + ImGui::CalcTextSize(GroupName).x + ImGui::GetStyle().FramePadding.x * 2.f) >= ImGui::GetWindowWidth())
+			{
+				ImGui::Dummy(ImVec2(0.f, 0.f)); //<br>
+			}
+
 			if (ImGui::Button(GroupName))
 			{
 				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *Itr.Value.StatName);
@@ -612,7 +608,6 @@ namespace ImGuiStatsVizualizer
 			if (bApplyStyle)
 			{
 				ImGui::PopStyleColor(3);
-				ImGui::PopID();
 			}
 
 			// disable at the end, we'll re-enable when stat group is encountered when displaying..
@@ -621,9 +616,7 @@ namespace ImGuiStatsVizualizer
 
 		ImGui::Separator();
 
-		StatFilter.Draw("FilterLabel", "Filter Stats");
-		
-		ImGui::Separator();
+		StatFilter.Draw("FilterLabel", "Filter Stats", false, ImGui::GetWindowWidth() * 0.75f);
 	}
 
 	static void Initialize()
@@ -639,8 +632,8 @@ namespace ImGuiStatsVizualizer
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), TableItemIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Edit"), TableItemIconSize * ImGui::GetIO().FontGlobalScale, 1.f);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Edit"), FVector2D(8.f, 8.f) * ImGui::GetIO().FontGlobalScale, 1.f);
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), FVector2D(8.f, 8.f) * ImGui::GetIO().FontGlobalScale, 1.f);
 	}
 
 	static void Tick(ImGuiContext* Context)
@@ -651,12 +644,13 @@ namespace ImGuiStatsVizualizer
 		{
 			RegisterOneFrameResources();
 			
-			constexpr float HeaderSizeY = 52.f; // TODO: auto resize header
-			if (ImGui::BeginChild("Header", ImVec2(0.f, HeaderSizeY * 0.5f + HeaderSizeY * ImGui::GetIO().FontGlobalScale * 0.5f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 			{
 				RenderStatsHeader();
 			}
 			ImGui::EndChild();
+
+			ImGui::Separator();
 
 			if (ImGui::BeginChild("Body"))
 			{

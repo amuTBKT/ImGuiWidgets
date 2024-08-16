@@ -62,6 +62,11 @@ public:
 		return FilterKeywords;
 	}
 
+	FORCEINLINE FString GetFilterString() const
+	{
+		return FString(ANSI_TO_TCHAR(FilterString));
+	}
+
 	bool Draw(const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f)
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();

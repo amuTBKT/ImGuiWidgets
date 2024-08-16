@@ -95,20 +95,19 @@ namespace ImGuiNiagaraProfiler
 
 		if (ImGui::Begin("Niagara Profiler", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
-			constexpr float HeaderSizeY = 52.f; // TODO: auto resize header
-			if (ImGui::BeginChild("Header", ImVec2(0.f, HeaderSizeY * 0.5f + HeaderSizeY * ImGui::GetIO().FontGlobalScale * 0.5f), false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 			{
 				ImGui::Checkbox("Enable profiling", &bIsCapturing);
 				
 				ImGui::Separator();
 
 				ImGui::BeginDisabled(!bIsCapturing);
-				SimStageFilter.Draw("SimStageFilter", "Filter Simulation Stages");
+				SimStageFilter.Draw("SimStageFilter", "Filter Simulation Stages", false, ImGui::GetWindowWidth() * 0.75f);
 				ImGui::EndDisabled();
-				
-				ImGui::Separator();
 			}
 			ImGui::EndChild();
+
+			ImGui::Separator();
 
 			NiagaraGPUProfilerListener->SetEnabled(bIsCapturing);
 			if (bIsCapturing)
