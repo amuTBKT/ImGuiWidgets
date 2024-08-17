@@ -22,7 +22,7 @@ public class ImGuiWidgets : ModuleRules
 		);
 
 		// for using ImGui
-        PrivateDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime" });
+        PublicDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime" });
 
 		// for using Niagara
 		PrivateDependencyModuleNames.Add("Niagara");
