@@ -4,11 +4,10 @@
 
 #if WITH_IMGUI && STATS
 
-#include "ImGuiCommonWidgets.h"
-
 #include <string>
 #include "Engine/Engine.h"
 #include "Stats/StatsData.h"
+#include "ImGuiCommonWidgets.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

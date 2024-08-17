@@ -4,9 +4,8 @@
 
 #if WITH_IMGUI
 
-#include "ImGuiAssetPicker.h"
-
 #include "ShaderCompiler.h"
+#include "ImGuiAssetPicker.h"
 #include "Materials/Material.h"
 #include "MaterialStatsCommon.h"
 #include "ShaderCompilerCommon.h"

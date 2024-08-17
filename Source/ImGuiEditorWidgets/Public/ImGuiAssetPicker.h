@@ -6,11 +6,10 @@
 
 #if WITH_IMGUI
 
-#include "ImGuiCommonWidgets.h"
-
 #include "Editor.h"
 #include "AssetThumbnail.h"
 #include "ClassIconFinder.h"
+#include "ImGuiCommonWidgets.h"
 #include "EditorUtilityLibrary.h"
 #include "Styling/SlateIconFinder.h"
 #include "AssetRegistry/AssetData.h"

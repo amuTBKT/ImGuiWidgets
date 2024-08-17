@@ -18,7 +18,9 @@
 		{
 			"Name": "ImGuiWidgets",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "Default",
+			"TargetDenyList": [ "Server" ],
+			"TargetConfigurationDenyList": [ "Shipping" ]
 		},
 		{
 			"Name": "ImGuiEditorWidgets",
