@@ -7,7 +7,7 @@ public class ImGuiEditorWidgets : ModuleRules
 {
 	public ImGuiEditorWidgets(ReadOnlyTargetRules Target) : base(Target)
 	{
-		PCHUsage = PCHUsageMode.NoPCHs;
+		//PCHUsage = PCHUsageMode.NoPCHs;
 
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
@@ -16,7 +16,6 @@ public class ImGuiEditorWidgets : ModuleRules
 				"Core",
 				"Engine",
 				"SlateCore",
-				"RenderCore",
 				"CoreUObject",
 
                 "UnrealEd",

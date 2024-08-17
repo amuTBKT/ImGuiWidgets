@@ -7,16 +7,13 @@ public class ImGuiWidgets : ModuleRules
 {
 	public ImGuiWidgets(ReadOnlyTargetRules Target) : base(Target)
 	{
-		PCHUsage = PCHUsageMode.NoPCHs;
+		//PCHUsage = PCHUsageMode.NoPCHs;
 
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				"RHI",
 				"Core",
 				"Engine",
-				"SlateCore",
-				"RenderCore",
 				"CoreUObject",
             }
 		);

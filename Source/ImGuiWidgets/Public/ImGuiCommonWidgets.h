@@ -7,7 +7,6 @@
 #if WITH_IMGUI
 
 #include "ImGuiSubsystem.h"
-#include "Styling/AppStyle.h"
 
 template <size_t MaxLength = 64>
 class FImGuiTextFilter : FNoncopyable
@@ -70,8 +69,8 @@ public:
 	bool Draw(const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f)
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
-		const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.X"), FVector2D(ImGui::GetFontSize()), 1.f);
+		const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(FName(TEXT("Icons.Search")), FVector2D(ImGui::GetFontSize()), 1.f);
+		const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(FName(TEXT("Icons.X")), FVector2D(ImGui::GetFontSize()), 1.f);
 
 		FImGuiNamedWidgetScope WidgetScope{ WidgetName };
 
