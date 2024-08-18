@@ -64,10 +64,10 @@ public:
 		const float GlobalScale = ImGui::GetIO().FontGlobalScale;
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush(FName(TEXT("Icons.Use"))), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush(FName(TEXT("Icons.BrowseContent"))), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush(FName(TEXT("PropertyWindow.DiffersFromDefault"))), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams ComboboxDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(&FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>("ComboButton").DownArrowImage, FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Use"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.BrowseContent"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("PropertyWindow.DiffersFromDefault"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams ComboboxDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(&FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton")).DownArrowImage, FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(ClassIconBrush, FVector2D(50.)* GlobalScale, 1.f);
 
 		auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, TAssetType* Asset)

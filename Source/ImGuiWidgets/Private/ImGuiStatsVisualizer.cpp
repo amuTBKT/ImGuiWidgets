@@ -562,7 +562,7 @@ namespace ImGuiStatsVizualizer
 	{
 		// add new stat
 		{
-			ImGui::PushItemWidth(64);
+			ImGui::SetNextItemWidth(128);
 
 			static char StatSourceBuffer[64] = { 0 };
 			if (ImGui::InputTextWithHint("###NewStat", "Add Stat", StatSourceBuffer, sizeof(StatSourceBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
@@ -576,7 +576,11 @@ namespace ImGuiStatsVizualizer
 				ImGui::SetKeyboardFocusHere(-1);
 			}
 
-			ImGui::PopItemWidth();
+			if (ImGui::IsItemActive())
+			{
+				ImDrawList* DrawList = ImGui::GetWindowDrawList();
+				DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor(ImVec4(0.26f, 0.59f, 0.98f, 0.67f)), 0.f, ImDrawFlags_None, 1.f);
+			}
 		}
 
 		for (auto& Itr : StatGroups)
@@ -631,8 +635,8 @@ namespace ImGuiStatsVizualizer
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FName(TEXT("Icons.Edit")), FVector2D(8.f, 8.f) * ImGui::GetIO().FontGlobalScale, 1.f);
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(FName(TEXT("Icons.Search")), FVector2D(8.f, 8.f) * ImGui::GetIO().FontGlobalScale, 1.f);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Edit"), FVector2D(8.f, 8.f) * ImGui::GetIO().FontGlobalScale, 1.f);
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Search"), FVector2D(8.f, 8.f) * ImGui::GetIO().FontGlobalScale, 1.f);
 	}
 
 	static void Tick(ImGuiContext* Context)

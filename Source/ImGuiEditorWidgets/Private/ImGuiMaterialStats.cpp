@@ -258,9 +258,9 @@ namespace ImGuiMaterialStats
 			static FImGuiTextFilter<128> ShaderFilter;
 
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-			const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Warning"), FVector2D(ImGui::GetFontSize()), 1.f);
-			const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
-			const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(FAppStyle::GetBrush("Icons.Edit"), FVector2D(ImGui::GetFontSize()), 1.f);
+			const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Warning"), FVector2D(ImGui::GetFontSize()), 1.f);
+			const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
+			const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Edit"), FVector2D(ImGui::GetFontSize()), 1.f);
 
 			// warning messages
 			{
