@@ -24,10 +24,10 @@ class FImGuiAssetPicker : FNoncopyable
 	static_assert(sizeof...(Types) > 0, "Asset type missing, expected FImGuiAssetPicker<UAssetType>");
 	using TAssetType = std::tuple_element<0, std::tuple<Types...>>::type;
 	
-	// validation for blueprints
+	// blueprints support optional SubClass argument
 	static constexpr bool bUsedWithBlueprintAsset = std::is_same<TAssetType, UBlueprint>::value;
-	static_assert(!bUsedWithBlueprintAsset || (sizeof...(Types) == 2), "BlueprintClass type missing, expected FImGuiAssetPicker<UBlueprint, UClassType>");
-
+	static constexpr bool bUseBlueprintSubClass = bUsedWithBlueprintAsset && (sizeof...(Types) > 1);
+	
 public:
 	FImGuiAssetPicker() = default;
 
@@ -377,7 +377,7 @@ private:
 		Filter.ClassPaths.Add(TAssetType::StaticClass()->GetClassPathName());
 		Filter.bRecursiveClasses = true; // TODO: expose filter settings
 		
-		if constexpr (bUsedWithBlueprintAsset)
+		if constexpr (bUseBlueprintSubClass)
 		{
 			using TBlueprintClassType = std::tuple_element<1, std::tuple<Types...>>::type;
 			Filter.TagsAndValues.Add(FBlueprintTags::NativeParentClassPath, FObjectPropertyBase::GetExportPath(TBlueprintClassType::StaticClass()));
@@ -404,7 +404,7 @@ private:
 
 	FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
 	{
-		if constexpr (bUsedWithBlueprintAsset)
+		if constexpr (bUseBlueprintSubClass)
 		{
 			using TBlueprintClassType = std::tuple_element<1, std::tuple<Types...>>::type;
 			FAssetDataTagMapSharedView::FFindTagResult NativeClassPathTag = AssetData.TagsAndValues.FindTag(FBlueprintTags::NativeParentClassPath);
