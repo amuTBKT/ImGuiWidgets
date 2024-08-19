@@ -211,7 +211,7 @@ public:
 			ImGui::Image(ComboboxDownArrowIcon.Id, ComboboxDownArrowIcon.Size, ComboboxDownArrowIcon.UV0, ComboboxDownArrowIcon.UV1);
 			ImGui::PopStyleVar(1);
 
-			const float AssetViewerPopupPosX = ImGui::GetCursorPosX();
+			const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
 			const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;
 			const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
 			const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeight * (AvailableAssets.Num() + 1));
