@@ -106,9 +106,9 @@ public:
 
 		auto Add_UseSelectedAssetButton = [&](TAssetType*& InOutAsset)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_WindowBg));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_WindowBg));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetColorU32(ImGuiCol_WindowBg));
+			ImGui::PushStyleColor(ImGuiCol_Button, 0);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
 
 			if (ImGui::ImageButton("UseSelectedAsset", UseSelectedAssetIcon.Id, UseSelectedAssetIcon.Size, UseSelectedAssetIcon.UV0, UseSelectedAssetIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(UseSelectedAssetIconTint, UseSelectedAssetIconTint, UseSelectedAssetIconTint, 1.f)))
 			{
@@ -132,9 +132,9 @@ public:
 
 		auto Add_BrowseToAssetButton = [&](TAssetType* InAsset)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_WindowBg));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_WindowBg));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetColorU32(ImGuiCol_WindowBg));
+			ImGui::PushStyleColor(ImGuiCol_Button, 0);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
 
 			if (!InAsset)
 			{
@@ -162,9 +162,9 @@ public:
 
 		auto Add_ResetSelectionButton = [&](TAssetType*& InOutAsset)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_WindowBg));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_WindowBg));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetColorU32(ImGuiCol_WindowBg));
+			ImGui::PushStyleColor(ImGuiCol_Button, 0);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
 
 			if (ImGui::ImageButton("ResetToDefault", ResetToDefaultIcon.Id, ResetToDefaultIcon.Size, ResetToDefaultIcon.UV0, ResetToDefaultIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(ResetIconTint, ResetIconTint, ResetIconTint, 1.f)))
 			{
