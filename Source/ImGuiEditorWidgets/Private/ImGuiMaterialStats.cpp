@@ -423,11 +423,13 @@ namespace ImGuiMaterialStats
 									{
 										if (MaterialStats.ActiveShaderIndices.Contains(ShaderIndex))
 										{
-											ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-											ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-											ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+											ImGui::PushStyleColor(ImGuiCol_Button, 0);
+											ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
+											ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
+											ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
+											ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
-											if (ImGui::TransparentImageButton("BrowseToDir", BrowseIcon.Id, BrowseIcon.Size, BrowseIcon.UV0, BrowseIcon.UV1))
+											if (ImGui::ImageButtonWithTint("BrowseToDir", BrowseIcon.Id, BrowseIcon.Size, BrowseIcon.UV0, BrowseIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
 											{
 												FPlatformProcess::ExploreFolder(*Shader.ShaderDumpFilePath);
 											}
@@ -438,7 +440,7 @@ namespace ImGuiMaterialStats
 
 											ImGui::SameLine();
 
-											if (ImGui::TransparentImageButton("EditFile", EditIcon.Id, EditIcon.Size, EditIcon.UV0, EditIcon.UV1))
+											if (ImGui::ImageButtonWithTint("EditFile", EditIcon.Id, EditIcon.Size, EditIcon.UV0, EditIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
 											{
 												FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderDumpFilePath);
 											}
@@ -447,6 +449,7 @@ namespace ImGuiMaterialStats
 												ImGui::SetTooltip("Edit shader file");
 											}
 
+											ImGui::PopStyleVar(2);
 											ImGui::PopStyleColor(3);
 										}
 									}

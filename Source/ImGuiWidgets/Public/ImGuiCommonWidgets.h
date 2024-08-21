@@ -9,6 +9,34 @@
 
 namespace ImGui
 {
+	FORCEINLINE bool ImageButtonWithTint(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, ImU32 normal_tint_col, ImU32 active_tint_col, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
+	{
+		ImGuiContext& g = *ImGui::GetCurrentContext();
+		ImGuiWindow* window = GetCurrentWindow();
+		if (window->SkipItems)
+			return false;
+
+		const ImGuiID id = window->GetID(str_id);
+
+		const ImVec2 padding = g.Style.FramePadding;
+		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + image_size + padding * 2.0f);
+		ItemSize(bb);
+		if (!ItemAdd(bb, id))
+			return false;
+
+		bool hovered, held;
+		bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
+
+		// Render
+		const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+		const ImU32 tint_col = (held || hovered) ? active_tint_col : normal_tint_col;
+		RenderNavHighlight(bb, id);
+		RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, g.Style.FrameRounding));
+		window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col));
+
+		return pressed;
+	}
+
 	FORCEINLINE bool TransparentImageButton(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
 	{
 		ImGuiContext& g = *ImGui::GetCurrentContext();
@@ -16,7 +44,7 @@ namespace ImGui
 		if (window->SkipItems)
 			return false;
 
-		ImGuiID id = window->GetID(str_id);
+		const ImGuiID id = window->GetID(str_id);
 
 		const ImVec2 padding = g.Style.FramePadding;
 		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + image_size + padding * 2.0f);

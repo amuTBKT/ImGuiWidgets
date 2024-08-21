@@ -104,11 +104,13 @@ public:
 
 		auto Add_UseSelectedAssetButton = [&](TAssetType*& InOutAsset)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_Button, 0);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
 
-			if (ImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon.Id, UseSelectedAssetIcon.Size, UseSelectedAssetIcon.UV0, UseSelectedAssetIcon.UV1))
+			if (ImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon.Id, UseSelectedAssetIcon.Size, UseSelectedAssetIcon.UV0, UseSelectedAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
 			{
 				for (auto Asset : UEditorUtilityLibrary::GetSelectedAssets())
 				{
@@ -124,24 +126,27 @@ public:
 				ImGui::SetTooltip("Use Selected Asset from Content Browser");
 			}
 
+			ImGui::PopStyleVar(2);
 			ImGui::PopStyleColor(3);
 		};
 
 		auto Add_BrowseToAssetButton = [&](TAssetType* InAsset)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_Button, 0);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
+			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
 
 			if (!InAsset)
 			{
 				ImGui::BeginDisabled();
-				ImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1);
+				ImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF);
 				ImGui::EndDisabled();
 			}
 			else
 			{
-				if (ImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1))
+				if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
 				{
 					TArray<UObject*> Objects;
 					Objects.Add(InAsset);
@@ -153,6 +158,7 @@ public:
 				}
 			}
 
+			ImGui::PopStyleVar(2);
 			ImGui::PopStyleColor(3);
 		};
 
