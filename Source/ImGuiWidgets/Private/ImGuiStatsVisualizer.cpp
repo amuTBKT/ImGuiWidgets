@@ -1,12 +1,11 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
-#include "ImGuiStaticWidget.h"
-
 #if WITH_IMGUI && STATS
 
 #include <string>
 #include "Engine/Engine.h"
 #include "Stats/StatsData.h"
+#include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
 
 #if WITH_EDITOR
@@ -579,7 +578,7 @@ namespace ImGuiStatsVizualizer
 			if (ImGui::IsItemActive())
 			{
 				ImDrawList* DrawList = ImGui::GetWindowDrawList();
-				DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor(ImVec4(0.26f, 0.59f, 0.98f, 0.67f)), 0.f, ImDrawFlags_None, 1.f);
+				DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(ImGuiCol_FrameBgActive), 0.f, ImDrawFlags_None, 1.f);
 			}
 		}
 

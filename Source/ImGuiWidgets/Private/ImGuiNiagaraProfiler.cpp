@@ -1,11 +1,10 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
-#include "ImGuiStaticWidget.h"
-
 #if WITH_IMGUI && STATS
 
 #include "Engine/World.h"
 #include "NiagaraSystem.h"
+#include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
 #include "NiagaraGPUProfilerInterface.h"
 

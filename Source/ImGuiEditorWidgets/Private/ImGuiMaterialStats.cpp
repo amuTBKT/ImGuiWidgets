@@ -1,11 +1,10 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
-#include "ImGuiStaticWidget.h"
-
 #if WITH_IMGUI
 
 #include "ShaderCompiler.h"
 #include "ImGuiAssetPicker.h"
+#include "ImGuiStaticWidget.h"
 #include "Materials/Material.h"
 #include "MaterialStatsCommon.h"
 #include "ShaderCompilerCommon.h"
@@ -424,7 +423,11 @@ namespace ImGuiMaterialStats
 									{
 										if (MaterialStats.ActiveShaderIndices.Contains(ShaderIndex))
 										{
-											if (ImGui::ImageButton("BrowseToDir", BrowseIcon.Id, BrowseIcon.Size, BrowseIcon.UV0, BrowseIcon.UV1))
+											ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+											ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+											ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+
+											if (ImGui::TransparentImageButton("BrowseToDir", BrowseIcon.Id, BrowseIcon.Size, BrowseIcon.UV0, BrowseIcon.UV1))
 											{
 												FPlatformProcess::ExploreFolder(*Shader.ShaderDumpFilePath);
 											}
@@ -435,7 +438,7 @@ namespace ImGuiMaterialStats
 
 											ImGui::SameLine();
 
-											if (ImGui::ImageButton("EditFile", EditIcon.Id, EditIcon.Size, EditIcon.UV0, EditIcon.UV1))
+											if (ImGui::TransparentImageButton("EditFile", EditIcon.Id, EditIcon.Size, EditIcon.UV0, EditIcon.UV1))
 											{
 												FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderDumpFilePath);
 											}
@@ -443,6 +446,8 @@ namespace ImGuiMaterialStats
 											{
 												ImGui::SetTooltip("Edit shader file");
 											}
+
+											ImGui::PopStyleColor(3);
 										}
 									}
 								}

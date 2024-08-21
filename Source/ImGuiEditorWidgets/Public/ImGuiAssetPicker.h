@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "ImGuiPluginTypes.h"
-
 #if WITH_IMGUI
 
 #include "Editor.h"
@@ -93,7 +91,7 @@ public:
 				const ImVec2 p1 = ImVec2(CursorPosition.x + BorderRectSize.x, CursorPosition.y - 4.f);
 
 				ImDrawList* DrawList = ImGui::GetWindowDrawList();
-				DrawList->AddRect(p0, p1, ImColor(ImVec4(0.26f, 0.59f, 0.98f, 0.67f)), 0.f, ImDrawFlags_None, 1.f);
+				DrawList->AddRect(p0, p1, ImGui::GetColorU32(ImGuiCol_FrameBgActive), 0.f, ImDrawFlags_None, 1.f);
 
 				ImGui::SetTooltip("%s", TCHAR_TO_ANSI(*Asset->GetPathName()));
 
@@ -106,11 +104,11 @@ public:
 
 		auto Add_UseSelectedAssetButton = [&](TAssetType*& InOutAsset)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, 0);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
 
-			if (ImGui::ImageButton("UseSelectedAsset", UseSelectedAssetIcon.Id, UseSelectedAssetIcon.Size, UseSelectedAssetIcon.UV0, UseSelectedAssetIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(UseSelectedAssetIconTint, UseSelectedAssetIconTint, UseSelectedAssetIconTint, 1.f)))
+			if (ImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon.Id, UseSelectedAssetIcon.Size, UseSelectedAssetIcon.UV0, UseSelectedAssetIcon.UV1))
 			{
 				for (auto Asset : UEditorUtilityLibrary::GetSelectedAssets())
 				{
@@ -121,7 +119,6 @@ public:
 					}
 				}
 			}
-			UseSelectedAssetIconTint = ImGui::IsItemHovered() ? 1.f : 0.75f;
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetTooltip("Use Selected Asset from Content Browser");
@@ -132,25 +129,24 @@ public:
 
 		auto Add_BrowseToAssetButton = [&](TAssetType* InAsset)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, 0);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
 
 			if (!InAsset)
 			{
 				ImGui::BeginDisabled();
-				ImGui::ImageButton("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(BrowseIconTint, BrowseIconTint, BrowseIconTint, 1.f));
+				ImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1);
 				ImGui::EndDisabled();
 			}
 			else
 			{
-				if (ImGui::ImageButton("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(BrowseIconTint, BrowseIconTint, BrowseIconTint, 1.f)))
+				if (ImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1))
 				{
 					TArray<UObject*> Objects;
 					Objects.Add(InAsset);
 					GEditor->SyncBrowserToObjects(Objects);
 				}
-				BrowseIconTint = ImGui::IsItemHovered() ? 1.f : 0.75f;
 				if (ImGui::IsItemHovered())
 				{
 					ImGui::SetTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InAsset->GetName()));
@@ -162,15 +158,14 @@ public:
 
 		auto Add_ResetSelectionButton = [&](TAssetType*& InOutAsset)
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, 0);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0);
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
 
-			if (ImGui::ImageButton("ResetToDefault", ResetToDefaultIcon.Id, ResetToDefaultIcon.Size, ResetToDefaultIcon.UV0, ResetToDefaultIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(ResetIconTint, ResetIconTint, ResetIconTint, 1.f)))
+			if (ImGui::TransparentImageButton("ResetToDefault", ResetToDefaultIcon.Id, ResetToDefaultIcon.Size, ResetToDefaultIcon.UV0, ResetToDefaultIcon.UV1))
 			{
 				InOutAsset = nullptr;
 			}
-			ResetIconTint = ImGui::IsItemHovered() ? 1.f : 0.5f;
 			if (InOutAsset && ImGui::IsItemHovered())
 			{
 				ImGui::SetTooltip("Reset this property to its default value");
@@ -451,10 +446,6 @@ private:
 	bool bInitialized = false;
 	bool bAssetListChanged = false;
 	int32 LastSelectedAssetIndex = INDEX_NONE;
-
-	float ResetIconTint = 0.5f;
-	float BrowseIconTint = 0.75f;
-	float UseSelectedAssetIconTint = 0.75f;
 };
 
 #endif //#if WITH_IMGUI

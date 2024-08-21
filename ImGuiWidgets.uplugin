@@ -19,7 +19,7 @@
 			"Name": "ImGuiWidgets",
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
-			"TargetDenyList": [ "Server" ],
+			"TargetDenyList": [ "Server", "Program" ],
 			"TargetConfigurationDenyList": [ "Shipping" ]
 		},
 		{
