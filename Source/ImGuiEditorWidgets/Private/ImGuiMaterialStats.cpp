@@ -11,22 +11,27 @@
 #include "Materials/MaterialInstance.h"
 #include "DataDrivenShaderPlatformInfo.h"
 
+//namespace ImGuiShaderAnalyzer
+//{
+//	extern bool CanAnalyzeShader(EShaderFrequency ShaderType);
+//	extern void ShowShaderStats(EShaderFrequency ShaderType, const FString& EntryName, const FString& ShaderFilePath);
+//}
+
 namespace ImGuiMaterialStats
 {
 	static const EShaderPlatform PreviewShaderPlatform = EShaderPlatform::SP_PCD3D_SM6;
-
-	struct FShaderStatsData
-	{
-		FString			 EntryName;
-		FString			 ShaderName;
-		FString			 FunctionName;
-		FString			 ShaderDumpFilePath;
-		int32			 NumInstructions;
-		EShaderFrequency ShaderType;
-	};
-
+	static const EMaterialQualityLevel::Type PreviewQualityLevel = EMaterialQualityLevel::Num;
 	struct FMaterialStatsData
 	{
+		struct FShaderStatsData
+		{
+			FString			 ShaderClassName;
+			FString			 ShaderEntryName;
+			FString			 ShaderFilePath;
+			int32			 NumInstructions;
+			EShaderFrequency ShaderType;
+		};
+
 		void Reset()
 		{
 			if (DuplicatedMaterial && DuplicatedMaterial->IsRooted())
@@ -99,31 +104,32 @@ namespace ImGuiMaterialStats
 			}
 			return ShortName;
 		}
-		static FString MakeShaderName(FString VFName, FString ShaderEntryName)
+		static FString MakeShaderName(FString VFName, FString ShaderClassName)
 		{
 			static IConsoleVariable* DumpShaderDebugInfoShortCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DumpShaderDebugShortNames"));			
 			if (DumpShaderDebugInfoShortCVar && (DumpShaderDebugInfoShortCVar->GetInt() == 1))
 			{
 				// shorten name based on: GlobalBeginCompileShader()
-
-				if (VFName[0] == TCHAR('F') || VFName[0] == TCHAR('T'))
+				if (VFName.Len() > 0)
 				{
-					VFName.RemoveAt(0);
+					if (VFName[0] == TCHAR('F') || VFName[0] == TCHAR('T'))
+					{
+						VFName.RemoveAt(0);
+					}
+					VFName.ReplaceInline(TEXT("VertexFactory"), TEXT("VF"));
+					VFName.ReplaceInline(TEXT("GPUSkinAPEXCloth"), TEXT("APEX"));
+					VFName.ReplaceInline(TEXT("true"), TEXT("_1"));
+					VFName.ReplaceInline(TEXT("false"), TEXT("_0"));
 				}
-				VFName.ReplaceInline(TEXT("VertexFactory"), TEXT("VF"));
-				VFName.ReplaceInline(TEXT("GPUSkinAPEXCloth"), TEXT("APEX"));
-				VFName.ReplaceInline(TEXT("true"), TEXT("_1"));
-				VFName.ReplaceInline(TEXT("false"), TEXT("_0"));
 
-				if (ShaderEntryName[0] == TCHAR('F') || ShaderEntryName[0] == TCHAR('T'))
+				if (ShaderClassName[0] == TCHAR('F') || ShaderClassName[0] == TCHAR('T'))
 				{
-					ShaderEntryName.RemoveAt(0);
+					ShaderClassName.RemoveAt(0);
 				}
 			}
-			FString ShaderName = VFName / ShaderEntryName;
-			return ShaderName;
+			return (VFName.Len() == 0) ? ShaderClassName : (VFName / ShaderClassName);
 		}
-		static FString SanitizeShaderDumpFilepath(const FString& FilePath)
+		static FString SanitizeShaderDumpFilePath(const FString& FilePath)
 		{
 			FString SanitizedPath = FilePath;
 			// sanitize based on: FShaderCompilingManager::CreateShaderDebugInfoPath
@@ -143,7 +149,7 @@ namespace ImGuiMaterialStats
 
 			const FMaterialShaderMap* MaterialShaderMap = Resource->GetGameThreadShaderMap();
 			if (MaterialShaderMap != nullptr)
-			{				
+			{
 				TMap<FShaderId, TShaderRef<FShader>> ShaderMap;
 				MaterialShaderMap->GetShaderList(ShaderMap);
 
@@ -154,43 +160,39 @@ namespace ImGuiMaterialStats
 				Shaders.Reserve(ShaderMap.Num());
 				for (const auto& Entry : ShaderMap)
 				{
-					FShaderType* EntryShader = Entry.Value.GetType();
-					FVertexFactoryType* VertexFactory = Entry.Value.GetVertexFactoryType();
-					if (VertexFactory)
+					const FShaderType* EntryShader = Entry.Value.GetType();
+					const FVertexFactoryType* VertexFactory = Entry.Value.GetVertexFactoryType();
+					const FString VertexFactoryName = VertexFactory ? VertexFactory->GetName() : TEXT("Global");
+					const FString ShaderClassName = EntryShader->GetName();
+					const FString ShaderName = VertexFactory ? MakeShaderName(VertexFactoryName, ShaderClassName) : MakeShaderName(TEXT(""), ShaderClassName);
+
+					FString ShaderFileName = EntryShader->GetShaderFilename();
+					int32 SlashIndex;
+					if (ShaderFileName.FindLastChar(TEXT('/'), SlashIndex))
 					{
-						FString VertexFactoryName = VertexFactory->GetName();
-						FString ShaderEntryName = EntryShader->GetName();
-						const FString ShaderName = MakeShaderName(VertexFactoryName, ShaderEntryName);
+						ShaderFileName = ShaderFileName.RightChop(SlashIndex + 1);
+					}
 
-						FString ShaderFileName = EntryShader->GetShaderFilename();
-						int32 SlashIndex;
-						if (ShaderFileName.FindLastChar(TEXT('/'), SlashIndex))
-						{
-							ShaderFileName = ShaderFileName.RightChop(SlashIndex + 1);
-						}
-						
-						const FString DebugExtensionStr = FString::Printf(TEXT("_%08x%08x"), MaterialShaderMap->GetShaderMapId().BaseMaterialId.A, MaterialShaderMap->GetShaderMapId().BaseMaterialId.B);
-						FString DebugGroupName = Resource->GetUniqueAssetName(PreviewShaderPlatform, MaterialShaderMap->GetShaderMapId()) / LexToString(Resource->GetQualityLevel()) / Entry.Key.ShaderPipelineName.GetDebugString().String.Get() / ShaderName;
-						DebugGroupName = ShortenShaderDebugName(DebugGroupName);
-						
-						FString ShaderDumpFilePath = GShaderCompilingManager->GetAbsoluteShaderDebugInfoDirectory() / ShaderPlatformName / DebugGroupName / FString::Printf(TEXT("%i%s"), Entry.Key.PermutationId, *DebugExtensionStr) / ShaderFileName;
-						ShaderDumpFilePath = SanitizeShaderDumpFilepath(ShaderDumpFilePath);
+					const FString DebugExtensionStr = FString::Printf(TEXT("_%08x%08x"), MaterialShaderMap->GetShaderMapId().BaseMaterialId.A, MaterialShaderMap->GetShaderMapId().BaseMaterialId.B);
+					FString DebugGroupName = Resource->GetUniqueAssetName(PreviewShaderPlatform, MaterialShaderMap->GetShaderMapId()) / LexToString(Resource->GetQualityLevel()) / Entry.Key.ShaderPipelineName.GetDebugString().String.Get() / ShaderName;
+					DebugGroupName = ShortenShaderDebugName(DebugGroupName);
 
-						const int32 ShaderIndex = Shaders.AddDefaulted();
-						Shaders[ShaderIndex].EntryName = ShaderEntryName;
-						Shaders[ShaderIndex].ShaderName = ShaderName;
-						Shaders[ShaderIndex].FunctionName = EntryShader->GetFunctionName();
-						Shaders[ShaderIndex].ShaderDumpFilePath = ShaderDumpFilePath;
-						Shaders[ShaderIndex].NumInstructions = Entry.Value.GetShader()->GetNumInstructions();
-						Shaders[ShaderIndex].ShaderType = EntryShader->GetFrequency();
-						
-						ShaderVFLookup.FindOrAdd(VertexFactoryName).Add(ShaderIndex);
+					FString ShaderFilePath = GShaderCompilingManager->GetAbsoluteShaderDebugInfoDirectory() / ShaderPlatformName / DebugGroupName / FString::Printf(TEXT("%i%s"), Entry.Key.PermutationId, *DebugExtensionStr) / ShaderFileName;
+					ShaderFilePath = SanitizeShaderDumpFilePath(ShaderFilePath);
 
-						IPlatformFile& PlatformFile = IPlatformFile::GetPlatformPhysical();
-						if (PlatformFile.FileExists(*ShaderDumpFilePath))
-						{
-							ActiveShaderIndices.AddUnique(ShaderIndex);
-						}
+					const int32 ShaderIndex = Shaders.AddDefaulted();
+					Shaders[ShaderIndex].ShaderClassName = ShaderClassName;
+					Shaders[ShaderIndex].ShaderEntryName = EntryShader->GetFunctionName();
+					Shaders[ShaderIndex].ShaderFilePath = ShaderFilePath;
+					Shaders[ShaderIndex].NumInstructions = Entry.Value.GetShader()->GetNumInstructions();
+					Shaders[ShaderIndex].ShaderType = EntryShader->GetFrequency();
+
+					ShaderVFLookup.FindOrAdd(VertexFactoryName).Add(ShaderIndex);
+
+					IPlatformFile& PlatformFile = IPlatformFile::GetPlatformPhysical();
+					if (PlatformFile.FileExists(*ShaderFilePath))
+					{
+						ActiveShaderIndices.AddUnique(ShaderIndex);
 					}
 				}
 			}
@@ -251,7 +253,7 @@ namespace ImGuiMaterialStats
 			static IConsoleVariable* DumpShaderShortNamesCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DumpShaderDebugShortNames"));
 			static int32 DumpShaderInfoCVarRestoreValue = INDEX_NONE;
 			static bool bIsCompilingPermutations = false;
-			
+
 			static FImGuiAssetPicker<UMaterial> MaterialPicker;
 			static TWeakObjectPtr<UMaterial> SelectedMaterial;
 			static FImGuiTextFilter<128> ShaderFilter;
@@ -260,6 +262,7 @@ namespace ImGuiMaterialStats
 			const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Warning"), FVector2D(ImGui::GetFontSize()), 1.f);
 			const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
 			const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Edit"), FVector2D(ImGui::GetFontSize()), 1.f);
+			//const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("DerivedData.Cache.Statistics"), FVector2D(ImGui::GetFontSize()), 1.f);
 
 			// warning messages
 			{
@@ -300,14 +303,13 @@ namespace ImGuiMaterialStats
 				Reset();
 			}
 
-			ImGui::Separator();
-
 			// stats collection
 			{
 				bool bButtonDisabled = (bIsCompilingPermutations || !SelectedMaterial.IsValid());
 				
 				ImGui::BeginDisabled(bButtonDisabled);
-				if (ImGui::Button(bIsCompilingPermutations ? "Compiling..." : "Gather Stats"))
+				const char* ButtonText = bIsCompilingPermutations ? "Compiling..." : (MaterialStats.ShaderVFLookup.IsEmpty() ? "Gather Stats" : "Refresh Stats");
+				if (ImGui::Button(ButtonText))
 				{
 					Reset();
 
@@ -331,7 +333,7 @@ namespace ImGuiMaterialStats
 					}
 					auto& Resource = MaterialStats.Resource;
 					Resource = new FMaterialResourceStats();
-					Resource->SetMaterial(MaterialToUse, nullptr, ERHIFeatureLevel::SM6, EMaterialQualityLevel::Num);
+					Resource->SetMaterial(MaterialToUse, nullptr, ERHIFeatureLevel::SM6, PreviewQualityLevel);
 					Resource->CacheShaders(PreviewShaderPlatform, EMaterialShaderPrecompileMode::Default);
 				}
 				ImGui::EndDisabled();
@@ -364,10 +366,9 @@ namespace ImGuiMaterialStats
 			{
 				ImGui::SameLine();
 				ShaderFilter.Draw("FilterShaders", "Filter Shaders");
-
 				ImGui::Separator();
 
-				if (ImGui::BeginTabBar("Shader"))
+				if (ImGui::BeginTabBar("Shaders"))
 				{
 					for (const auto& [VFName, ShaderIndices] : MaterialStats.ShaderVFLookup)
 					{
@@ -381,7 +382,7 @@ namespace ImGuiMaterialStats
 								ImGui::TableSetupColumn("Shader Name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
 								ImGui::TableSetupColumn("Shader Type", ImGuiTableColumnFlags_WidthFixed);
 								ImGui::TableSetupColumn("Instruction Count", ImGuiTableColumnFlags_WidthFixed);
-								ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed);
+								ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthStretch);
 								ImGui::TableSetupScrollFreeze(0, 1);
 
 								ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
@@ -395,18 +396,18 @@ namespace ImGuiMaterialStats
 								{
 									const auto& Shader = MaterialStats.Shaders[ShaderIndex];
 
-									if (!ShaderFilter.PassFilter(Shader.EntryName))
+									if (!ShaderFilter.PassFilter(Shader.ShaderClassName))
 									{
 										continue;
 									}
 
-									FImGuiNamedWidgetScope Shader_Scope{ TCHAR_TO_ANSI(*Shader.EntryName) };
+									FImGuiNamedWidgetScope Shader_Scope{ TCHAR_TO_ANSI(*Shader.ShaderClassName) };
 
 									ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 									ImGui::TableSetColumnIndex(0);
 									{
-										ImGui::TextUnformatted(TCHAR_TO_ANSI(*Shader.EntryName));
+										ImGui::TextUnformatted(TCHAR_TO_ANSI(*Shader.ShaderClassName));
 									}
 
 									ImGui::TableSetColumnIndex(1);
@@ -431,7 +432,7 @@ namespace ImGuiMaterialStats
 
 											if (ImGui::ImageButtonWithTint("BrowseToDir", BrowseIcon.Id, BrowseIcon.Size, BrowseIcon.UV0, BrowseIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
 											{
-												FPlatformProcess::ExploreFolder(*Shader.ShaderDumpFilePath);
+												FPlatformProcess::ExploreFolder(*Shader.ShaderFilePath);
 											}
 											if (ImGui::IsItemHovered())
 											{
@@ -442,12 +443,25 @@ namespace ImGuiMaterialStats
 
 											if (ImGui::ImageButtonWithTint("EditFile", EditIcon.Id, EditIcon.Size, EditIcon.UV0, EditIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
 											{
-												FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderDumpFilePath);
+												FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderFilePath);
 											}
 											if (ImGui::IsItemHovered())
 											{
 												ImGui::SetTooltip("Edit shader file");
 											}
+
+											ImGui::SameLine();
+
+											//ImGui::BeginDisabled(ImGuiShaderAnalyzer::CanAnalyzeShader(Shader.ShaderType) == false);
+											//if (ImGui::ImageButtonWithTint("Analyze", AnalyzeIcon.Id, AnalyzeIcon.Size, AnalyzeIcon.UV0, AnalyzeIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
+											//{
+											//	ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
+											//}
+											//if (ImGui::IsItemHovered())
+											//{
+											//	ImGui::SetTooltip("Analyze shader");
+											//}
+											//ImGui::EndDisabled();
 
 											ImGui::PopStyleVar(2);
 											ImGui::PopStyleColor(3);

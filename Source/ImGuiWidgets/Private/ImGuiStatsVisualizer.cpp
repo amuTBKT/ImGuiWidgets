@@ -2,11 +2,11 @@
 
 #if WITH_IMGUI && STATS
 
-#include <string>
 #include "Engine/Engine.h"
 #include "Stats/StatsData.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
+#include "Containers/AnsiString.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -19,8 +19,8 @@ namespace ImGuiStatsVizualizer
 {
 	struct FStatGroupData
 	{
-		const std::string DisplayName = "None";
-		const FString StatName = "None";
+		const FAnsiString DisplayName;
+		const FString StatName;
 		bool IsActive = false;
 	};
 	static TMap<FName, FStatGroupData> StatGroups;
@@ -31,29 +31,26 @@ namespace ImGuiStatsVizualizer
 
 	FORCEINLINE static const char* GetStatDescription(const FComplexStatMessage& Stat)
 	{
-		static TMap<FName, std::string> CachedDescriptions;
+		static TMap<FName, FAnsiString> CachedDescriptions;
 
 		const FName RawStatName = Stat.NameAndInfo.GetRawName();
-		const std::string* CachedDescription = CachedDescriptions.Find(RawStatName);
+		const FAnsiString* CachedDescription = CachedDescriptions.Find(RawStatName);
 		if (!CachedDescription)
 		{
 			const FString StatDesc = Stat.GetDescription();
 			const FString StatDisplay = StatDesc.Len() == 0 ? Stat.GetShortName().GetPlainNameString() : StatDesc;
 
-			CachedDescription = &CachedDescriptions.Add(RawStatName, std::string(TCHAR_TO_ANSI(*StatDisplay)));
+			CachedDescription = &CachedDescriptions.Add(RawStatName, FAnsiString(*StatDisplay));
 		}
-
-		return CachedDescription->c_str();
+		return *(*CachedDescription);
 	}
 
 	FORCEINLINE static bool AddSelectableRow(const char* Label, FName ItemName)
 	{
 		static TSet<FName> SelectedItems;
 
-		bool WasSelected = SelectedItems.Contains(ItemName);
-
-		bool IsSelected = ImGui::Selectable(Label, WasSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
-	
+		const bool WasSelected = SelectedItems.Contains(ItemName);
+		const bool IsSelected = ImGui::Selectable(Label, WasSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);	
 		if (IsSelected)
 		{
 			const int32 NumItemsSelected = SelectedItems.Num();
@@ -71,7 +68,6 @@ namespace ImGuiStatsVizualizer
 				SelectedItems.Add(ItemName);
 			}
 		}
-
 		return IsSelected;
 	}
 
@@ -486,11 +482,11 @@ namespace ImGuiStatsVizualizer
 				FString StatName = GroupName.ToString();
 				StatName.RemoveFromStart(TEXT("STATGROUP_"), ESearchCase::CaseSensitive);
 
-				StatGroupData = &StatGroups.Add(StatGroupFName, { std::string(TCHAR_TO_ANSI(*GroupDesc)), StatName, true });
+				StatGroupData = &StatGroups.Add(StatGroupFName, { FAnsiString(GroupDesc), StatName, true });
 			};
 			StatGroupData->IsActive = true;
 
-			if (!CullNextSection && ImGui::CollapsingHeader(StatGroupData->DisplayName.c_str(), ImGuiTreeNodeFlags_DefaultOpen))
+			if (!CullNextSection && ImGui::CollapsingHeader(*StatGroupData->DisplayName, ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
 				char ScratchTableIdBuffer[128];
@@ -502,7 +498,7 @@ namespace ImGuiStatsVizualizer
 
 					if (bHasHierarchy || bHasFlat)
 					{
-						sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_CycleStats", StatGroupData->DisplayName.c_str());
+						sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_CycleStats", *StatGroupData->DisplayName);
 						if (ImGui::BeginTable(ScratchTableIdBuffer, GetCycleStatsColumnCount(), TableFlags))
 						{
 							RenderGroupedHeadings(bHasHierarchy);
@@ -527,7 +523,7 @@ namespace ImGuiStatsVizualizer
 				// Render memory counters.
 				if (!CullNextSection && StatGroup.MemoryAggregate.Num())
 				{
-					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_MemoryStats", StatGroupData->DisplayName.c_str());
+					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_MemoryStats", *StatGroupData->DisplayName);
 					if (ImGui::BeginTable(ScratchTableIdBuffer, GetMemoryStatsColumnCount(), TableFlags))
 					{
 						RenderMemoryHeadings();
@@ -542,7 +538,7 @@ namespace ImGuiStatsVizualizer
 				// Render remaining counters.
 				if (!CullNextSection && StatGroup.CountersAggregate.Num())
 				{
-					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_CounterStats", StatGroupData->DisplayName.c_str());
+					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_CounterStats", *StatGroupData->DisplayName);
 					if (ImGui::BeginTable(ScratchTableIdBuffer, GetCounterStatsColumnCount(), TableFlags))
 					{
 						RenderCounterHeadings();
@@ -592,9 +588,9 @@ namespace ImGuiStatsVizualizer
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
 			}
 
-			const char* GroupName = Itr.Value.DisplayName.c_str();
+			const char* GroupName = *Itr.Value.DisplayName;
 
-			// TODO: maybe there's a better way to wrap widgets to window width?
+			// TODO: maybe there's a better way to wrap widgets?
 			ImGui::SameLine();
 			if ((ImGui::GetCursorPosX() + ImGui::CalcTextSize(GroupName).x + ImGui::GetStyle().FramePadding.x * 2.f) >= ImGui::GetWindowWidth())
 			{
