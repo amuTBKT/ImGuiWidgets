@@ -384,13 +384,7 @@ namespace ImGuiMaterialStats
 								ImGui::TableSetupColumn("Instruction Count", ImGuiTableColumnFlags_WidthFixed);
 								ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthStretch);
 								ImGui::TableSetupScrollFreeze(0, 1);
-
-								ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
-								for (int32 ColumnIndex = 0; ColumnIndex < 4; ColumnIndex++)
-								{
-									ImGui::TableSetColumnIndex(ColumnIndex);
-									ImGui::TableHeader(ImGui::TableGetColumnName(ColumnIndex));
-								}
+								ImGui::TableHeadersRow();
 
 								for (int32 ShaderIndex : ShaderIndices)
 								{

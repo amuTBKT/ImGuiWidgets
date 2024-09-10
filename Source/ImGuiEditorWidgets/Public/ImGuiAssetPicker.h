@@ -91,7 +91,7 @@ public:
 				const ImVec2 p1 = ImVec2(CursorPosition.x + BorderRectSize.x, CursorPosition.y - 4.f);
 
 				ImDrawList* DrawList = ImGui::GetWindowDrawList();
-				DrawList->AddRect(p0, p1, ImGui::GetColorU32(ImGuiCol_FrameBgActive), 0.f, ImDrawFlags_None, 1.f);
+				DrawList->AddRect(p0, p1, 0x80FFFFFF, 0.f, ImDrawFlags_None, 1.f);
 
 				ImGui::SetTooltip("%s", TCHAR_TO_ANSI(*Asset->GetPathName()));
 

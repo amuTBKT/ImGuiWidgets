@@ -101,14 +101,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetupColumn("ExclusiveMax", ImGuiTableColumnFlags_WidthFixed);
 		ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
-
-		//ImGui::TableHeadersRow();
-		ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
-		for (int32 ColumnIndex = 0; ColumnIndex < GetCycleStatsColumnCount(); ColumnIndex++)
-		{
-			ImGui::TableSetColumnIndex(ColumnIndex);
-			ImGui::TableHeader(ImGui::TableGetColumnName(ColumnIndex));
-		}
+		ImGui::TableHeadersRow();
 	}
 
 	FORCEINLINE static void RenderMemoryHeadings()
@@ -122,14 +115,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetupColumn("MemPool", ImGuiTableColumnFlags_WidthFixed);
 		ImGui::TableSetupColumn("Pool Capacity", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
-	
-		//ImGui::TableHeadersRow();
-		ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
-		for (int column = 0; column < GetMemoryStatsColumnCount(); column++)
-		{
-			ImGui::TableSetColumnIndex(column);
-			ImGui::TableHeader(ImGui::TableGetColumnName(column));
-		}
+		ImGui::TableHeadersRow();
 	}
 
 	FORCEINLINE static void RenderCounterHeadings()
@@ -142,14 +128,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetupColumn("Max", ImGuiTableColumnFlags_WidthFixed);
 		ImGui::TableSetupColumn("Min", ImGuiTableColumnFlags_WidthStretch);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
-	
-		//ImGui::TableHeadersRow();
-		ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
-		for (int column = 0; column < GetCounterStatsColumnCount(); column++)
-		{
-			ImGui::TableSetColumnIndex(column);
-			ImGui::TableHeader(ImGui::TableGetColumnName(column));
-		}
+		ImGui::TableHeadersRow();
 	}
 
 	// body

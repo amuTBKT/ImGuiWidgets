@@ -90,7 +90,7 @@ public:
 
 		for (const FString& Keyword : FilterKeywords)
 		{
-			if ((Keyword[0] == TCHAR('!') && (Keyword.Len() > 1)))
+			if ((Keyword.Len() > 1) && (Keyword[0] == TCHAR('!')))
 			{
 				if (StringToCheck.Contains(&Keyword[1], Keyword.Len() - 1, ESearchCase::IgnoreCase))
 				{

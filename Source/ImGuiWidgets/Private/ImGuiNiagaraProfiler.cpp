@@ -138,13 +138,7 @@ namespace ImGuiNiagaraProfiler
 				ImGui::TableSetupColumn("Calls", ImGuiTableColumnFlags_WidthFixed);
 				ImGui::TableSetupColumn("Duration(ms)", ImGuiTableColumnFlags_WidthStretch);
 				ImGui::TableSetupScrollFreeze(0, 1);
-
-				ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
-				for (int32 ColumnIndex = 0; ColumnIndex < 3; ColumnIndex++)
-				{
-					ImGui::TableSetColumnIndex(ColumnIndex);
-					ImGui::TableHeader(ImGui::TableGetColumnName(ColumnIndex));
-				}
+				ImGui::TableHeadersRow();
 
 				for (const auto& Stat : AccumulatedStats)
 				{
