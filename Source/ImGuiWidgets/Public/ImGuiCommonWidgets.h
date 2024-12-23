@@ -30,7 +30,7 @@ namespace ImGui
 		// Render
 		const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
 		const ImU32 tint_col = (held || hovered) ? active_tint_col : normal_tint_col;
-		RenderNavHighlight(bb, id);
+		RenderNavCursor(bb, id);
 		RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, g.Style.FrameRounding));
 		window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col));
 
@@ -57,6 +57,7 @@ namespace ImGui
 
 		// Render
 		const ImU32 col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+		RenderNavCursor(bb, id);
 		window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, col);
 
 		return pressed;
