@@ -199,7 +199,10 @@ public:
 				PreviewText[PreviewTextMaxLength - 3] = TCHAR('.');
 			}
 			
-			const bool bWasAssetViewerVisible = ImGui::IsPopupOpen(AssetViewerPopupName);
+			if (!ImGui::IsPopupOpen(AssetViewerPopupName))
+			{
+				bIsAssetViewerVisible = false;
+			}
 
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
 			if (ImGui::Button(TCHAR_TO_ANSI(*PreviewText), ImVec2(AssetViewerWidth * 0.65f, 0.f)))
@@ -230,11 +233,11 @@ public:
 			if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 			{
 				// reset filter text and set focus when asset viewer is triggered
-				if (!bWasAssetViewerVisible)
+				if (!bIsAssetViewerVisible)
 				{
 					TextFilter.Reset();
 				}
-				TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bWasAssetViewerVisible, AssetViewerWidth);
+				TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth);
 
 				if (ImGui::BeginListBox("###AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
 				{
@@ -243,7 +246,7 @@ public:
 						const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
 						const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
 						{
-							ImGui::PushID(GetTypeHash(AvailableAssets[AssetIndex]));
+							ImGui::PushID(GetTypeHash(AvailableAssets[AssetIndex].AssetName));
 							if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, AssetViewerRowHeight)))
 							{
 								NewSelectedIndex = AssetIndex;
@@ -277,6 +280,11 @@ public:
 						// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
 						if (bWasSelected)
 						{
+							// scroll to item when popup is opened
+							if (!bIsAssetViewerVisible)
+							{
+								ImGui::ScrollToItem();
+							}
 							ImGui::SetItemDefaultFocus();
 						}
 					};
@@ -309,6 +317,10 @@ public:
 							}
 						}
 					}
+
+					// NOTE: ImGui::BeginListBox can return false on first attempt (rect not visible in the popup window)
+					// So this flag is set there, instead of using `ImGui::IsPopupOpen(AssetViewerPopupName)`
+					bIsAssetViewerVisible = true;
 
 					ImGui::EndListBox();
 				}
@@ -451,6 +463,7 @@ private:
 
 	bool bInitialized = false;
 	bool bAssetListChanged = false;
+	bool bIsAssetViewerVisible = false;
 	int32 LastSelectedAssetIndex = INDEX_NONE;
 };
 
