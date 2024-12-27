@@ -9,6 +9,7 @@
 
 namespace ImGui
 {
+	// Similar to `ImGui::ImageButton` but allows tinting the image depending on button state (inactive/active|hovered)
 	FORCEINLINE bool ImageButtonWithTint(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, ImU32 normal_tint_col, ImU32 active_tint_col, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
 	{
 		ImGuiContext& g = *ImGui::GetCurrentContext();
@@ -37,6 +38,7 @@ namespace ImGui
 		return pressed;
 	}
 
+	// Similar to `ImGui::ImageButton` but doesn't render the background
 	FORCEINLINE bool TransparentImageButton(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
 	{
 		ImGuiContext& g = *ImGui::GetCurrentContext();

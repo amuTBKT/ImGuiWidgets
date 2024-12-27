@@ -5,6 +5,7 @@
 #if WITH_IMGUI
 
 #include "Editor.h"
+#include "imgui_internal.h"
 #include "AssetThumbnail.h"
 #include "ClassIconFinder.h"
 #include "ImGuiCommonWidgets.h"
@@ -49,11 +50,11 @@ public:
 		TAssetType* SelectedAsset = SelectedAssetPtr.Get();
 		if (SelectedAsset)
 		{
-			if (SelectedAsset != SelectedAssetThumbnail->GetAsset() || bAssetListChanged)
+			if (!SelectedAssetThumbnail || (SelectedAsset != SelectedAssetThumbnail->GetAsset()) || bAssetListChanged)
 			{
 				bAssetListChanged = false;
 
-				SelectedAssetThumbnail->SetAsset(SelectedAsset);
+				SelectedAssetThumbnail = MakeShareable(new FAssetThumbnail(FAssetData(SelectedAsset), 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
 				LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(SelectedAsset);
 			}
 			SelectedAssetTexture = SelectedAssetThumbnail->GetViewportRenderTargetTexture();
@@ -261,12 +262,12 @@ public:
 						}
 						ImGui::SameLine();
 
-						if (!AssetThumnailIcons.Find(AvailableAssets[AssetIndex]))
+						if (!AssetThumbnailIcons.Find(AvailableAssets[AssetIndex]))
 						{
-							AssetThumnailIcons.Add(AvailableAssets[AssetIndex]) = MakeShareable(new FAssetThumbnail(AvailableAssets[AssetIndex], 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
+							AssetThumbnailIcons.Add(AvailableAssets[AssetIndex]) = MakeShareable(new FAssetThumbnail(AvailableAssets[AssetIndex], 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
 						}
 
-						FSlateShaderResource* PreviewTexture = AssetThumnailIcons[AvailableAssets[AssetIndex]]->GetViewportRenderTargetTexture();
+						FSlateShaderResource* PreviewTexture = AssetThumbnailIcons[AvailableAssets[AssetIndex]]->GetViewportRenderTargetTexture();
 						Add_AssetThumbnail(PreviewTexture, AssetViewerRowHeight, nullptr);
 
 						ImGui::SameLine();
@@ -454,10 +455,10 @@ private:
 private:
 	// TODO: Move resources to a common type so that they can be shared
 	TArray<FAssetData> AvailableAssets;
-	TMap<FAssetData, TSharedPtr<FAssetThumbnail>> AssetThumnailIcons;
+	TMap<FAssetData, TSharedPtr<FAssetThumbnail>> AssetThumbnailIcons;
 
 	const FSlateBrush* ClassIconBrush = nullptr;
-	TSharedRef<FAssetThumbnail> SelectedAssetThumbnail = MakeShared<FAssetThumbnail>(nullptr, 50, 50, UThumbnailManager::Get().GetSharedThumbnailPool());
+	TSharedPtr<FAssetThumbnail> SelectedAssetThumbnail = nullptr;
 
 	FImGuiTextFilter<128> TextFilter = {};
 
