@@ -222,29 +222,33 @@ namespace ImGuiStatsVizualizer
 
 				if (UObject* Asset = LinkedAsset.Find(RawStatName)->Get())
 				{
-					static const uint32 BrowseHash = FCrc::Strihash_DEPRECATED(TEXT("_Browse"));
-					static const uint32 EditHash = FCrc::Strihash_DEPRECATED(TEXT("_Edit"));
+					static const uint32 BrowseHash = GetTypeHash(TEXT("_Browse"));
+					static const uint32 EditHash = GetTypeHash(TEXT("_Edit"));
 				
 					const uint32 AssetHash = GetTypeHash(StatDescription);
 
+					ImGui::PushStyleColor(ImGuiCol_Button, 0);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
+					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+
 					ImGui::PushID(HashCombine(AssetHash, BrowseHash));
-					if (ImGui::ImageButton("BrowseToAsset", BrowseAssetIcon.Id, BrowseAssetIcon.Size, BrowseAssetIcon.UV0, BrowseAssetIcon.UV1))
+					if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseAssetIcon.Id, BrowseAssetIcon.Size, BrowseAssetIcon.UV0, BrowseAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
 						TArray<UObject*> Objects = { Asset };
-						GEditor->SyncBrowserToObjects(Objects);					
+						GEditor->SyncBrowserToObjects(Objects);
 					}
 					if (ImGui::IsItemHovered())
 					{
 						ImGui::SetTooltip("Browse to asset.");
 					}
 					ImGui::PopID();
-								
-#define ENABLE_EDIT_ICON 0 // seems to be crashing
-#if ENABLE_EDIT_ICON
+
 					ImGui::SameLine();
 
 					ImGui::PushID(HashCombine(AssetHash, EditHash));
-					if (ImGui::ImageButton("EditAsset", EditAssetIcon.Id, EditAssetIcon.Size, EditAssetIcon.UV0, EditAssetIcon.UV1))
+					if (ImGui::ImageButtonWithTint("EditAsset", EditAssetIcon.Id, EditAssetIcon.Size, EditAssetIcon.UV0, EditAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
 						UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 						if (AssetEditorSubsystem)
@@ -257,7 +261,9 @@ namespace ImGuiStatsVizualizer
 						ImGui::SetTooltip("Edit asset.");
 					}
 					ImGui::PopID();
-#endif //#if ENABLE_EDIT_ICON
+
+					ImGui::PopStyleVar(2);
+					ImGui::PopStyleColor(3);
 				}
 #else
 				//ImGui::Text("");
@@ -609,8 +615,8 @@ namespace ImGuiStatsVizualizer
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Edit"), FVector2D(8.f, 8.f) * ImGui::GetIO().FontGlobalScale, 1.f);
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Search"), FVector2D(8.f, 8.f) * ImGui::GetIO().FontGlobalScale, 1.f);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Edit"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale, 1.f);
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Search"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale, 1.f);
 	}
 
 	static void Tick(ImGuiContext* Context)
