@@ -27,32 +27,126 @@ class FImGuiAssetPicker : FNoncopyable
 	static constexpr bool bUsedWithBlueprintAsset = std::is_same<TAssetType, UBlueprint>::value;
 	static constexpr bool bUseBlueprintSubClass = bUsedWithBlueprintAsset && (sizeof...(Types) > 1);
 	
-public:
-	FImGuiAssetPicker() = default;
-
-	~FImGuiAssetPicker()
+	class FAssetContainer
 	{
-		if (UObjectInitialized())
+	public:
+		static FAssetContainer& GetInstance()
 		{
-			IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
-			AssetRegistry.OnAssetAdded().RemoveAll(this);
-			AssetRegistry.OnAssetRemoved().RemoveAll(this);
+			static FAssetContainer ContainerInstance = {};
+			return ContainerInstance;
 		}
-	}
 
+		~FAssetContainer()
+		{
+			if (UObjectInitialized())
+			{
+				IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+				AssetRegistry.OnAssetAdded().RemoveAll(this);
+				AssetRegistry.OnAssetRemoved().RemoveAll(this);
+			}
+		}
+
+		uint32 GetRevisionId() const { return RevisionId; }
+		const FSlateBrush* GetClassIconBrush() const { return ClassIconBrush; }
+		const TArray<FAssetData>& GetAvailableAssets() const { return AvailableAssets; }
+
+		FORCEINLINE FSlateShaderResource* GetAssetThumbnail(const FAssetData& AssetData)
+		{
+			const int32 AssetTypeHash = GetTypeHash(AssetData);
+			TSharedPtr<FAssetThumbnail>* AssetThumbnailPtr = AssetThumbnailIcons.Find(AssetTypeHash);
+			if (!AssetThumbnailPtr)
+			{
+				AssetThumbnailPtr = &AssetThumbnailIcons.Add(AssetTypeHash);
+				*AssetThumbnailPtr = MakeShareable(new FAssetThumbnail(AssetData, 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
+			}
+			return AssetThumbnailPtr->Get()->GetViewportRenderTargetTexture();
+		}
+
+	private:
+		FAssetContainer()
+		{
+			ClassIconBrush = FClassIconFinder::FindThumbnailForClass(TAssetType::StaticClass(), NAME_None);
+
+			IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+			GatherAssets(AssetRegistry);
+			AssetRegistry.OnAssetAdded().AddRaw(this, &FAssetContainer::OnAssetAdded);
+			AssetRegistry.OnAssetRemoved().AddRaw(this, &FAssetContainer::OnAssetRemoved);
+		}
+
+		FORCEINLINE void GatherAssets(IAssetRegistry& AssetRegistry)
+		{
+			FARFilter Filter;
+			Filter.ClassPaths.Add(TAssetType::StaticClass()->GetClassPathName());
+			Filter.bRecursiveClasses = true; // TODO: expose filter settings
+
+			if constexpr (bUseBlueprintSubClass)
+			{
+				using TBlueprintClassType = std::tuple_element<1, std::tuple<Types...>>::type;
+				Filter.TagsAndValues.Add(FBlueprintTags::NativeParentClassPath, FObjectPropertyBase::GetExportPath(TBlueprintClassType::StaticClass()));
+			}
+
+			AssetRegistry.GetAssets(Filter, AvailableAssets);
+		}
+
+		FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
+		{
+			if constexpr (bUseBlueprintSubClass)
+			{
+				using TBlueprintClassType = std::tuple_element<1, std::tuple<Types...>>::type;
+				FAssetDataTagMapSharedView::FFindTagResult NativeClassPathTag = AssetData.TagsAndValues.FindTag(FBlueprintTags::NativeParentClassPath);
+				if (!NativeClassPathTag.IsSet() || (!NativeClassPathTag.Equals(FObjectPropertyBase::GetExportPath(TBlueprintClassType::StaticClass()))))
+				{
+					return false;
+				}
+				return true;
+			}
+			else
+			{
+				return AssetData.GetClass() && AssetData.GetClass()->IsChildOf(TAssetType::StaticClass());
+			}
+		}
+
+		void OnAssetAdded(const FAssetData& AssetData)
+		{
+			if (FilterAsset(AssetData))
+			{
+				RevisionId++;
+				AvailableAssets.AddUnique(AssetData);
+			}
+		}
+
+		void OnAssetRemoved(const FAssetData& AssetData)
+		{
+			if (FilterAsset(AssetData))
+			{
+				RevisionId++;
+				AvailableAssets.Remove(AssetData);
+			}
+		}
+
+	private:
+		TArray<FAssetData> AvailableAssets;
+		TMap<int32, TSharedPtr<FAssetThumbnail>> AssetThumbnailIcons;
+
+		const FSlateBrush* ClassIconBrush = nullptr;
+		uint32 RevisionId = 0;
+	};
+
+public:
 	bool Draw(const char* Label, TWeakObjectPtr<TAssetType>& SelectedAssetPtr)
 	{
-		Initialize();
-
 		FImGuiNamedWidgetScope WidgetScope{ Label };
+
+		auto& AssetContainer = FAssetContainer::GetInstance();
+		const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
 
 		FSlateShaderResource* SelectedAssetTexture = nullptr;
 		TAssetType* SelectedAsset = SelectedAssetPtr.Get();
 		if (SelectedAsset)
 		{
-			if (!SelectedAssetThumbnail || (SelectedAsset != SelectedAssetThumbnail->GetAsset()) || bAssetListChanged)
+			if (!SelectedAssetThumbnail || (SelectedAsset != SelectedAssetThumbnail->GetAsset()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
 			{
-				bAssetListChanged = false;
+				ContainerRevisionId = AssetContainer.GetRevisionId();
 
 				SelectedAssetThumbnail = MakeShareable(new FAssetThumbnail(FAssetData(SelectedAsset), 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
 				LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(SelectedAsset);
@@ -67,7 +161,7 @@ public:
 		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.BrowseContent"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("PropertyWindow.DiffersFromDefault"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams ComboboxDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(&FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton")).DownArrowImage, FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(ClassIconBrush, FVector2D(50.)* GlobalScale, 1.f);
+		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale, 1.f);
 
 		auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, TAssetType* Asset)
 		{
@@ -262,12 +356,7 @@ public:
 						}
 						ImGui::SameLine();
 
-						if (!AssetThumbnailIcons.Find(AvailableAssets[AssetIndex]))
-						{
-							AssetThumbnailIcons.Add(AvailableAssets[AssetIndex]) = MakeShareable(new FAssetThumbnail(AvailableAssets[AssetIndex], 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
-						}
-
-						FSlateShaderResource* PreviewTexture = AssetThumbnailIcons[AvailableAssets[AssetIndex]]->GetViewportRenderTargetTexture();
+						FSlateShaderResource* PreviewTexture = AssetContainer.GetAssetThumbnail(AvailableAssets[AssetIndex]);
 						Add_AssetThumbnail(PreviewTexture, AssetViewerRowHeight, nullptr);
 
 						ImGui::SameLine();
@@ -385,87 +474,12 @@ public:
 	}
 
 private:
-	FORCEINLINE void GatherAssets(IAssetRegistry& AssetRegistry)
-	{
-		FARFilter Filter;
-		Filter.ClassPaths.Add(TAssetType::StaticClass()->GetClassPathName());
-		Filter.bRecursiveClasses = true; // TODO: expose filter settings
-		
-		if constexpr (bUseBlueprintSubClass)
-		{
-			using TBlueprintClassType = std::tuple_element<1, std::tuple<Types...>>::type;
-			Filter.TagsAndValues.Add(FBlueprintTags::NativeParentClassPath, FObjectPropertyBase::GetExportPath(TBlueprintClassType::StaticClass()));
-		}
-
-		AssetRegistry.GetAssets(Filter, AvailableAssets);
-	}
-
-	FORCEINLINE void Initialize()
-	{
-		if (bInitialized)
-		{
-			return;
-		}
-		bInitialized = true;
-
-		ClassIconBrush = FClassIconFinder::FindThumbnailForClass(TAssetType::StaticClass(), NAME_None);
-
-		IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
-		GatherAssets(AssetRegistry);
-		AssetRegistry.OnAssetAdded().AddRaw(this, &FImGuiAssetPicker::OnAssetAdded);
-		AssetRegistry.OnAssetRemoved().AddRaw(this, &FImGuiAssetPicker::OnAssetRemoved);
-	}
-
-	FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
-	{
-		if constexpr (bUseBlueprintSubClass)
-		{
-			using TBlueprintClassType = std::tuple_element<1, std::tuple<Types...>>::type;
-			FAssetDataTagMapSharedView::FFindTagResult NativeClassPathTag = AssetData.TagsAndValues.FindTag(FBlueprintTags::NativeParentClassPath);
-			if (!NativeClassPathTag.IsSet() || (!NativeClassPathTag.Equals(FObjectPropertyBase::GetExportPath(TBlueprintClassType::StaticClass()))))
-			{
-				return false;
-			}
-			return true;
-		}
-		else
-		{
-			return AssetData.GetClass() && AssetData.GetClass()->IsChildOf(TAssetType::StaticClass());
-		}
-	}
-
-	void OnAssetAdded(const FAssetData& AssetData)
-	{
-		if (FilterAsset(AssetData))
-		{
-			bAssetListChanged = true;
-			AvailableAssets.AddUnique(AssetData);
-		}
-	}
-
-	void OnAssetRemoved(const FAssetData& AssetData)
-	{
-		if (FilterAsset(AssetData))
-		{
-			bAssetListChanged = true;
-			AvailableAssets.Remove(AssetData);
-		}
-	}
-
-private:
-	// TODO: Move resources to a common type so that they can be shared
-	TArray<FAssetData> AvailableAssets;
-	TMap<FAssetData, TSharedPtr<FAssetThumbnail>> AssetThumbnailIcons;
-
-	const FSlateBrush* ClassIconBrush = nullptr;
+	FImGuiTextFilter<128> TextFilter = {};
+	int32 LastSelectedAssetIndex = INDEX_NONE;
 	TSharedPtr<FAssetThumbnail> SelectedAssetThumbnail = nullptr;
 
-	FImGuiTextFilter<128> TextFilter = {};
-
-	bool bInitialized = false;
-	bool bAssetListChanged = false;
+	uint32 ContainerRevisionId = UINT32_MAX;
 	bool bIsAssetViewerVisible = false;
-	int32 LastSelectedAssetIndex = INDEX_NONE;
 };
 
 #endif //#if WITH_IMGUI
