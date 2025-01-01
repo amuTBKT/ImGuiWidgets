@@ -226,6 +226,7 @@ namespace ImGuiStatsVizualizer
 					static const uint32 EditHash = PointerHash(TEXT("_Edit"));
 				
 					const uint32 AssetHash = GetTypeHash(StatDescription);
+					FImGuiNamedWidgetScope Scope{ AssetHash };
 
 					ImGui::PushStyleColor(ImGuiCol_Button, 0);
 					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
@@ -233,7 +234,6 @@ namespace ImGuiStatsVizualizer
 					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
-					ImGui::PushID(HashCombine(AssetHash, BrowseHash));
 					if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
 						TArray<UObject*> Objects = { Asset };
@@ -243,11 +243,9 @@ namespace ImGuiStatsVizualizer
 					{
 						ImGui::SetTooltip("Browse to asset.");
 					}
-					ImGui::PopID();
-
+					
 					ImGui::SameLine();
 
-					ImGui::PushID(HashCombine(AssetHash, EditHash));
 					if (ImGui::ImageButtonWithTint("EditAsset", EditAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
 						UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
@@ -260,7 +258,6 @@ namespace ImGuiStatsVizualizer
 					{
 						ImGui::SetTooltip("Edit asset.");
 					}
-					ImGui::PopID();
 
 					ImGui::PopStyleVar(2);
 					ImGui::PopStyleColor(3);

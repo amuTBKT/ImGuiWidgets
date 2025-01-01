@@ -341,7 +341,8 @@ public:
 						const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
 						const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
 						{
-							ImGui::PushID(GetTypeHash(AvailableAssets[AssetIndex].AssetName));
+							FImGuiNamedWidgetScope Scope{ GetTypeHash(AvailableAssets[AssetIndex]) };
+
 							if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, AssetViewerRowHeight)))
 							{
 								NewSelectedIndex = AssetIndex;
@@ -352,7 +353,6 @@ public:
 									ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
 									ImGui::GetColorU32((AssetIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
 							}
-							ImGui::PopID();
 						}
 						ImGui::SameLine();
 

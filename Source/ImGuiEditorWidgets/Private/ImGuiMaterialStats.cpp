@@ -323,7 +323,7 @@ namespace ImGuiMaterialStats
 						}
 					}
 
-					const FString UniqueName = FString::Printf(TEXT("%s_%s"), *SelectedMaterial->GetName(), * FGuid::NewGuid().ToString());
+					const FString UniqueName = FString::Printf(TEXT("%s_%s"), *SelectedMaterial->GetName(), *FGuid::NewGuid().ToString());
 					const FName Name = FName(*UniqueName);
 					MaterialStats.DuplicatedMaterial = (UMaterial*)StaticDuplicateObject(SelectedMaterial.Get(), GetTransientPackage(), Name);
 					UMaterial* MaterialToUse = MaterialStats.DuplicatedMaterial;
@@ -374,7 +374,7 @@ namespace ImGuiMaterialStats
 					{
 						if (ImGui::BeginTabItem(TCHAR_TO_ANSI(*VFName)))
 						{
-							FImGuiNamedWidgetScope VF_Scope{ TCHAR_TO_ANSI(*VFName) };
+							FImGuiNamedWidgetScope VF_Scope{ *VFName };
 
 							static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
 							if (ImGui::BeginTable("ShaderTable", 4, TableFlags))
@@ -395,7 +395,7 @@ namespace ImGuiMaterialStats
 										continue;
 									}
 
-									FImGuiNamedWidgetScope Shader_Scope{ TCHAR_TO_ANSI(*Shader.ShaderClassName) };
+									FImGuiNamedWidgetScope Shader_Scope{ *Shader.ShaderFilePath };
 
 									ImGui::TableNextRow(ImGuiTableRowFlags_None);
 

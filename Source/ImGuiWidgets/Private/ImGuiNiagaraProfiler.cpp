@@ -129,7 +129,7 @@ namespace ImGuiNiagaraProfiler
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode(TCHAR_TO_ANSI(*EmitterName), "%s - %f", TCHAR_TO_ANSI(*EmitterName), EmitterSimTime))
 		{
-			FImGuiNamedWidgetScope Scope{ TCHAR_TO_ANSI(*EmitterName) };
+			FImGuiNamedWidgetScope Scope{ *EmitterName };
 
 			static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
 			if (ImGui::BeginTable("SimStages", 3, TableFlags))
@@ -173,7 +173,7 @@ namespace ImGuiNiagaraProfiler
 	}
 
 
-	static void DisplayAddSystemStats(const UNiagaraSystem* System, const TArray<FEmitterStatData>& EmitterStats)
+	static void DisplaySystemStats(const UNiagaraSystem* System, const TArray<FEmitterStatData>& EmitterStats)
 	{
 		if (!System || EmitterStats.IsEmpty())
 		{
@@ -185,7 +185,7 @@ namespace ImGuiNiagaraProfiler
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::CollapsingHeader(TCHAR_TO_ANSI(*SystemName)))
 		{
-			FImGuiNamedWidgetScope Scope{ TCHAR_TO_ANSI(*SystemName) };
+			FImGuiNamedWidgetScope Scope{ *SystemName };
 
 			for (const auto& EmitterStat : EmitterStats)
 			{
@@ -203,13 +203,13 @@ namespace ImGuiNiagaraProfiler
 
 		if (ImGui::BeginTabItem(TCHAR_TO_ANSI(*World->GetName())))
 		{
-			FImGuiNamedWidgetScope Scope{ TCHAR_TO_ANSI(*World->GetName()) };
+			FImGuiNamedWidgetScope Scope{ *World->GetName() };
 
 			if (ImGui::BeginChild("ScrollingArea"))
 			{
 				for (const auto& SystemStat : WorldStats.SystemStats)
 				{
-					DisplayAddSystemStats(SystemStat.System.Get(), SystemStat.EmitterStats);
+					DisplaySystemStats(SystemStat.System.Get(), SystemStat.EmitterStats);
 				}
 			}
 			ImGui::EndChild();
