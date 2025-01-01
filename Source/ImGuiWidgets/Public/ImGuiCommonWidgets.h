@@ -64,6 +64,26 @@ namespace ImGui
 
 		return pressed;
 	}
+
+	FORCEINLINE bool ImageButtonWithTint(const char* str_id, const FImGuiImageBindingParams& image, ImU32 normal_tint_col, ImU32 active_tint_col, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
+	{
+		return ImageButtonWithTint(str_id, image.Id, image.Size, image.UV0, image.UV1, normal_tint_col, active_tint_col, flags);
+	}
+
+	FORCEINLINE bool TransparentImageButton(const char* str_id, const FImGuiImageBindingParams& image, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
+	{
+		return TransparentImageButton(str_id, image.Id, image.Size, image.UV0, image.UV1, flags);
+	}
+
+	FORCEINLINE bool ImageButton(const char* str_id, const FImGuiImageBindingParams& image, const ImVec4& bg_col = ImVec4(0, 0, 0, 0), const ImVec4& tint_col = ImVec4(1, 1, 1, 1))
+	{
+		return ImGui::ImageButton(str_id, image.Id, image.Size, image.UV0, image.UV1, bg_col, tint_col);
+	}
+
+	FORCEINLINE void Image(const FImGuiImageBindingParams& image, const ImVec4& tint_col = ImVec4(1, 1, 1, 1), const ImVec4& border_col = ImVec4(0, 0, 0, 0))
+	{
+		ImGui::Image(image.Id, image.Size, image.UV0, image.UV1, tint_col, border_col);
+	}
 }
 
 template <size_t MaxLength = 64>
@@ -146,11 +166,11 @@ public:
 			if (FilterKeywords.IsEmpty())
 			{
 				// TODO: doesn't need to be a button
-				ImGui::ImageButton("Search", SearchIcon.Id, SearchIcon.Size, SearchIcon.UV0, SearchIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f));
+				ImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f));
 			}
 			else
 			{
-				if (ImGui::ImageButton("ClearFilter", ClearIcon.Id, ClearIcon.Size, ClearIcon.UV0, ClearIcon.UV1, ImVec4(0, 0, 0, 0), ImVec4(ClearIconTint, ClearIconTint, ClearIconTint, 1.f)))
+				if (ImGui::ImageButton("ClearFilter", ClearIcon, ImVec4(0, 0, 0, 0), ImVec4(ClearIconTint, ClearIconTint, ClearIconTint, 1.f)))
 				{
 					bFilterChanged = true;
 					FilterString[0] = '\0';

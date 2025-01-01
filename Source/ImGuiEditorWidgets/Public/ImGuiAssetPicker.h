@@ -205,7 +205,7 @@ public:
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
 
-			if (ImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon.Id, UseSelectedAssetIcon.Size, UseSelectedAssetIcon.UV0, UseSelectedAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
+			if (ImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 			{
 				for (auto Asset : UEditorUtilityLibrary::GetSelectedAssets())
 				{
@@ -236,12 +236,12 @@ public:
 			if (!InAsset)
 			{
 				ImGui::BeginDisabled();
-				ImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF);
+				ImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF);
 				ImGui::EndDisabled();
 			}
 			else
 			{
-				if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon.Id, BrowseToAssetIcon.Size, BrowseToAssetIcon.UV0, BrowseToAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
+				if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 				{
 					TArray<UObject*> Objects;
 					Objects.Add(InAsset);
@@ -263,7 +263,7 @@ public:
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
 
-			if (ImGui::TransparentImageButton("ResetToDefault", ResetToDefaultIcon.Id, ResetToDefaultIcon.Size, ResetToDefaultIcon.UV0, ResetToDefaultIcon.UV1))
+			if (ImGui::TransparentImageButton("ResetToDefault", ResetToDefaultIcon))
 			{
 				InOutAsset = nullptr;
 			}
@@ -307,7 +307,7 @@ public:
 			const float ComboBoxHeight = ImGui::GetItemRectSize().y;
 			ImGui::SameLine();
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ComboboxDownArrowIcon.Size.x * 2.f);
-			ImGui::Image(ComboboxDownArrowIcon.Id, ComboboxDownArrowIcon.Size, ComboboxDownArrowIcon.UV0, ComboboxDownArrowIcon.UV1);
+			ImGui::Image(ComboboxDownArrowIcon);
 			ImGui::PopStyleVar(1);
 
 			const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
@@ -432,7 +432,7 @@ public:
 		if (strstr(Label, "###") == nullptr)
 		{
 			ImGui::BeginGroup();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetFontSize() * 1.5f);
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 25.f * GlobalScale - ImGui::GetFontSize() * 0.5f);
 			ImGui::TextUnformatted(Label);
 			ImGui::EndGroup();
 
@@ -460,7 +460,7 @@ public:
 		// reset icon
 		if (SelectedAsset)
 		{
-			ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y / 2.f - ResetToDefaultIcon.Size.y);
+			ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y * 0.5f - ResetToDefaultIcon.Size.y);
 			Add_ResetSelectionButton(SelectedAsset);
 		}
 

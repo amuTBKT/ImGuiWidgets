@@ -272,7 +272,7 @@ namespace ImGuiMaterialStats
 				{
 					if (DumpShaderInfoCVar->GetInt() == 1)
 					{
-						ImGui::Image(WarningIcon.Id, WarningIcon.Size, WarningIcon.UV0, WarningIcon.UV1, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
+						ImGui::Image(WarningIcon, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
 						ImGui::SameLine();
 						ImGui::TextUnformatted("Shader debug data enabled...");
 
@@ -284,7 +284,7 @@ namespace ImGuiMaterialStats
 				{
 					if (DumpShaderShortNamesCVar->GetInt() == 0)
 					{
-						ImGui::Image(WarningIcon.Id, WarningIcon.Size, WarningIcon.UV0, WarningIcon.UV1, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
+						ImGui::Image(WarningIcon, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
 						ImGui::SameLine();
 						ImGui::TextUnformatted("Browse/Edit functions maybe not work properly without 'r.DumpShaderDebugShortNames' enabled");
 
@@ -424,7 +424,7 @@ namespace ImGuiMaterialStats
 											ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
 											ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
-											if (ImGui::ImageButtonWithTint("BrowseToDir", BrowseIcon.Id, BrowseIcon.Size, BrowseIcon.UV0, BrowseIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
+											if (ImGui::ImageButtonWithTint("BrowseToDir", BrowseIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 											{
 												FPlatformProcess::ExploreFolder(*Shader.ShaderFilePath);
 											}
@@ -435,7 +435,7 @@ namespace ImGuiMaterialStats
 
 											ImGui::SameLine();
 
-											if (ImGui::ImageButtonWithTint("EditFile", EditIcon.Id, EditIcon.Size, EditIcon.UV0, EditIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
+											if (ImGui::ImageButtonWithTint("EditFile", EditIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 											{
 												FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderFilePath);
 											}
@@ -447,7 +447,7 @@ namespace ImGuiMaterialStats
 											ImGui::SameLine();
 
 											//ImGui::BeginDisabled(ImGuiShaderAnalyzer::CanAnalyzeShader(Shader.ShaderType) == false);
-											//if (ImGui::ImageButtonWithTint("Analyze", AnalyzeIcon.Id, AnalyzeIcon.Size, AnalyzeIcon.UV0, AnalyzeIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
+											//if (ImGui::ImageButtonWithTint("Analyze", AnalyzeIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 											//{
 											//	ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
 											//}

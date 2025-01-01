@@ -222,8 +222,8 @@ namespace ImGuiStatsVizualizer
 
 				if (UObject* Asset = LinkedAsset.Find(RawStatName)->Get())
 				{
-					static const uint32 BrowseHash = GetTypeHash(TEXT("_Browse"));
-					static const uint32 EditHash = GetTypeHash(TEXT("_Edit"));
+					static const uint32 BrowseHash = PointerHash(TEXT("_Browse"));
+					static const uint32 EditHash = PointerHash(TEXT("_Edit"));
 				
 					const uint32 AssetHash = GetTypeHash(StatDescription);
 
@@ -234,7 +234,7 @@ namespace ImGuiStatsVizualizer
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
 					ImGui::PushID(HashCombine(AssetHash, BrowseHash));
-					if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseAssetIcon.Id, BrowseAssetIcon.Size, BrowseAssetIcon.UV0, BrowseAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
+					if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
 						TArray<UObject*> Objects = { Asset };
 						GEditor->SyncBrowserToObjects(Objects);
@@ -248,7 +248,7 @@ namespace ImGuiStatsVizualizer
 					ImGui::SameLine();
 
 					ImGui::PushID(HashCombine(AssetHash, EditHash));
-					if (ImGui::ImageButtonWithTint("EditAsset", EditAssetIcon.Id, EditAssetIcon.Size, EditAssetIcon.UV0, EditAssetIcon.UV1, 0x8FFFFFFF, 0xFFFFFFFF))
+					if (ImGui::ImageButtonWithTint("EditAsset", EditAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
 						UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 						if (AssetEditorSubsystem)
