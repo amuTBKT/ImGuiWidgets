@@ -11,11 +11,13 @@
 #include "Materials/MaterialInstance.h"
 #include "DataDrivenShaderPlatformInfo.h"
 
-//namespace ImGuiShaderAnalyzer
-//{
-//	extern bool CanAnalyzeShader(EShaderFrequency ShaderType);
-//	extern void ShowShaderStats(EShaderFrequency ShaderType, const FString& EntryName, const FString& ShaderFilePath);
-//}
+#if 0
+namespace ImGuiShaderAnalyzer
+{
+	extern bool CanAnalyzeShader(EShaderFrequency ShaderType);
+	extern void ShowShaderStats(EShaderFrequency ShaderType, const FString& EntryName, const FString& ShaderFilePath);
+}
+#endif
 
 namespace ImGuiMaterialStats
 {
@@ -262,7 +264,7 @@ namespace ImGuiMaterialStats
 			const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Warning"), FVector2D(ImGui::GetFontSize()), 1.f);
 			const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
 			const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Edit"), FVector2D(ImGui::GetFontSize()), 1.f);
-			//const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("DerivedData.Cache.Statistics"), FVector2D(ImGui::GetFontSize()), 1.f);
+			const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("DerivedData.Cache.Statistics"), FVector2D(ImGui::GetFontSize()), 1.f);
 
 			// warning messages
 			{
@@ -446,16 +448,18 @@ namespace ImGuiMaterialStats
 
 											ImGui::SameLine();
 
-											//ImGui::BeginDisabled(ImGuiShaderAnalyzer::CanAnalyzeShader(Shader.ShaderType) == false);
-											//if (ImGui::ImageButtonWithTint("Analyze", AnalyzeIcon, 0x8FFFFFFF, 0xFFFFFFFF))
-											//{
-											//	ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
-											//}
-											//if (ImGui::IsItemHovered())
-											//{
-											//	ImGui::SetTooltip("Analyze shader");
-											//}
-											//ImGui::EndDisabled();
+#if 0
+											ImGui::BeginDisabled(ImGuiShaderAnalyzer::CanAnalyzeShader(Shader.ShaderType) == false);
+											if (ImGui::ImageButtonWithTint("Analyze", AnalyzeIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+											{
+												ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
+											}
+											if (ImGui::IsItemHovered())
+											{
+												ImGui::SetTooltip("Analyze shader");
+											}
+											ImGui::EndDisabled();
+#endif
 
 											ImGui::PopStyleVar(2);
 											ImGui::PopStyleColor(3);

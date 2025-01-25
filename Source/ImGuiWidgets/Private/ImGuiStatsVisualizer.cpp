@@ -21,7 +21,7 @@ namespace ImGuiStatsVizualizer
 	{
 		const FAnsiString DisplayName;
 		const FString StatName;
-		bool IsActive = false;
+		bool bIsActive = false;
 	};
 	static TMap<FName, FStatGroupData> StatGroups;
 
@@ -49,9 +49,9 @@ namespace ImGuiStatsVizualizer
 	{
 		static TSet<FName> SelectedItems;
 
-		const bool WasSelected = SelectedItems.Contains(ItemName);
-		const bool IsSelected = ImGui::Selectable(Label, WasSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);	
-		if (IsSelected)
+		const bool bWasSelected = SelectedItems.Contains(ItemName);
+		const bool bIsSelected = ImGui::Selectable(Label, bWasSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);	
+		if (bIsSelected)
 		{
 			const int32 NumItemsSelected = SelectedItems.Num();
 			if (!ImGui::GetIO().KeyCtrl)
@@ -59,7 +59,7 @@ namespace ImGuiStatsVizualizer
 				SelectedItems.Reset();
 			}
 
-			if (WasSelected && NumItemsSelected == 1)
+			if (bWasSelected && NumItemsSelected == 1)
 			{
 				SelectedItems.Remove(ItemName);
 			}
@@ -68,7 +68,7 @@ namespace ImGuiStatsVizualizer
 				SelectedItems.Add(ItemName);
 			}
 		}
-		return IsSelected;
+		return bIsSelected;
 	}
 
 	// headings
@@ -207,7 +207,7 @@ namespace ImGuiStatsVizualizer
 					AssetPath.RemoveFromEnd(" [RT]", ESearchCase::IgnoreCase);
 					AssetPath.RemoveFromEnd(" [GT]", ESearchCase::IgnoreCase);
 
-					FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+					FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(IMGUI_FNAME("AssetRegistry"));
 					IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 					FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
 					if (AssetData.IsValid())
@@ -222,11 +222,7 @@ namespace ImGuiStatsVizualizer
 
 				if (UObject* Asset = LinkedAsset.Find(RawStatName)->Get())
 				{
-					static const uint32 BrowseHash = PointerHash(TEXT("_Browse"));
-					static const uint32 EditHash = PointerHash(TEXT("_Edit"));
-				
-					const uint32 AssetHash = GetTypeHash(StatDescription);
-					FImGuiNamedWidgetScope Scope{ AssetHash };
+					FImGuiNamedWidgetScope Scope{ GetTypeHash(StatDescription) };
 
 					ImGui::PushStyleColor(ImGuiCol_Button, 0);
 					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
@@ -445,7 +441,7 @@ namespace ImGuiStatsVizualizer
 	static void RenderGroupedWithHierarchy(const FGameThreadStatsData& ViewData)
 	{
 		// coarse culling for sections that are not visible
-		bool CullNextSection = false;
+		bool bCullNextSection = false;
 
 		// Render all groups.
 		for (int32 GroupIndex = 0; GroupIndex < ViewData.ActiveStatGroups.Num(); ++GroupIndex)
@@ -466,9 +462,9 @@ namespace ImGuiStatsVizualizer
 
 				StatGroupData = &StatGroups.Add(StatGroupFName, { FAnsiString(GroupDesc), StatName, true });
 			};
-			StatGroupData->IsActive = true;
+			StatGroupData->bIsActive = true;
 
-			if (!CullNextSection && ImGui::CollapsingHeader(*StatGroupData->DisplayName, ImGuiTreeNodeFlags_DefaultOpen))
+			if (!bCullNextSection && ImGui::CollapsingHeader(*StatGroupData->DisplayName, ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
 				char ScratchTableIdBuffer[128];
@@ -488,13 +484,13 @@ namespace ImGuiStatsVizualizer
 							if (bHasHierarchy)
 							{
 								const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.HierAggregate, ViewData, RenderFlatCycle);							
-								CullNextSection = LastRowDisplayed < StatGroup.HierAggregate.Num();
+								bCullNextSection = LastRowDisplayed < StatGroup.HierAggregate.Num();
 							}
 						
-							if (!CullNextSection && bHasFlat)
+							if (!bCullNextSection && bHasFlat)
 							{
 								const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.FlatAggregate, ViewData, RenderFlatCycle);
-								CullNextSection = LastRowDisplayed < StatGroup.FlatAggregate.Num();
+								bCullNextSection = LastRowDisplayed < StatGroup.FlatAggregate.Num();
 							}
 
 							ImGui::EndTable();
@@ -503,7 +499,7 @@ namespace ImGuiStatsVizualizer
 				}
 
 				// Render memory counters.
-				if (!CullNextSection && StatGroup.MemoryAggregate.Num())
+				if (!bCullNextSection && StatGroup.MemoryAggregate.Num())
 				{
 					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_MemoryStats", *StatGroupData->DisplayName);
 					if (ImGui::BeginTable(ScratchTableIdBuffer, GetMemoryStatsColumnCount(), TableFlags))
@@ -511,14 +507,14 @@ namespace ImGuiStatsVizualizer
 						RenderMemoryHeadings();
 
 						int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.MemoryAggregate, ViewData, RenderMemoryCounter);
-						CullNextSection = LastRowDisplayed < StatGroup.MemoryAggregate.Num();
+						bCullNextSection = LastRowDisplayed < StatGroup.MemoryAggregate.Num();
 
 						ImGui::EndTable();
 					}
 				}
 
 				// Render remaining counters.
-				if (!CullNextSection && StatGroup.CountersAggregate.Num())
+				if (!bCullNextSection && StatGroup.CountersAggregate.Num())
 				{
 					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_CounterStats", *StatGroupData->DisplayName);
 					if (ImGui::BeginTable(ScratchTableIdBuffer, GetCounterStatsColumnCount(), TableFlags))
@@ -526,7 +522,7 @@ namespace ImGuiStatsVizualizer
 						RenderCounterHeadings();
 
 						int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.CountersAggregate, ViewData, RenderCounter);
-						CullNextSection = LastRowDisplayed < StatGroup.CountersAggregate.Num();
+						bCullNextSection = LastRowDisplayed < StatGroup.CountersAggregate.Num();
 					
 						ImGui::EndTable();
 					}
@@ -562,7 +558,7 @@ namespace ImGuiStatsVizualizer
 
 		for (auto& Itr : StatGroups)
 		{
-			const bool bApplyStyle = Itr.Value.IsActive;
+			const bool bApplyStyle = Itr.Value.bIsActive;
 			if (bApplyStyle)
 			{
 				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f));
@@ -572,11 +568,10 @@ namespace ImGuiStatsVizualizer
 
 			const char* GroupName = *Itr.Value.DisplayName;
 
-			// TODO: maybe there's a better way to wrap widgets?
 			ImGui::SameLine();
 			if ((ImGui::GetCursorPosX() + ImGui::CalcTextSize(GroupName).x + ImGui::GetStyle().FramePadding.x * 2.f) >= ImGui::GetWindowWidth())
 			{
-				ImGui::Dummy(ImVec2(0.f, 0.f)); //<br>
+				ImGui::NewLine(); //<br>
 			}
 
 			if (ImGui::Button(GroupName))
@@ -591,7 +586,7 @@ namespace ImGuiStatsVizualizer
 			}
 
 			// disable at the end, we'll re-enable when stat group is encountered when displaying..
-			Itr.Value.IsActive = false;
+			Itr.Value.bIsActive = false;
 		}
 
 		ImGui::Separator();

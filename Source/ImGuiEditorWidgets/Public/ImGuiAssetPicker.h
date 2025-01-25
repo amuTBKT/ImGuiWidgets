@@ -38,9 +38,9 @@ class FImGuiAssetPicker : FNoncopyable
 
 		~FAssetContainer()
 		{
-			if (UObjectInitialized())
+			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(IMGUI_FNAME("AssetRegistry")))
 			{
-				IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+				IAssetRegistry& AssetRegistry = AssetRegistryModulePtr->Get();
 				AssetRegistry.OnAssetAdded().RemoveAll(this);
 				AssetRegistry.OnAssetRemoved().RemoveAll(this);
 			}
@@ -67,10 +67,13 @@ class FImGuiAssetPicker : FNoncopyable
 		{
 			ClassIconBrush = FClassIconFinder::FindThumbnailForClass(TAssetType::StaticClass(), NAME_None);
 
-			IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
-			GatherAssets(AssetRegistry);
-			AssetRegistry.OnAssetAdded().AddRaw(this, &FAssetContainer::OnAssetAdded);
-			AssetRegistry.OnAssetRemoved().AddRaw(this, &FAssetContainer::OnAssetRemoved);
+			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(IMGUI_FNAME("AssetRegistry")))
+			{
+				IAssetRegistry& AssetRegistry = AssetRegistryModulePtr->Get();
+				GatherAssets(AssetRegistry);
+				AssetRegistry.OnAssetAdded().AddRaw(this, &FAssetContainer::OnAssetAdded);
+				AssetRegistry.OnAssetRemoved().AddRaw(this, &FAssetContainer::OnAssetRemoved);
+			}
 		}
 
 		FORCEINLINE void GatherAssets(IAssetRegistry& AssetRegistry)
