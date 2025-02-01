@@ -6,6 +6,7 @@
 #include "NiagaraSystem.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
+#include "NiagaraSimulationStageBase.h"
 #include "NiagaraGPUProfilerInterface.h"
 
 namespace ImGuiNiagaraProfiler
@@ -13,12 +14,50 @@ namespace ImGuiNiagaraProfiler
 	struct FSimStageStatData
 	{
 		FName StageName = NAME_None;
-		float Time = 0.f;
+		int32 CallCount = 0;
+		float TotalTime = 0.f;
+
+		bool operator==(const FName& OtherName) const
+		{
+			return StageName == OtherName;
+		}
 	};
 	struct FEmitterStatData
 	{
 		TWeakObjectPtr<UNiagaraEmitter> Emitter;
 		TArray<FSimStageStatData> SimStageStats;
+		float TotalTime = 0.f;
+
+		void Initialize(const FVersionedNiagaraEmitterWeakPtr& VersionedEmitter)
+		{
+			Emitter = VersionedEmitter.Emitter;
+
+			// add particle update stage
+			SimStageStats.AddDefaulted_GetRef().StageName = UNiagaraSimulationStageBase::ParticleSpawnUpdateName;
+
+			const TArray<UNiagaraSimulationStageBase*>& SimulationStages = Emitter->GetEmitterData(VersionedEmitter.Version)->GetSimulationStages();
+			for (const UNiagaraSimulationStageBase* SimStage : SimulationStages)
+			{
+				if (IsValid(SimStage))
+				{
+					SimStageStats.AddDefaulted_GetRef().StageName = SimStage->SimulationStageName;
+				}
+			}
+		}
+
+		void AddSimStageStat(const FName& StageName, float Duration)
+		{
+			FSimStageStatData* StageData = SimStageStats.FindByKey(StageName);
+			if (!ensure(StageData != nullptr))
+			{
+				return;
+			}
+
+			StageData->CallCount += 1;
+			StageData->TotalTime += Duration;
+
+			TotalTime += Duration;
+		}
 	};
 	struct FSystemStatData
 	{
@@ -29,8 +68,15 @@ namespace ImGuiNiagaraProfiler
 	{
 		TArray<FSystemStatData> SystemStats;
 
-		void AddStat(UNiagaraSystem* InSystem, UNiagaraEmitter* InEmitter, FSimStageStatData&& InSimStageData)
+		void AddStat(const FVersionedNiagaraEmitterWeakPtr& VersionedEmitter, const FName& InSimStageName, float InDuration)
 		{
+			UNiagaraEmitter* InEmitter = VersionedEmitter.Emitter.IsExplicitlyNull() ? nullptr : VersionedEmitter.Emitter.Get();
+			UNiagaraSystem* InSystem = InEmitter ? InEmitter->GetTypedOuter<UNiagaraSystem>() : nullptr;
+			if (!InSystem)
+			{
+				return;
+			}
+
 			FSystemStatData* SystemStat = SystemStats.FindByPredicate([InSystem](const auto& Stat) { return Stat.System.Get() == InSystem; });
 			if (!SystemStat)
 			{
@@ -42,10 +88,9 @@ namespace ImGuiNiagaraProfiler
 			if (!EmitterStat)
 			{
 				EmitterStat = &SystemStat->EmitterStats.Emplace_GetRef();
-				EmitterStat->Emitter = InEmitter;
+				EmitterStat->Initialize(VersionedEmitter);
 			}
-
-			EmitterStat->SimStageStats.Add(MoveTemp(InSimStageData));
+			EmitterStat->AddSimStageStat(InSimStageName, InDuration);
 		}
 	};
 
@@ -71,25 +116,19 @@ namespace ImGuiNiagaraProfiler
 				for (const auto& DispatchResult : FrameResults->DispatchResults)
 				{
 					UWorld* OwnerWorld = DispatchResult.OwnerComponent.IsValid() ? DispatchResult.OwnerComponent->GetWorld() : nullptr;						
-					if (OwnerWorld)
+					if (ensure(OwnerWorld))
 					{
-						UNiagaraEmitter* OwnerEmitter = DispatchResult.OwnerEmitter.Emitter.IsExplicitlyNull() ? nullptr : DispatchResult.OwnerEmitter.Emitter.Get();
-						UNiagaraSystem* OwnerSystem = OwnerEmitter ? OwnerEmitter->GetTypedOuter<UNiagaraSystem>() : nullptr;
-						if (OwnerSystem)
-						{
-							FSimStageStatData SimStageData;
-							SimStageData.StageName = DispatchResult.StageName;
-							SimStageData.Time = (float)DispatchResult.DurationMicroseconds / 1000.f;
-							WorldStatData.FindOrAdd(OwnerWorld).AddStat(OwnerSystem, OwnerEmitter, MoveTemp(SimStageData));
-						}
+						WorldStatData.FindOrAdd(OwnerWorld)
+								.AddStat(DispatchResult.OwnerEmitter, DispatchResult.StageName, (float)DispatchResult.DurationMicroseconds / 1000.f);
 					}
 				}
 			}
 		);
 	}
 
-	static void DisplayEmitterStats(const UNiagaraEmitter* Emitter, const TArray<FSimStageStatData>& SimStageStats)
+	static void DisplayEmitterStats(const FEmitterStatData& EmitterStat)
 	{
+		UNiagaraEmitter* Emitter = EmitterStat.Emitter.Get();
 		if (!Emitter)
 		{
 			return;
@@ -97,37 +136,8 @@ namespace ImGuiNiagaraProfiler
 
 		const FString& EmitterName = Emitter->GetUniqueEmitterName();
 
-		struct FAccumulatedStat
-		{
-			FName StageName = NAME_None;
-			float Time = 0.f;
-			int32 Count = 0;
-		};
-
-		float EmitterSimTime = 0.f;
-		TArray<FAccumulatedStat, TInlineAllocator<16>> AccumulatedStats;
-		// accumlate stats and prepare data for displaying
-		{
-			AccumulatedStats.Reserve(SimStageStats.Num());
-			for (const auto& Stat : SimStageStats)
-			{
-				FAccumulatedStat* AccumStat = AccumulatedStats.FindByPredicate([StageName = Stat.StageName](auto& S) { return S.StageName == StageName; });
-				if (!AccumStat)
-				{
-					AccumStat = &AccumulatedStats.Emplace_GetRef();
-					AccumStat->StageName = Stat.StageName;
-				}
-				check(AccumStat);
-
-				AccumStat->Time += Stat.Time;
-				AccumStat->Count += 1;
-
-				EmitterSimTime += Stat.Time;
-			}
-		}
-
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-		if (ImGui::TreeNode(TCHAR_TO_ANSI(*EmitterName), "%s - %f", TCHAR_TO_ANSI(*EmitterName), EmitterSimTime))
+		if (ImGui::TreeNode(TCHAR_TO_ANSI(*EmitterName), "%s - %f", TCHAR_TO_ANSI(*EmitterName), EmitterStat.TotalTime))
 		{
 			FImGuiNamedWidgetScope Scope{ *EmitterName };
 
@@ -140,7 +150,7 @@ namespace ImGuiNiagaraProfiler
 				ImGui::TableSetupScrollFreeze(0, 1);
 				ImGui::TableHeadersRow();
 
-				for (const auto& Stat : AccumulatedStats)
+				for (const auto& Stat : EmitterStat.SimStageStats)
 				{
 					const FString SimStageName = Stat.StageName.ToString();
 
@@ -155,12 +165,12 @@ namespace ImGuiNiagaraProfiler
 
 						ImGui::TableSetColumnIndex(1);
 						{
-							ImGui::Text("%i", Stat.Count);
+							ImGui::Text("%i", Stat.CallCount);
 						}
 
 						ImGui::TableSetColumnIndex(2);
 						{
-							ImGui::Text("%f", Stat.Time);
+							ImGui::Text("%f", Stat.TotalTime);
 						}
 					}
 				}
@@ -189,7 +199,7 @@ namespace ImGuiNiagaraProfiler
 
 			for (const auto& EmitterStat : EmitterStats)
 			{
-				DisplayEmitterStats(EmitterStat.Emitter.Get(), EmitterStat.SimStageStats);
+				DisplayEmitterStats(EmitterStat);
 			}
 		}
 	}
