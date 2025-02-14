@@ -116,7 +116,7 @@ namespace ImGuiNiagaraProfiler
 				for (const auto& DispatchResult : FrameResults->DispatchResults)
 				{
 					UWorld* OwnerWorld = DispatchResult.OwnerComponent.IsValid() ? DispatchResult.OwnerComponent->GetWorld() : nullptr;						
-					if (ensure(OwnerWorld))
+					if (/*ensure*/(OwnerWorld))
 					{
 						WorldStatData.FindOrAdd(OwnerWorld)
 								.AddStat(DispatchResult.OwnerEmitter, DispatchResult.StageName, (float)DispatchResult.DurationMicroseconds / 1000.f);
