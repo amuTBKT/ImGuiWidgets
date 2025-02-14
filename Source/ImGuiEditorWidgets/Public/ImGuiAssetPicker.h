@@ -136,7 +136,18 @@ class FImGuiAssetPicker : FNoncopyable
 	};
 
 public:
-	bool Draw(const char* Label, TWeakObjectPtr<TAssetType>& SelectedAssetPtr)
+	bool Draw(const char* Label, TWeakObjectPtr<TAssetType>& InOutSelectedAssetPtr)
+	{
+		TAssetType* SelectedAsset = InOutSelectedAssetPtr.Get();
+		if (Draw(Label, SelectedAsset))
+		{
+			InOutSelectedAssetPtr = SelectedAsset;
+			return true;
+		}
+		return false;
+	}
+	
+	bool Draw(const char* Label, TAssetType*& InOutSelectedAsset)
 	{
 		FImGuiNamedWidgetScope WidgetScope{ Label };
 
@@ -144,7 +155,7 @@ public:
 		const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
 
 		FSlateShaderResource* SelectedAssetTexture = nullptr;
-		TAssetType* SelectedAsset = SelectedAssetPtr.Get();
+		TAssetType* SelectedAsset = InOutSelectedAsset;
 		if (SelectedAsset)
 		{
 			if (!SelectedAssetThumbnail || (SelectedAsset != SelectedAssetThumbnail->GetAsset()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
@@ -467,10 +478,10 @@ public:
 			Add_ResetSelectionButton(SelectedAsset);
 		}
 
-		const bool bSelectionChanged = (SelectedAsset != SelectedAssetPtr.Get());
+		const bool bSelectionChanged = (SelectedAsset != InOutSelectedAsset);
 		if (bSelectionChanged)
 		{
-			SelectedAssetPtr = SelectedAsset;
+			InOutSelectedAsset = SelectedAsset;
 			LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(SelectedAsset);
 		}
 		return bSelectionChanged;
