@@ -16,6 +16,7 @@ public class ImGuiEditorWidgets : ModuleRules
 				"Core",
 				"Engine",
 				"SlateCore",
+				"RenderCore",
 				"CoreUObject",
 
                 "UnrealEd",
