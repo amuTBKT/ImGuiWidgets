@@ -7,13 +7,13 @@
 #include "ImGuiSubsystem.h"
 #include "imgui_internal.h"
 
-namespace ImGui
+namespace FImGui
 {
 	// Similar to `ImGui::ImageButton` but allows tinting the image depending on button state (inactive/active|hovered)
 	FORCEINLINE bool ImageButtonWithTint(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, ImU32 normal_tint_col, ImU32 active_tint_col, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
 	{
 		ImGuiContext& g = *ImGui::GetCurrentContext();
-		ImGuiWindow* window = GetCurrentWindow();
+		ImGuiWindow* window = ImGui::GetCurrentWindow();
 		if (window->SkipItems)
 			return false;
 
@@ -21,19 +21,19 @@ namespace ImGui
 
 		const ImVec2 padding = g.Style.FramePadding;
 		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + image_size + padding * 2.0f);
-		ItemSize(bb);
-		if (!ItemAdd(bb, id))
+		ImGui::ItemSize(bb);
+		if (!ImGui::ItemAdd(bb, id))
 			return false;
 
 		bool hovered, held;
-		bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
+		bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held, flags);
 
 		// Render
-		const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+		const ImU32 col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
 		const ImU32 tint_col = (held || hovered) ? active_tint_col : normal_tint_col;
-		RenderNavCursor(bb, id);
-		RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, g.Style.FrameRounding));
-		window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col));
+		ImGui::RenderNavCursor(bb, id);
+		ImGui::RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, g.Style.FrameRounding));
+		window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, ImGui::GetColorU32(tint_col));
 
 		return pressed;
 	}
@@ -59,7 +59,7 @@ namespace ImGui
 
 		// Render
 		const ImU32 col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-		RenderNavCursor(bb, id);
+		ImGui::RenderNavCursor(bb, id);
 		window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, col);
 
 		return pressed;
@@ -166,11 +166,11 @@ public:
 			if (FilterKeywords.IsEmpty())
 			{
 				// TODO: doesn't need to be a button
-				ImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f));
+				FImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f));
 			}
 			else
 			{
-				if (ImGui::ImageButton("ClearFilter", ClearIcon, ImVec4(0, 0, 0, 0), ImVec4(ClearIconTint, ClearIconTint, ClearIconTint, 1.f)))
+				if (FImGui::ImageButton("ClearFilter", ClearIcon, ImVec4(0, 0, 0, 0), ImVec4(ClearIconTint, ClearIconTint, ClearIconTint, 1.f)))
 				{
 					bFilterChanged = true;
 					FilterString[0] = '\0';

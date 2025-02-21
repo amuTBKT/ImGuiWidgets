@@ -219,7 +219,7 @@ public:
 			ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
 
-			if (ImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+			if (FImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 			{
 				for (auto Asset : UEditorUtilityLibrary::GetSelectedAssets())
 				{
@@ -250,12 +250,12 @@ public:
 			if (!InAsset)
 			{
 				ImGui::BeginDisabled();
-				ImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF);
+				FImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF);
 				ImGui::EndDisabled();
 			}
 			else
 			{
-				if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+				if (FImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 				{
 					TArray<UObject*> Objects;
 					Objects.Add(InAsset);
@@ -277,7 +277,7 @@ public:
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
 
-			if (ImGui::TransparentImageButton("ResetToDefault", ResetToDefaultIcon))
+			if (FImGui::TransparentImageButton("ResetToDefault", ResetToDefaultIcon))
 			{
 				InOutAsset = nullptr;
 			}
@@ -321,7 +321,7 @@ public:
 			const float ComboBoxHeight = ImGui::GetItemRectSize().y;
 			ImGui::SameLine();
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ComboboxDownArrowIcon.Size.x * 2.f);
-			ImGui::Image(ComboboxDownArrowIcon);
+			FImGui::Image(ComboboxDownArrowIcon);
 			ImGui::PopStyleVar(1);
 
 			const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;

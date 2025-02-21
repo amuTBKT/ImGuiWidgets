@@ -230,7 +230,7 @@ namespace ImGuiStatsVizualizer
 					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
-					if (ImGui::ImageButtonWithTint("BrowseToAsset", BrowseAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+					if (FImGui::ImageButtonWithTint("BrowseToAsset", BrowseAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
 						TArray<UObject*> Objects = { Asset };
 						GEditor->SyncBrowserToObjects(Objects);
@@ -242,7 +242,7 @@ namespace ImGuiStatsVizualizer
 					
 					ImGui::SameLine();
 
-					if (ImGui::ImageButtonWithTint("EditAsset", EditAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+					if (FImGui::ImageButtonWithTint("EditAsset", EditAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
 						UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 						if (AssetEditorSubsystem)
