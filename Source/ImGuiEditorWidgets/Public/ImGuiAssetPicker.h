@@ -348,7 +348,7 @@ public:
 				}
 				TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth);
 
-				if (ImGui::BeginListBox("###AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
+				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
 				{
 					auto Add_AssetListEntry = [&](int32 AssetIndex)
 					{
@@ -443,7 +443,7 @@ public:
 			}
 		};
 
-		if (strstr(Label, "###") == nullptr)
+		if (strstr(Label, "##") == nullptr)
 		{
 			ImGui::BeginGroup();
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 25.f * GlobalScale - ImGui::GetFontSize() * 0.5f);

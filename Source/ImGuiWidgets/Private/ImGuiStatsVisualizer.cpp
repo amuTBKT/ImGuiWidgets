@@ -538,7 +538,7 @@ namespace ImGuiStatsVizualizer
 			ImGui::SetNextItemWidth(128);
 
 			static char StatSourceBuffer[64] = { 0 };
-			if (ImGui::InputTextWithHint("###NewStat", "Add Stat", StatSourceBuffer, sizeof(StatSourceBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+			if (ImGui::InputTextWithHint("##NewStat", "Add Stat", StatSourceBuffer, sizeof(StatSourceBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
 			{
 				// execute command
 				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), ANSI_TO_TCHAR(StatSourceBuffer));

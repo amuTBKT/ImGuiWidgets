@@ -193,7 +193,7 @@ public:
 			{
 				ImGui::SetKeyboardFocusHere();
 			}
-			const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("###Filter", HintText, FilterString, sizeof(FilterString)) : ImGui::InputText("###Filter", FilterString, sizeof(FilterString));
+			const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("##Filter", HintText, FilterString, sizeof(FilterString)) : ImGui::InputText("##Filter", FilterString, sizeof(FilterString));
 			if (bInputTextChanged)
 			{
 				bFilterChanged = true;
