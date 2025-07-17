@@ -66,7 +66,7 @@ namespace ImGuiNiagaraProfiler
 	};
 	struct FWorldStatData
 	{
-		TArray<FSystemStatData> SystemStats;
+		TMap<FObjectKey, FSystemStatData> SystemStats;
 
 		void AddStat(const FVersionedNiagaraEmitterWeakPtr& VersionedEmitter, const FName& InSimStageName, float InDuration)
 		{
@@ -77,10 +77,10 @@ namespace ImGuiNiagaraProfiler
 				return;
 			}
 
-			FSystemStatData* SystemStat = SystemStats.FindByPredicate([InSystem](const auto& Stat) { return Stat.System.Get() == InSystem; });
+			FSystemStatData* SystemStat = SystemStats.Find(InSystem);
 			if (!SystemStat)
 			{
-				SystemStat = &SystemStats.Emplace_GetRef();
+				SystemStat = &SystemStats.Add(FObjectKey(InSystem));
 				SystemStat->System = InSystem;
 			}
 
@@ -217,9 +217,9 @@ namespace ImGuiNiagaraProfiler
 
 			if (ImGui::BeginChild("ScrollingArea"))
 			{
-				for (const auto& SystemStat : WorldStats.SystemStats)
+				for (const auto& SystemStatItr : WorldStats.SystemStats)
 				{
-					DisplaySystemStats(SystemStat.System.Get(), SystemStat.EmitterStats);
+					DisplaySystemStats(SystemStatItr.Value.System.Get(), SystemStatItr.Value.EmitterStats);
 				}
 			}
 			ImGui::EndChild();
