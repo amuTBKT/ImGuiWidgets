@@ -2,6 +2,7 @@
 
 #if WITH_IMGUI && STATS
 
+#include "GPUProfiler.h"
 #include "Engine/Engine.h"
 #include "Stats/StatsData.h"
 #include "ImGuiStaticWidget.h"
@@ -10,6 +11,7 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
+#include "TimerManager.h"
 #include "AssetRegistry/AssetData.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -119,6 +121,19 @@ namespace ImGuiStatsVizualizer
 	}
 
 	FORCEINLINE static void RenderCounterHeadings()
+	{
+		// The heading looks like:
+		// Stat [32chars]	Value [8chars]	Average [8chars]
+
+		ImGui::TableSetupColumn("Counters", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
+		ImGui::TableSetupColumn("Average", ImGuiTableColumnFlags_WidthFixed);
+		ImGui::TableSetupColumn("Max", ImGuiTableColumnFlags_WidthFixed);
+		ImGui::TableSetupColumn("Min", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
+		ImGui::TableHeadersRow();
+	}
+
+	FORCEINLINE static void RenderGpuStatHeadings()
 	{
 		// The heading looks like:
 		// Stat [32chars]	Value [8chars]	Average [8chars]
@@ -244,11 +259,21 @@ namespace ImGuiStatsVizualizer
 
 					if (FImGui::ImageButtonWithTint("EditAsset", EditAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 					{
-						UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-						if (AssetEditorSubsystem)
-						{
-							AssetEditorSubsystem->OpenEditorForAsset(Asset);
-						}
+						// NOTE: executing this immediately causes crashes when quering stats next frame
+						FFunctionGraphTask::CreateAndDispatchWhenReady(
+							[AssetPtr = TWeakObjectPtr<UObject>(Asset)]()
+							{
+								if (!AssetPtr.IsValid())
+								{
+									return;
+								}
+
+								UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+								if (AssetEditorSubsystem)
+								{
+									AssetEditorSubsystem->OpenEditorForAsset(AssetPtr.Get());
+								}
+							}, TStatId(), NULL, ENamedThreads::GameThread);
 					}
 					if (ImGui::IsItemHovered())
 					{
@@ -433,6 +458,37 @@ namespace ImGuiStatsVizualizer
 		return RowIndex;
 	}
 
+	template <typename T>
+	static int32 RenderArrayOfGpuStats(TArray<const FComplexStatMessage*>&& StatMessages, const FGameThreadStatsData& ViewData, const T& FunctionToCall)
+	{
+		using EType = UE::RHI::GPUProfiler::FGPUStat::EType;
+
+		int32 RowIndex = 0;
+
+		// Render all counters.
+		if (!StatFilter.IsActive()) // TODO: clipping doesn't work with JIT filtering
+		{
+			ImGuiListClipper clipper;
+			clipper.Begin(StatMessages.Num());
+			while (clipper.Step())
+			{
+				for (RowIndex = clipper.DisplayStart; RowIndex < clipper.DisplayEnd; RowIndex++)
+				{
+					FunctionToCall(ViewData, *StatMessages[RowIndex]);
+				}
+			}
+		}
+		else
+		{
+			for (RowIndex = 0; RowIndex < StatMessages.Num(); ++RowIndex)
+			{
+				FunctionToCall(ViewData, *StatMessages[RowIndex]);
+			}
+		}
+
+		return RowIndex;
+	}
+
 	FORCEINLINE static void RenderFlatCycle(const FGameThreadStatsData& ViewData, const FComplexStatMessage& Item)
 	{
 		RenderCycle(Item, true);
@@ -527,6 +583,35 @@ namespace ImGuiStatsVizualizer
 						ImGui::EndTable();
 					}
 				}
+
+#if RHI_NEW_GPU_PROFILER
+				if (!bCullNextSection && StatGroup.GpuStatsAggregate.Num())
+				{
+					TArray<const FComplexStatMessage*> FilteredStats;
+					FilteredStats.Reserve(StatGroup.GpuStatsAggregate.Num());
+					for (const FComplexStatMessage& Message : StatGroup.GpuStatsAggregate)
+					{
+						using EType = UE::RHI::GPUProfiler::FGPUStat::EType;
+						const FName ShortName = Message.GetShortName();
+						const int32 Number = ShortName.GetNumber();
+						if ((EType)Number == EType::Busy)
+						{
+							FilteredStats.Add(&Message);
+						}
+					}
+
+					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_GpuStats", *StatGroupData->DisplayName);
+					if (ImGui::BeginTable(ScratchTableIdBuffer, GetCounterStatsColumnCount(), TableFlags))
+					{
+						RenderGpuStatHeadings();
+
+						int32 LastRowDisplayed = RenderArrayOfGpuStats(MoveTemp(FilteredStats), ViewData, RenderCounter);
+						bCullNextSection = LastRowDisplayed < StatGroup.CountersAggregate.Num();
+
+						ImGui::EndTable();
+					}
+				}
+#endif //#if RHI_NEW_GPU_PROFILER
 			}
 		}
 	}
@@ -596,7 +681,7 @@ namespace ImGuiStatsVizualizer
 
 	static void Initialize()
 	{
-		StatGroups.Add(FName(TEXT("STATGROUP_GPU")),             { "GPU",              TEXT("GPU"),               false });
+		StatGroups.Add(FName(TEXT("STATGROUP_GPU0_Graphics0")),  { "GPU",              TEXT("GPU0_Graphics0"),    false });
 		StatGroups.Add(FName(TEXT("STATGROUP_SceneRendering")),  { "Scene Rendering",  TEXT("SceneRendering"),    false });
 		StatGroups.Add(FName(TEXT("STATGROUP_Niagara")),         { "Niagara",          TEXT("Niagara"),           false });
 		StatGroups.Add(FName(TEXT("STATGROUP_NiagaraSystems")),  { "Niagara Systems",  TEXT("NiagaraSystems"),    false });

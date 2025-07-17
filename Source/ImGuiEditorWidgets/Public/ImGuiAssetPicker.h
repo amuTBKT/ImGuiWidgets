@@ -13,6 +13,7 @@
 #include "Styling/SlateIconFinder.h"
 #include "AssetRegistry/AssetData.h"
 #include "Blueprint/BlueprintSupport.h"
+#include "Subsystems/AssetEditorSubsystem.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 
@@ -206,7 +207,11 @@ public:
 
 				if (Asset && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 				{
-					GEditor->EditObject(Asset);
+					UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
+					if (AssetEditorSubsystem)
+					{
+						AssetEditorSubsystem->OpenEditorForAsset(Asset);
+					}
 				}
 			}
 		};
