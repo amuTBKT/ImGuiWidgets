@@ -1,13 +1,14 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
-#if WITH_IMGUI && STATS
+#include "NiagaraGPUProfilerInterface.h"
+
+#if WITH_IMGUI && WITH_NIAGARA_GPU_PROFILER
 
 #include "Engine/World.h"
 #include "NiagaraSystem.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
 #include "NiagaraSimulationStageBase.h"
-#include "NiagaraGPUProfilerInterface.h"
 
 namespace ImGuiNiagaraProfiler
 {

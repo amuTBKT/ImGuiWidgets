@@ -1,5 +1,7 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
+#include "Misc/Build.h"
+
 #if WITH_IMGUI && STATS
 
 #include "GPUProfiler.h"
@@ -7,7 +9,6 @@
 #include "Stats/StatsData.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
-#include "Containers/AnsiString.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -458,6 +459,7 @@ namespace ImGuiStatsVizualizer
 		return RowIndex;
 	}
 
+#if RHI_NEW_GPU_PROFILER
 	template <typename T>
 	static int32 RenderArrayOfGpuStats(TArray<const FComplexStatMessage*>&& StatMessages, const FGameThreadStatsData& ViewData, const T& FunctionToCall)
 	{
@@ -488,6 +490,7 @@ namespace ImGuiStatsVizualizer
 
 		return RowIndex;
 	}
+#endif //#if RHI_NEW_GPU_PROFILER
 
 	FORCEINLINE static void RenderFlatCycle(const FGameThreadStatsData& ViewData, const FComplexStatMessage& Item)
 	{
