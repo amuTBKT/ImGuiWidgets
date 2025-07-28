@@ -10,6 +10,7 @@
 #include "ShaderCompilerCommon.h"
 #include "Materials/MaterialInstance.h"
 #include "DataDrivenShaderPlatformInfo.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #if 0
 namespace ImGuiShaderAnalyzer
@@ -21,8 +22,6 @@ namespace ImGuiShaderAnalyzer
 
 namespace ImGuiMaterialStats
 {
-	static const EShaderPlatform PreviewShaderPlatform = EShaderPlatform::SP_PCD3D_SM6;
-	static const EMaterialQualityLevel::Type PreviewQualityLevel = EMaterialQualityLevel::Num;
 	struct FMaterialStatsData
 	{
 		struct FShaderStatsData
@@ -145,7 +144,7 @@ namespace ImGuiMaterialStats
 			return SanitizedPath;
 		}
 
-		void PopulateStats()
+		void PopulateStats(EShaderPlatform ShaderPlatform)
 		{
 			check(Shaders.IsEmpty());
 
@@ -155,8 +154,12 @@ namespace ImGuiMaterialStats
 				TMap<FShaderId, TShaderRef<FShader>> ShaderMap;
 				MaterialShaderMap->GetShaderList(ShaderMap);
 
-				const FString ResourceUniqueName = ShortenShaderDebugName(Resource->GetUniqueAssetName(PreviewShaderPlatform, MaterialShaderMap->GetShaderMapId()));				
-				const FString ShaderPlatformName = FDataDrivenShaderPlatformInfo::GetName(PreviewShaderPlatform).ToString();
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 506) //(Version > 5.6)
+				const FString ResourceUniqueName = ShortenShaderDebugName(Resource->GetUniqueAssetName(MaterialShaderMap->GetShaderMapId()));
+#else
+				const FString ResourceUniqueName = ShortenShaderDebugName(Resource->GetUniqueAssetName(ShaderPlatform, MaterialShaderMap->GetShaderMapId()));
+#endif
+				const FString ShaderPlatformName = FDataDrivenShaderPlatformInfo::GetName(ShaderPlatform).ToString();
 				ShaderOutputBaseDir = GShaderCompilingManager->GetAbsoluteShaderDebugInfoDirectory() / ShaderPlatformName / ResourceUniqueName;
 
 				Shaders.Reserve(ShaderMap.Num());
@@ -176,7 +179,11 @@ namespace ImGuiMaterialStats
 					}
 
 					const FString DebugExtensionStr = FString::Printf(TEXT("_%08x%08x"), MaterialShaderMap->GetShaderMapId().BaseMaterialId.A, MaterialShaderMap->GetShaderMapId().BaseMaterialId.B);
-					FString DebugGroupName = Resource->GetUniqueAssetName(PreviewShaderPlatform, MaterialShaderMap->GetShaderMapId()) / LexToString(Resource->GetQualityLevel()) / Entry.Key.ShaderPipelineName.GetDebugString().String.Get() / ShaderName;
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 506) //(Version > 5.6)
+					FString DebugGroupName = Resource->GetUniqueAssetName(MaterialShaderMap->GetShaderMapId()) / LexToString(Resource->GetQualityLevel()) / Entry.Key.ShaderPipelineName.GetDebugString().String.Get() / ShaderName;
+#else
+					FString DebugGroupName = Resource->GetUniqueAssetName(ShaderPlatform, MaterialShaderMap->GetShaderMapId()) / LexToString(Resource->GetQualityLevel()) / Entry.Key.ShaderPipelineName.GetDebugString().String.Get() / ShaderName;
+#endif
 					DebugGroupName = ShortenShaderDebugName(DebugGroupName);
 
 					FString ShaderFilePath = GShaderCompilingManager->GetAbsoluteShaderDebugInfoDirectory() / ShaderPlatformName / DebugGroupName / FString::Printf(TEXT("%i%s"), Entry.Key.PermutationId, *DebugExtensionStr) / ShaderFileName;
@@ -209,6 +216,8 @@ namespace ImGuiMaterialStats
 	};
 
 	static FMaterialStatsData MaterialStats = {};
+	static EShaderPlatform PreviewShaderPlatform = EShaderPlatform::SP_PCD3D_SM6;
+	static EMaterialQualityLevel::Type PreviewQualityLevel = EMaterialQualityLevel::Num;
 
 	static void Reset()
 	{
@@ -335,8 +344,13 @@ namespace ImGuiMaterialStats
 					}
 					auto& Resource = MaterialStats.Resource;
 					Resource = new FMaterialResourceStats();
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 506) //(Version > 5.6)
+					Resource->SetMaterial(MaterialToUse, nullptr, PreviewShaderPlatform, PreviewQualityLevel);
+					Resource->CacheShaders(EMaterialShaderPrecompileMode::Default);
+#else
 					Resource->SetMaterial(MaterialToUse, nullptr, ERHIFeatureLevel::SM6, PreviewQualityLevel);
 					Resource->CacheShaders(PreviewShaderPlatform, EMaterialShaderPrecompileMode::Default);
+#endif
 				}
 				ImGui::EndDisabled();
 			}
@@ -360,7 +374,7 @@ namespace ImGuiMaterialStats
 						DumpShaderInfoCVarRestoreValue = INDEX_NONE;
 					}
 
-					MaterialStats.PopulateStats();
+					MaterialStats.PopulateStats(PreviewShaderPlatform);
 				}
 			}
 
@@ -450,7 +464,7 @@ namespace ImGuiMaterialStats
 
 #if 0
 											ImGui::BeginDisabled(ImGuiShaderAnalyzer::CanAnalyzeShader(Shader.ShaderType) == false);
-											if (ImGui::ImageButtonWithTint("Analyze", AnalyzeIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+											if (FImGui::ImageButtonWithTint("Analyze", AnalyzeIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 											{
 												ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
 											}
