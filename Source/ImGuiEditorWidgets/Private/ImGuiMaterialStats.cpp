@@ -268,6 +268,7 @@ namespace ImGuiMaterialStats
 			static FImGuiAssetPicker<UMaterial> MaterialPicker;
 			static TWeakObjectPtr<UMaterial> SelectedMaterial;
 			static FImGuiTextFilter<128> ShaderFilter;
+			static uint32 EnabledShaderTypes = (1u << SF_Vertex) | (1u << SF_Pixel);
 
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 			const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Warning"), FVector2D(ImGui::GetFontSize()), 1.f);
@@ -381,7 +382,41 @@ namespace ImGuiMaterialStats
 			if (!bIsCompilingPermutations && !MaterialStats.ShaderVFLookup.IsEmpty())
 			{
 				ImGui::SameLine();
-				ShaderFilter.Draw("FilterShaders", "Filter Shaders");
+				// filtering
+				{
+					auto AddCheckboxButton = [](const char* Label, const char* ToolTip, uint32& InOutState, uint32 BitsToToggle)
+						{
+							const bool bApplyStyle = (InOutState & BitsToToggle) > 0u;
+							if (bApplyStyle)
+							{
+								ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.7f, 0.7f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
+							}
+
+							if (ImGui::Button(Label))
+							{
+								InOutState ^= BitsToToggle;
+							}
+							if (ImGui::IsItemHovered())
+							{
+								ImGui::SetTooltip(ToolTip);
+							}
+
+							if (bApplyStyle)
+							{
+								ImGui::PopStyleColor(3);
+							}
+						};
+					
+					ShaderFilter.Draw("FilterShaders", "Filter Shaders");
+
+					ImGui::SameLine(); AddCheckboxButton("VS", "Toggle Vertex Shaders", EnabledShaderTypes, (1u << SF_Vertex));
+					ImGui::SameLine(); AddCheckboxButton("PS", "Toggle Pixel Shaders", EnabledShaderTypes, (1u << SF_Pixel));
+					ImGui::SameLine(); AddCheckboxButton("CS", "Toggle Compute Shaders", EnabledShaderTypes, (1u << SF_Compute));
+					ImGui::SameLine(); AddCheckboxButton("RTX", "Toggle RayTracing Shaders", EnabledShaderTypes, ((1u << SF_RayMiss) | (1u << SF_RayHitGroup)));
+					//ImGui::SameLine(); AddCheckboxButton("MS", "Toggle Mesh/Amplification Shaders",  EnabledShaderTypes, ((1u << SF_Mesh) | (1u << SF_Amplification)));
+				}
 				ImGui::Separator();
 
 				if (ImGui::BeginTabBar("Shaders"))
@@ -406,7 +441,8 @@ namespace ImGuiMaterialStats
 								{
 									const auto& Shader = MaterialStats.Shaders[ShaderIndex];
 
-									if (!ShaderFilter.PassFilter(Shader.ShaderClassName))
+									if (((EnabledShaderTypes & (1u << Shader.ShaderType)) == 0u) ||
+										!ShaderFilter.PassFilter(Shader.ShaderClassName))
 									{
 										continue;
 									}
