@@ -64,6 +64,7 @@ namespace ImGuiNiagaraProfiler
 	{
 		TWeakObjectPtr<UNiagaraSystem> System;
 		TArray<FEmitterStatData> EmitterStats;
+		float TotalTime = 0.f;
 	};
 	struct FWorldStatData
 	{
@@ -83,6 +84,7 @@ namespace ImGuiNiagaraProfiler
 			{
 				SystemStat = &SystemStats.Add(FObjectKey(InSystem));
 				SystemStat->System = InSystem;
+				SystemStat->TotalTime = 0.f;
 			}
 
 			FEmitterStatData* EmitterStat = SystemStat->EmitterStats.FindByPredicate([InEmitter](const auto& Stat) { return Stat.Emitter.Get() == InEmitter; });
@@ -92,6 +94,8 @@ namespace ImGuiNiagaraProfiler
 				EmitterStat->Initialize(VersionedEmitter);
 			}
 			EmitterStat->AddSimStageStat(InSimStageName, InDuration);
+
+			SystemStat->TotalTime += InDuration;
 		}
 	};
 
@@ -184,24 +188,27 @@ namespace ImGuiNiagaraProfiler
 	}
 
 
-	static void DisplaySystemStats(const UNiagaraSystem* System, const TArray<FEmitterStatData>& EmitterStats)
+	static void DisplaySystemStats(const FSystemStatData& SystemStat)
 	{
-		if (!System || EmitterStats.IsEmpty())
+		if (!SystemStat.System.IsValid() || SystemStat.EmitterStats.IsEmpty())
 		{
 			return;
 		}
 
-		const FString SystemName = System->GetFName().ToString();
+		const FString SystemName = SystemStat.System->GetFName().ToString();
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::CollapsingHeader(TCHAR_TO_ANSI(*SystemName)))
 		{
-			FImGuiNamedWidgetScope Scope{ *SystemName };
-
-			for (const auto& EmitterStat : EmitterStats)
+			ImGui::SameLine(); ImGui::Text(" - %fms", SystemStat.TotalTime);
+			for (const auto& EmitterStat : SystemStat.EmitterStats)
 			{
 				DisplayEmitterStats(EmitterStat);
 			}
+		}
+		else
+		{
+			ImGui::SameLine(); ImGui::Text(" - %fms", SystemStat.TotalTime);
 		}
 	}
 
@@ -214,13 +221,13 @@ namespace ImGuiNiagaraProfiler
 
 		if (ImGui::BeginTabItem(TCHAR_TO_ANSI(*World->GetName())))
 		{
-			FImGuiNamedWidgetScope Scope{ *World->GetName() };
-
 			if (ImGui::BeginChild("ScrollingArea"))
 			{
 				for (const auto& SystemStatItr : WorldStats.SystemStats)
 				{
-					DisplaySystemStats(SystemStatItr.Value.System.Get(), SystemStatItr.Value.EmitterStats);
+					FImGuiNamedWidgetScope Scope{ GetTypeHash(SystemStatItr.Key) };
+
+					DisplaySystemStats(SystemStatItr.Value);
 				}
 			}
 			ImGui::EndChild();
