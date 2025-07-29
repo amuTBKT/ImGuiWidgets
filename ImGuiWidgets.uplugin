@@ -18,14 +18,14 @@
 		{
 			"Name": "ImGuiWidgets",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
+			"LoadingPhase": "PostDefault",
 			"TargetDenyList": [ "Server", "Program" ],
 			"TargetConfigurationDenyList": [ "Shipping" ]
 		},
 		{
 			"Name": "ImGuiEditorWidgets",
 			"Type": "Editor",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostDefault"
 		}
 	],
 	"Plugins": [

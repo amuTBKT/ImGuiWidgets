@@ -211,14 +211,15 @@ public:
 		const float GlobalScale = ImGui::GetIO().FontGlobalScale;
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("Icons.Use"), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("Icons.BrowseContent"), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("PropertyWindow.DiffersFromDefault"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Use"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.BrowseContent"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("PropertyWindow.DiffersFromDefault"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams ComboboxDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(&FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton")).DownArrowImage, FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale, 1.f);		
-		const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("ContentBrowser.AssetTreeFolderOpenVirtual"), FVector2D(16.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("PluginStyle", "Plugins.TabIcon"), FVector2D(16.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("ContentBrowser.ColumnViewDeveloperFolderIcon"), FVector2D(16.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DeveloperFolder"), FVector2D(16.) * GlobalScale, 1.f);
 
 		auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, TAssetType* Asset)
 		{
@@ -510,6 +511,7 @@ public:
 							return bWasActive != bInOutState;
 						};
 					
+					bFilterAvailableAssets |= AddButton("ToggleProjectContent", FImGuiContentBrowserUtils::bShowProjectConent, ProjectContentIcon, "Show Project Content?");
 					bFilterAvailableAssets |= AddButton("ToggleEngineContent", FImGuiContentBrowserUtils::bShowEngineConent, EngineContentIcon, "Show Engine Content?");
 					bFilterAvailableAssets |= AddButton("TogglePluginContent", FImGuiContentBrowserUtils::bShowPluginConent, PluginContentIcon, "Show Plugin Content?");
 					bFilterAvailableAssets |= AddButton("ToggleDeveloperContent", FImGuiContentBrowserUtils::bShowDeveloperConent, DeveloperContentIcon, "Show Developer Folder Content?");

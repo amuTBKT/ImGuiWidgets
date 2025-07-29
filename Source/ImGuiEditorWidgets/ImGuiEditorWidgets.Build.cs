@@ -28,7 +28,7 @@ public class ImGuiEditorWidgets : ModuleRules
 			}
 		);
 
-        // for using ImGui
-        PublicDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime", "ImGuiWidgets" });
+		// for using ImGui
+		PublicDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime", "ImGuiWidgets" });
 	}
 }
