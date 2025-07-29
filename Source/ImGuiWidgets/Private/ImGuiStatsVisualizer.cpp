@@ -223,7 +223,7 @@ namespace ImGuiStatsVizualizer
 					AssetPath.RemoveFromEnd(" [RT]", ESearchCase::IgnoreCase);
 					AssetPath.RemoveFromEnd(" [GT]", ESearchCase::IgnoreCase);
 
-					FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(IMGUI_FNAME("AssetRegistry"));
+					FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(FName("AssetRegistry"));
 					IAssetRegistry& AssetRegistry = AssetRegistryModule.Get();
 					FAssetData AssetData = AssetRegistry.GetAssetByObjectPath(FSoftObjectPath(AssetPath));
 					if (AssetData.IsValid())
@@ -695,8 +695,8 @@ namespace ImGuiStatsVizualizer
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Edit"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale, 1.f);
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Search"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale, 1.f);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale, 1.f);
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale, 1.f);
 	}
 
 	static void Tick(ImGuiContext* Context)

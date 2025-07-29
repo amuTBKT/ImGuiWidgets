@@ -19,12 +19,13 @@ public class ImGuiEditorWidgets : ModuleRules
 				"RenderCore",
 				"CoreUObject",
 
-                "UnrealEd",
-                "Blutility",
-                "AssetRegistry",
-                "MaterialEditor",
-                "ShaderCompilerCommon",
-            }
+				"UnrealEd",
+				"Blutility",
+				"AssetRegistry",
+				"MaterialEditor",
+				"ContentBrowserData",
+				"ShaderCompilerCommon",
+			}
 		);
 
         // for using ImGui

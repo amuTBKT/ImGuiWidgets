@@ -14,25 +14,26 @@ public class ImGuiWidgets : ModuleRules
 			{
 				"Core",
 				"Engine",
+				"SlateCore",
 				"CoreUObject",
-            }
+			}
 		);
 
 		// for using ImGui
-        PublicDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime" });
+		PublicDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime" });
 
 		// for using Niagara
 		PrivateDependencyModuleNames.Add("Niagara");
 
-        if (Target.bBuildEditor)
-        {
-            PrivateDependencyModuleNames.AddRange(
-                new string[]
-                {
-                    "UnrealEd",
-                    "AssetRegistry",
-                }
-            );
-        }
-    }
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[]
+				{
+					"UnrealEd",
+					"AssetRegistry",
+				}
+			);
+		}
+	}
 }
