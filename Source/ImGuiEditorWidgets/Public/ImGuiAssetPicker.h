@@ -147,7 +147,7 @@ public:
 		}
 		return false;
 	}
-	
+
 	bool Draw(const char* Label, TAssetType*& InOutSelectedAsset)
 	{
 		FImGuiNamedWidgetScope WidgetScope{ Label };
@@ -164,7 +164,9 @@ public:
 				ContainerRevisionId = AssetContainer.GetRevisionId();
 
 				SelectedAssetThumbnail = MakeShareable(new FAssetThumbnail(FAssetData(SelectedAsset), 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
-				LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(SelectedAsset);
+				LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::None));
+
+				FilterAvailableAssets();
 			}
 			SelectedAssetTexture = SelectedAssetThumbnail->GetViewportRenderTargetTexture();
 		}
@@ -350,12 +352,16 @@ public:
 				if (!bIsAssetViewerVisible)
 				{
 					TextFilter.Reset();
+					FilterAvailableAssets();
 				}
-				TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth);
+				if (TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth))
+				{
+					FilterAvailableAssets();
+				}
 
 				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
 				{
-					auto Add_AssetListEntry = [&](int32 AssetIndex)
+					auto Add_AssetListEntry = [&](int32 AssetIndex, int32 RowIndex)
 					{
 						const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
 						const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
@@ -370,7 +376,7 @@ public:
 							{
 								ImGui::GetWindowDrawList()->AddRectFilled(
 									ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
-									ImGui::GetColorU32((AssetIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
+									ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
 							}
 						}
 						ImGui::SameLine();
@@ -387,7 +393,7 @@ public:
 						}
 
 						// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-						if (bWasSelected)
+						if (bWasSelected || ((RowIndex == 0) && (LastSelectedAssetIndex == INDEX_NONE)))
 						{
 							// scroll to item when popup is opened
 							if (!bIsAssetViewerVisible)
@@ -397,33 +403,20 @@ public:
 							ImGui::SetItemDefaultFocus();
 						}
 					};
-
-					if (!TextFilter.IsActive()) // TODO: clipping doesn't work with JIT filtering
+					
+					ImGuiListClipper Clipper;
+					Clipper.Begin(FilteredAssets.Num());
+					if (LastSelectedAssetIndexInFilteredList != INDEX_NONE)
 					{
-						ImGuiListClipper Clipper;
-						Clipper.Begin(AvailableAssets.Num());
-						if (LastSelectedAssetIndex != INDEX_NONE)
-						{
-							Clipper.IncludeItemByIndex(LastSelectedAssetIndex);
-						}
-
-						while (Clipper.Step() && (NewSelectedIndex == INDEX_NONE))
-						{
-							for (int32 AssetIndex = Clipper.DisplayStart; AssetIndex < Clipper.DisplayEnd; AssetIndex++)
-							{
-								Add_AssetListEntry(AssetIndex);
-							}
-						}
+						Clipper.IncludeItemByIndex(LastSelectedAssetIndexInFilteredList);
 					}
-					else
+
+					int32 RowIndex = 0;
+					while (Clipper.Step() && (NewSelectedIndex == INDEX_NONE))
 					{
-						for (int32 AssetIndex = 0; AssetIndex < AvailableAssets.Num(); ++AssetIndex)
+						for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
 						{
-							const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
-							if (TextFilter.PassFilter(AssetName))
-							{
-								Add_AssetListEntry(AssetIndex);
-							}
+							Add_AssetListEntry(FilteredAssets[Index], RowIndex++);
 						}
 					}
 
@@ -487,13 +480,38 @@ public:
 		if (bSelectionChanged)
 		{
 			InOutSelectedAsset = SelectedAsset;
-			LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(SelectedAsset);
+			LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::None));
+			LastSelectedAssetIndexInFilteredList = FilteredAssets.IndexOfByKey(LastSelectedAssetIndex);
 		}
 		return bSelectionChanged;
 	}
 
 private:
+	void FilterAvailableAssets()
+	{
+		FilteredAssets.Reset();
+		LastSelectedAssetIndexInFilteredList = INDEX_NONE;
+
+		const auto& AssetContainer = FAssetContainer::GetInstance();
+		const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
+		for (int32 AssetIndex = 0; AssetIndex < AvailableAssets.Num(); ++AssetIndex)
+		{
+			const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
+			if (TextFilter.PassFilter(AssetName))
+			{
+				if (LastSelectedAssetIndex == AssetIndex)
+				{
+					LastSelectedAssetIndexInFilteredList = FilteredAssets.Num();
+				}
+				FilteredAssets.Add(AssetIndex);
+			}
+		}
+	}
+
+private:
 	FImGuiTextFilter<128> TextFilter = {};
+	TArray<int32> FilteredAssets;
+	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;
 	int32 LastSelectedAssetIndex = INDEX_NONE;
 	TSharedPtr<FAssetThumbnail> SelectedAssetThumbnail = nullptr;
 
