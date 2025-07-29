@@ -17,6 +17,16 @@
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 
+namespace FImGuiContentBrowserUtils
+{
+	IMGUIEDITORWIDGETS_API extern bool bShowProjectConent;
+	IMGUIEDITORWIDGETS_API extern bool bShowEngineConent;
+	IMGUIEDITORWIDGETS_API extern bool bShowPluginConent;
+	IMGUIEDITORWIDGETS_API extern bool bShowDeveloperConent;
+
+	IMGUIEDITORWIDGETS_API extern bool FilterAsset(FName AssetPath);
+};
+
 template <typename... Types>
 class FImGuiAssetPicker : FNoncopyable
 {
@@ -39,7 +49,7 @@ class FImGuiAssetPicker : FNoncopyable
 
 		~FAssetContainer()
 		{
-			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(IMGUI_FNAME("AssetRegistry")))
+			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(FName("AssetRegistry")))
 			{
 				IAssetRegistry& AssetRegistry = AssetRegistryModulePtr->Get();
 				AssetRegistry.OnAssetAdded().RemoveAll(this);
@@ -68,7 +78,7 @@ class FImGuiAssetPicker : FNoncopyable
 		{
 			ClassIconBrush = FClassIconFinder::FindThumbnailForClass(TAssetType::StaticClass(), NAME_None);
 
-			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(IMGUI_FNAME("AssetRegistry")))
+			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(FName("AssetRegistry")))
 			{
 				IAssetRegistry& AssetRegistry = AssetRegistryModulePtr->Get();
 				GatherAssets(AssetRegistry);
@@ -77,8 +87,19 @@ class FImGuiAssetPicker : FNoncopyable
 			}
 		}
 
+		static FORCEINLINE bool CompareAssetData(const FAssetData& LHS, const FAssetData& RHS)
+		{
+			if (LHS.AssetName == RHS.AssetName)
+			{
+				return LHS.PackageName.LexicalLess(RHS.PackageName);
+			}
+			return LHS.AssetName.LexicalLess(RHS.AssetName);
+		}
+
 		FORCEINLINE void GatherAssets(IAssetRegistry& AssetRegistry)
 		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ImGuiAssetPicker_GatherAssets"), STAT_ImGui_GatherAssets, STATGROUP_ImGui);
+
 			FARFilter Filter;
 			Filter.ClassPaths.Add(TAssetType::StaticClass()->GetClassPathName());
 			Filter.bRecursiveClasses = true; // TODO: expose filter settings
@@ -90,6 +111,8 @@ class FImGuiAssetPicker : FNoncopyable
 			}
 
 			AssetRegistry.GetAssets(Filter, AvailableAssets);
+
+			AvailableAssets.Sort([](const auto& A, const auto& B){ return CompareAssetData(A, B); });
 		}
 
 		FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
@@ -112,15 +135,25 @@ class FImGuiAssetPicker : FNoncopyable
 
 		void OnAssetAdded(const FAssetData& AssetData)
 		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ImGuiAssetPicker_AddAsset"), STAT_ImGui_AddAsset, STATGROUP_ImGui);
+
 			if (FilterAsset(AssetData))
 			{
 				RevisionId++;
-				AvailableAssets.AddUnique(AssetData);
+
+				int32 InsertIndex = Algo::LowerBound(AvailableAssets, AssetData, [](const auto& A, const auto& B){ return CompareAssetData(A, B); });
+				bool bExists = (AvailableAssets.IsValidIndex(InsertIndex) && AvailableAssets[InsertIndex] == AssetData);
+				if (!bExists && InsertIndex >= 0)
+				{
+					AvailableAssets.Insert(AssetData, InsertIndex);
+				}
 			}
 		}
 
 		void OnAssetRemoved(const FAssetData& AssetData)
 		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ImGuiAssetPicker_RemoveAsset"), STAT_ImGui_AddAsset, STATGROUP_ImGui);
+
 			if (FilterAsset(AssetData))
 			{
 				RevisionId++;
@@ -170,15 +203,22 @@ public:
 			}
 			SelectedAssetTexture = SelectedAssetThumbnail->GetViewportRenderTargetTexture();
 		}
+		if (PackedAssetPathFilter != GetGlobalAssetPathFilter())
+		{
+			FilterAvailableAssets();
+		}
 
 		const float GlobalScale = ImGui::GetIO().FontGlobalScale;
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.Use"), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("Icons.BrowseContent"), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_FNAME("PropertyWindow.DiffersFromDefault"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("Icons.Use"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("Icons.BrowseContent"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("PropertyWindow.DiffersFromDefault"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams ComboboxDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(&FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton")).DownArrowImage, FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale, 1.f);		
+		const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("ContentBrowser.AssetTreeFolderOpenVirtual"), FVector2D(16.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("PluginStyle", "Plugins.TabIcon"), FVector2D(16.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_EDITOR_ICON("ContentBrowser.ColumnViewDeveloperFolderIcon"), FVector2D(16.) * GlobalScale, 1.f);
 
 		auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, TAssetType* Asset)
 		{
@@ -348,83 +388,137 @@ public:
 			int32 NewSelectedIndex = INDEX_NONE;
 			if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 			{
+				bool bFilterAvailableAssets = false;
+
 				// reset filter text and set focus when asset viewer is triggered
 				if (!bIsAssetViewerVisible)
 				{
 					TextFilter.Reset();
-					FilterAvailableAssets();
+					bFilterAvailableAssets = true;
 				}
-				if (TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth))
+				
+				ImGui::BeginGroup();
 				{
-					FilterAvailableAssets();
-				}
-
-				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
-				{
-					auto Add_AssetListEntry = [&](int32 AssetIndex, int32 RowIndex)
+					if (TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth))
 					{
-						const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
-						const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
-						{
-							FImGuiNamedWidgetScope Scope{ GetTypeHash(AvailableAssets[AssetIndex]) };
+						bFilterAvailableAssets = true;
+					}
 
-							if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, AssetViewerRowHeight)))
+					if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
+					{
+						auto Add_AssetListEntry = [&](int32 AssetIndex, int32 RowIndex)
 							{
-								NewSelectedIndex = AssetIndex;
-							}
-							if (!bWasSelected)
+								const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
+								const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
+								{
+									FImGuiNamedWidgetScope Scope{ GetTypeHash(AvailableAssets[AssetIndex]) };
+
+									if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, AssetViewerRowHeight)))
+									{
+										NewSelectedIndex = AssetIndex;
+									}
+									if (!bWasSelected)
+									{
+										ImGui::GetWindowDrawList()->AddRectFilled(
+											ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
+											ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
+									}
+								}
+								ImGui::SameLine();
+
+								FSlateShaderResource* PreviewTexture = AssetContainer.GetAssetThumbnail(AvailableAssets[AssetIndex]);
+								Add_AssetThumbnail(PreviewTexture, AssetViewerRowHeight, nullptr);
+
+								ImGui::SameLine();
+								{
+									ImGui::BeginGroup();
+									ImGui::TextUnformatted(TCHAR_TO_ANSI(*AssetName));
+									ImGui::TextUnformatted(TCHAR_TO_ANSI(*AvailableAssets[AssetIndex].PackagePath.ToString()));
+									ImGui::EndGroup();
+								}
+
+								// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+								if (bWasSelected || ((RowIndex == 0) && (LastSelectedAssetIndex == INDEX_NONE)))
+								{
+									// scroll to item when popup is opened
+									if (!bIsAssetViewerVisible)
+									{
+										ImGui::ScrollToItem();
+									}
+									ImGui::SetItemDefaultFocus();
+								}
+							};
+
+						ImGuiListClipper Clipper;
+						Clipper.Begin(FilteredAssets.Num());
+						if (LastSelectedAssetIndexInFilteredList != INDEX_NONE)
+						{
+							Clipper.IncludeItemByIndex(LastSelectedAssetIndexInFilteredList);
+						}
+
+						int32 RowIndex = 0;
+						while (Clipper.Step() && (NewSelectedIndex == INDEX_NONE))
+						{
+							for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
 							{
-								ImGui::GetWindowDrawList()->AddRectFilled(
-									ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
-									ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
+								Add_AssetListEntry(FilteredAssets[Index], RowIndex++);
 							}
 						}
-						ImGui::SameLine();
 
-						FSlateShaderResource* PreviewTexture = AssetContainer.GetAssetThumbnail(AvailableAssets[AssetIndex]);
-						Add_AssetThumbnail(PreviewTexture, AssetViewerRowHeight, nullptr);
+						// NOTE: ImGui::BeginListBox can return false on first attempt (rect not visible in the popup window)
+						// So this flag is set there, instead of using `ImGui::IsPopupOpen(AssetViewerPopupName)`
+						bIsAssetViewerVisible = true;
 
-						ImGui::SameLine();
+						ImGui::EndListBox();
+					}
+				}
+				ImGui::EndGroup();
+
+				ImGui::SameLine();
+				ImGui::BeginGroup(); 
+				{
+					auto AddButton = [](const char* Label, bool& bInOutState, const FImGuiImageBindingParams& ImageParams, const char* ToolTip)
 						{
-							ImGui::BeginGroup();
-							ImGui::TextUnformatted(TCHAR_TO_ANSI(*AssetName));
-							ImGui::TextUnformatted(TCHAR_TO_ANSI(*AvailableAssets[AssetIndex].PackagePath.ToString()));
-							ImGui::EndGroup();
-						}
-
-						// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-						if (bWasSelected || ((RowIndex == 0) && (LastSelectedAssetIndex == INDEX_NONE)))
-						{
-							// scroll to item when popup is opened
-							if (!bIsAssetViewerVisible)
+							const bool bWasActive = bInOutState;
+							if (bWasActive)
 							{
-								ImGui::ScrollToItem();
+								ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_ButtonActive, 0.8f));
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_ButtonActive));
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetColorU32(ImGuiCol_ButtonActive, 0.8f));
 							}
-							ImGui::SetItemDefaultFocus();
-						}
-					};
+							else
+							{
+								ImGui::PushStyleColor(ImGuiCol_Button, 0);
+								ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
+								ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
+							}
+							ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
+							ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+
+							if (FImGui::ImageButtonWithTint(Label, ImageParams, bWasActive ? 0xFFFFFFFF : 0xC8FFFFFF, 0xFFFFFFFF))
+							{
+								bInOutState = !bInOutState;
+							}
+							if (ImGui::IsItemHovered())
+							{
+								ImGui::SetItemTooltip(ToolTip);
+							}
+
+							ImGui::PopStyleVar(2);
+							ImGui::PopStyleColor(3);
+
+							return bWasActive != bInOutState;
+						};
 					
-					ImGuiListClipper Clipper;
-					Clipper.Begin(FilteredAssets.Num());
-					if (LastSelectedAssetIndexInFilteredList != INDEX_NONE)
-					{
-						Clipper.IncludeItemByIndex(LastSelectedAssetIndexInFilteredList);
-					}
+					bFilterAvailableAssets |= AddButton("ToggleEngineContent", FImGuiContentBrowserUtils::bShowEngineConent, EngineContentIcon, "Show Engine Content?");
+					bFilterAvailableAssets |= AddButton("TogglePluginContent", FImGuiContentBrowserUtils::bShowPluginConent, PluginContentIcon, "Show Plugin Content?");
+					bFilterAvailableAssets |= AddButton("ToggleDeveloperContent", FImGuiContentBrowserUtils::bShowDeveloperConent, DeveloperContentIcon, "Show Developer Folder Content?");
+				}
+				ImGui::EndGroup();
 
-					int32 RowIndex = 0;
-					while (Clipper.Step() && (NewSelectedIndex == INDEX_NONE))
-					{
-						for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
-						{
-							Add_AssetListEntry(FilteredAssets[Index], RowIndex++);
-						}
-					}
-
-					// NOTE: ImGui::BeginListBox can return false on first attempt (rect not visible in the popup window)
-					// So this flag is set there, instead of using `ImGui::IsPopupOpen(AssetViewerPopupName)`
-					bIsAssetViewerVisible = true;
-
-					ImGui::EndListBox();
+				if (bFilterAvailableAssets)
+				{
+					FilterAvailableAssets();
 				}
 
 				if (NewSelectedIndex != INDEX_NONE)
@@ -437,6 +531,7 @@ public:
 
 			if (NewSelectedIndex != INDEX_NONE)
 			{
+				// TODO: this performs a synchronous load, flushing async loading thread :(
 				InOutAsset = Cast<TAssetType>(AvailableAssets[NewSelectedIndex].GetAsset());
 			}
 		};
@@ -487,36 +582,67 @@ public:
 	}
 
 private:
+	FORCEINLINE static uint8 GetGlobalAssetPathFilter()
+	{
+		uint8 Filter = 0u;
+		if (FImGuiContentBrowserUtils::bShowProjectConent)
+		{
+			Filter |= 1u << 0;
+		}
+		if (FImGuiContentBrowserUtils::bShowEngineConent)
+		{
+			Filter |= 1u << 1;
+		}
+		if (FImGuiContentBrowserUtils::bShowPluginConent)
+		{
+			Filter |= 1u << 2;
+		}
+		if (FImGuiContentBrowserUtils::bShowDeveloperConent)
+		{
+			Filter |= 1u << 3;
+		}
+		return Filter;
+	}
+
 	void FilterAvailableAssets()
 	{
 		FilteredAssets.Reset();
 		LastSelectedAssetIndexInFilteredList = INDEX_NONE;
+		PackedAssetPathFilter = GetGlobalAssetPathFilter();
 
 		const auto& AssetContainer = FAssetContainer::GetInstance();
 		const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
 		for (int32 AssetIndex = 0; AssetIndex < AvailableAssets.Num(); ++AssetIndex)
 		{
-			const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
-			if (TextFilter.PassFilter(AssetName))
+			FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
+			FName AssetPath = AvailableAssets[AssetIndex].PackagePath;
+			if (!TextFilter.PassFilter(AssetName))
 			{
-				if (LastSelectedAssetIndex == AssetIndex)
-				{
-					LastSelectedAssetIndexInFilteredList = FilteredAssets.Num();
-				}
-				FilteredAssets.Add(AssetIndex);
+				continue;
 			}
+			if (!FImGuiContentBrowserUtils::FilterAsset(AssetPath))
+			{
+				continue;
+			}
+
+			if (LastSelectedAssetIndex == AssetIndex)
+			{
+				LastSelectedAssetIndexInFilteredList = FilteredAssets.Num();
+			}
+			FilteredAssets.Add(AssetIndex);
 		}
 	}
 
 private:
 	FImGuiTextFilter<128> TextFilter = {};
-	TArray<int32> FilteredAssets;
-	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;
-	int32 LastSelectedAssetIndex = INDEX_NONE;
 	TSharedPtr<FAssetThumbnail> SelectedAssetThumbnail = nullptr;
 
-	uint32 ContainerRevisionId = UINT32_MAX;
+	TArray<int32> FilteredAssets;
+	uint8 PackedAssetPathFilter = 0;
 	bool bIsAssetViewerVisible = false;
+	uint32 ContainerRevisionId = UINT32_MAX;
+	int32 LastSelectedAssetIndex = INDEX_NONE;
+	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;
 };
 
 #endif //#if WITH_IMGUI
