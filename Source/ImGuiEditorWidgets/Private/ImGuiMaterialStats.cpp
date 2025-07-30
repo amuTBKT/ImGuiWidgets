@@ -267,7 +267,7 @@ namespace ImGuiMaterialStats
 
 			static FImGuiAssetPicker<UMaterial> MaterialPicker;
 			static TWeakObjectPtr<UMaterial> SelectedMaterial;
-			static FImGuiTextFilter<128> ShaderFilter;
+			static FImGuiTextFilter<64> ShaderFilter;
 			static uint32 EnabledShaderTypes = (1u << SF_Vertex) | (1u << SF_Pixel);
 
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();

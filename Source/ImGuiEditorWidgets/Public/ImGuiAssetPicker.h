@@ -8,6 +8,7 @@
 #include "imgui_internal.h"
 #include "AssetThumbnail.h"
 #include "ClassIconFinder.h"
+#include "Algo/BinarySearch.h"
 #include "ImGuiCommonWidgets.h"
 #include "EditorUtilityLibrary.h"
 #include "Styling/SlateIconFinder.h"
@@ -98,7 +99,7 @@ class FImGuiAssetPicker : FNoncopyable
 
 		FORCEINLINE void GatherAssets(IAssetRegistry& AssetRegistry)
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ImGuiAssetPicker_GatherAssets"), STAT_ImGui_GatherAssets, STATGROUP_ImGui);
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::GatherAssets"), STAT_ImGuiAssetPicker_GatherAssets, STATGROUP_ImGui);
 
 			FARFilter Filter;
 			Filter.ClassPaths.Add(TAssetType::StaticClass()->GetClassPathName());
@@ -135,7 +136,7 @@ class FImGuiAssetPicker : FNoncopyable
 
 		void OnAssetAdded(const FAssetData& AssetData)
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ImGuiAssetPicker_AddAsset"), STAT_ImGui_AddAsset, STATGROUP_ImGui);
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::AddAsset"), STAT_ImGuiAssetPicker_AddAsset, STATGROUP_ImGui);
 
 			if (FilterAsset(AssetData))
 			{
@@ -152,7 +153,7 @@ class FImGuiAssetPicker : FNoncopyable
 
 		void OnAssetRemoved(const FAssetData& AssetData)
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ImGuiAssetPicker_RemoveAsset"), STAT_ImGui_AddAsset, STATGROUP_ImGui);
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::RemoveAsset"), STAT_ImGuiAssetPicker_AddAsset, STATGROUP_ImGui);
 
 			if (FilterAsset(AssetData))
 			{
@@ -183,6 +184,8 @@ public:
 
 	bool Draw(const char* Label, TAssetType*& InOutSelectedAsset)
 	{
+		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
+
 		FImGuiNamedWidgetScope WidgetScope{ Label };
 
 		auto& AssetContainer = FAssetContainer::GetInstance();
@@ -409,7 +412,8 @@ public:
 					{
 						auto Add_AssetListEntry = [&](int32 AssetIndex, int32 RowIndex)
 							{
-								const FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
+								FNameBuilder AssetName{ AvailableAssets[AssetIndex].AssetName };
+								FNameBuilder AssetPath{ AvailableAssets[AssetIndex].PackagePath };
 								const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
 								{
 									FImGuiNamedWidgetScope Scope{ GetTypeHash(AvailableAssets[AssetIndex]) };
@@ -434,7 +438,7 @@ public:
 								{
 									ImGui::BeginGroup();
 									ImGui::TextUnformatted(TCHAR_TO_ANSI(*AssetName));
-									ImGui::TextUnformatted(TCHAR_TO_ANSI(*AvailableAssets[AssetIndex].PackagePath.ToString()));
+									ImGui::TextUnformatted(TCHAR_TO_ANSI(*AssetPath));
 									ImGui::EndGroup();
 								}
 
@@ -616,13 +620,12 @@ private:
 		const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
 		for (int32 AssetIndex = 0; AssetIndex < AvailableAssets.Num(); ++AssetIndex)
 		{
-			FString AssetName = AvailableAssets[AssetIndex].AssetName.ToString();
-			FName AssetPath = AvailableAssets[AssetIndex].PackagePath;
-			if (!TextFilter.PassFilter(AssetName))
+			FNameBuilder AssetName{ AvailableAssets[AssetIndex].AssetName };
+			if (!TextFilter.PassFilter(AssetName.ToView()))
 			{
 				continue;
 			}
-			if (!FImGuiContentBrowserUtils::FilterAsset(AssetPath))
+			if (!FImGuiContentBrowserUtils::FilterAsset(AvailableAssets[AssetIndex].PackagePath))
 			{
 				continue;
 			}
@@ -636,7 +639,7 @@ private:
 	}
 
 private:
-	FImGuiTextFilter<128> TextFilter = {};
+	FImGuiTextFilter<64> TextFilter = {};
 	TSharedPtr<FAssetThumbnail> SelectedAssetThumbnail = nullptr;
 
 	TArray<int32> FilteredAssets;

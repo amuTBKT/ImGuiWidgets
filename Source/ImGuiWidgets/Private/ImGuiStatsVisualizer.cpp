@@ -28,7 +28,7 @@ namespace ImGuiStatsVizualizer
 	};
 	static TMap<FName, FStatGroupData> StatGroups;
 
-	static FImGuiTextFilter<128> StatFilter;
+	static FImGuiTextFilter<64> StatFilter;
 	static FImGuiImageBindingParams EditAssetIcon;
 	static FImGuiImageBindingParams BrowseAssetIcon;
 

@@ -101,7 +101,7 @@ namespace ImGuiNiagaraProfiler
 
 	static TMap<TWeakObjectPtr<UWorld>, FWorldStatData> WorldStatData;
 	static TUniquePtr<FNiagaraGpuProfilerListener> NiagaraGPUProfilerListener;
-	static FImGuiTextFilter<128> SimStageFilter;
+	static FImGuiTextFilter<32> SimStageFilter;
 	static bool bIsCapturing = false;
 
 	static void Initialize()
@@ -157,9 +157,8 @@ namespace ImGuiNiagaraProfiler
 
 				for (const auto& Stat : EmitterStat.SimStageStats)
 				{
-					const FString SimStageName = Stat.StageName.ToString();
-
-					if (SimStageFilter.PassFilter(SimStageName))
+					FNameBuilder SimStageName{ Stat.StageName };
+					if (SimStageFilter.PassFilter(SimStageName.ToView()))
 					{
 						ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
@@ -195,7 +194,7 @@ namespace ImGuiNiagaraProfiler
 			return;
 		}
 
-		const FString SystemName = SystemStat.System->GetFName().ToString();
+		FNameBuilder SystemName{ SystemStat.System->GetFName() };
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::CollapsingHeader(TCHAR_TO_ANSI(*SystemName)))
