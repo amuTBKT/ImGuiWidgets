@@ -4,11 +4,6 @@
 
 #if WITH_IMGUI
 
-#if WITH_EDITOR
-#include "AssetThumbnail.h"
-#include "ThumbnailRendering/ThumbnailManager.h"
-#endif
-
 #include "Algo/BinarySearch.h"
 #include "ImGuiCommonWidgets.h"
 #include "AssetRegistry/AssetData.h"
@@ -23,6 +18,7 @@ namespace FImGuiContentBrowserUtils
 	IMGUIWIDGETS_API extern bool bShowDeveloperConent;
 
 	IMGUIWIDGETS_API extern const FSlateBrush* GetIconForClass(UClass* AssetClass);
+	IMGUIWIDGETS_API extern FSlateShaderResource* GetAssetThumbnail(const FAssetData& AssetData);
 	IMGUIWIDGETS_API extern bool FilterAsset(FName AssetPath);
 	IMGUIWIDGETS_API extern UObject* GetSelectedAsset(UClass* AssetClass);
 	IMGUIWIDGETS_API extern void OpenEditorForAsset(UObject* Asset);
@@ -67,22 +63,6 @@ class FImGuiAssetPicker : FNoncopyable
 		uint32 GetRevisionId() const { return RevisionId; }
 		const FSlateBrush* GetClassIconBrush() const { return ClassIconBrush; }
 		const TArray<FAssetData>& GetAvailableAssets() const { return AvailableAssets; }
-
-		FORCEINLINE FSlateShaderResource* GetAssetThumbnail(const FAssetData& AssetData)
-		{
-#if WITH_EDITOR
-			const uint32 AssetTypeHash = GetTypeHash(AssetData);
-			TSharedPtr<FAssetThumbnail>* AssetThumbnailPtr = AssetThumbnailIcons.Find(AssetTypeHash);
-			if (!AssetThumbnailPtr)
-			{
-				AssetThumbnailPtr = &AssetThumbnailIcons.Add(AssetTypeHash);
-				*AssetThumbnailPtr = MakeShareable(new FAssetThumbnail(AssetData, 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
-			}
-			return AssetThumbnailPtr->Get()->GetViewportRenderTargetTexture();
-#else
-			return nullptr;
-#endif
-		}
 
 	private:
 		FAssetContainer()
@@ -174,9 +154,6 @@ class FImGuiAssetPicker : FNoncopyable
 
 	private:
 		TArray<FAssetData> AvailableAssets;
-#if WITH_EDITOR
-		TMap<uint32, TSharedPtr<FAssetThumbnail>> AssetThumbnailIcons;
-#endif
 		const FSlateBrush* ClassIconBrush = nullptr;
 		uint32 RevisionId = 0;
 	};
@@ -206,18 +183,6 @@ public:
 		TAssetType* SelectedAsset = InOutSelectedAsset;
 		if (SelectedAsset)
 		{
-#if WITH_EDITOR
-			if (!SelectedAssetThumbnail || (SelectedAsset != SelectedAssetThumbnail->GetAsset()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
-			{
-				ContainerRevisionId = AssetContainer.GetRevisionId();
-
-				SelectedAssetThumbnail = MakeShareable(new FAssetThumbnail(FAssetData(SelectedAsset), 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
-				LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::None));
-
-				FilterAvailableAssets();
-			}
-			SelectedAssetTexture = SelectedAssetThumbnail->GetViewportRenderTargetTexture();
-#else
 			if ((SelectedAsset != LastSelectedAssetPtr.Get()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
 			{
 				ContainerRevisionId = AssetContainer.GetRevisionId();
@@ -226,8 +191,7 @@ public:
 				
 				FilterAvailableAssets();
 			}
-			SelectedAssetTexture = nullptr;
-#endif
+			SelectedAssetTexture = FImGuiContentBrowserUtils::GetAssetThumbnail(FAssetData(SelectedAsset, FAssetData::ECreationFlags::None));
 		}
 		if (PackedAssetPathFilter != GetGlobalAssetPathFilter())
 		{
@@ -444,7 +408,7 @@ public:
 								}
 								ImGui::SameLine();
 
-								FSlateShaderResource* PreviewTexture = AssetContainer.GetAssetThumbnail(AvailableAssets[AssetIndex]);
+								FSlateShaderResource* PreviewTexture = FImGuiContentBrowserUtils::GetAssetThumbnail(AvailableAssets[AssetIndex]);
 								Add_AssetThumbnail(PreviewTexture, AssetViewerRowHeight, nullptr);
 
 								ImGui::SameLine();
@@ -656,9 +620,6 @@ private:
 
 private:
 	FImGuiTextFilter<64> TextFilter = {};
-#if WITH_EDITOR
-	TSharedPtr<FAssetThumbnail> SelectedAssetThumbnail = nullptr;
-#endif
 	TWeakObjectPtr<TAssetType> LastSelectedAssetPtr = nullptr;
 
 	TArray<int32> FilteredAssets;

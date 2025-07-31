@@ -6,11 +6,13 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
+#include "AssetThumbnail.h"
 #include "ClassIconFinder.h"
 #include "EditorUtilityLibrary.h"
 #include "Styling/SlateIconFinder.h"
 #include "ContentBrowserDataUtils.h"
 #include "Subsystems/AssetEditorSubsystem.h"
+#include "ThumbnailRendering/ThumbnailManager.h"
 #endif
 
 namespace FImGuiContentBrowserUtils
@@ -24,6 +26,19 @@ namespace FImGuiContentBrowserUtils
 	const FSlateBrush* GetIconForClass(UClass* AssetClass)
 	{
 		return FClassIconFinder::FindThumbnailForClass(AssetClass, NAME_None);
+	}
+
+	static TMap<uint32, TSharedPtr<FAssetThumbnail>> AssetThumbnailIcons;
+	FSlateShaderResource* GetAssetThumbnail(const FAssetData& AssetData)
+	{
+		const uint32 AssetTypeHash = GetTypeHash(AssetData);
+		TSharedPtr<FAssetThumbnail>* AssetThumbnailPtr = AssetThumbnailIcons.Find(AssetTypeHash);
+		if (!AssetThumbnailPtr)
+		{
+			AssetThumbnailPtr = &AssetThumbnailIcons.Add(AssetTypeHash);
+			*AssetThumbnailPtr = MakeShareable(new FAssetThumbnail(AssetData, 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
+		}
+		return AssetThumbnailPtr->Get()->GetViewportRenderTargetTexture();
 	}
 
 	bool FilterAsset(FName AssetPath)
@@ -80,6 +95,11 @@ namespace FImGuiContentBrowserUtils
 
 #else
 	const FSlateBrush* GetIconForClass(UClass* AssetClass)
+	{
+		return nullptr;
+	}
+
+	FSlateShaderResource* GetAssetThumbnail(const FAssetData& AssetData)
 	{
 		return nullptr;
 	}
