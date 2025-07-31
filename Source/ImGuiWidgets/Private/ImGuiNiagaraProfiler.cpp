@@ -186,7 +186,6 @@ namespace ImGuiNiagaraProfiler
 		}
 	}
 
-
 	static void DisplaySystemStats(const FSystemStatData& SystemStat)
 	{
 		if (!SystemStat.System.IsValid() || SystemStat.EmitterStats.IsEmpty())

@@ -28,6 +28,11 @@ namespace FImGuiContentBrowserUtils
 	IMGUIEDITORWIDGETS_API extern bool FilterAsset(FName AssetPath);
 };
 
+#ifdef TCHAR_TO_ANSI_PATH
+#error TCHAR_TO_ANSI_PATH already defined
+#endif
+#define TCHAR_TO_ANSI_PATH(path) (ANSICHAR*)StringCast<ANSICHAR, FName::StringBufferSize>(static_cast<const TCHAR*>(path)).Get()
+
 template <typename... Types>
 class FImGuiAssetPicker : FNoncopyable
 {
@@ -249,7 +254,7 @@ public:
 				ImDrawList* DrawList = ImGui::GetWindowDrawList();
 				DrawList->AddRect(p0, p1, 0x80FFFFFF, 0.f, ImDrawFlags_None, 1.f);
 
-				ImGui::SetTooltip("%s", TCHAR_TO_ANSI(*Asset->GetPathName()));
+				ImGui::SetTooltip("%s", TCHAR_TO_ANSI_PATH(*Asset->GetPathName()));
 
 				if (Asset && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 				{
@@ -416,7 +421,7 @@ public:
 								FNameBuilder AssetPath{ AvailableAssets[AssetIndex].PackagePath };
 								const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
 								{
-									FImGuiNamedWidgetScope Scope{ GetTypeHash(AvailableAssets[AssetIndex]) };
+									FImGuiNamedWidgetScope Scope{ RowIndex };
 
 									if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, AssetViewerRowHeight)))
 									{
@@ -438,7 +443,7 @@ public:
 								{
 									ImGui::BeginGroup();
 									ImGui::TextUnformatted(TCHAR_TO_ANSI(*AssetName));
-									ImGui::TextUnformatted(TCHAR_TO_ANSI(*AssetPath));
+									ImGui::TextUnformatted(TCHAR_TO_ANSI_PATH(*AssetPath));
 									ImGui::EndGroup();
 								}
 
@@ -649,5 +654,7 @@ private:
 	int32 LastSelectedAssetIndex = INDEX_NONE;
 	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;
 };
+
+#undef TCHAR_TO_ANSI_PATH
 
 #endif //#if WITH_IMGUI
