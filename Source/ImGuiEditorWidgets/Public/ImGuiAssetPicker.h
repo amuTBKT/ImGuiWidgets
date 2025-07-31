@@ -219,11 +219,11 @@ public:
 		const float GlobalScale = ImGui::GetIO().FontGlobalScale;
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
+		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale, 1.f);		
 		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Use"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.BrowseContent"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("PropertyWindow.DiffersFromDefault"), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams ComboboxDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(&FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton")).DownArrowImage, FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale, 1.f);		
+		const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale, 1.f);
@@ -376,8 +376,8 @@ public:
 			}
 			const float ComboBoxHeight = ImGui::GetItemRectSize().y;
 			ImGui::SameLine();
-			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - ComboboxDownArrowIcon.Size.x * 2.f);
-			FImGui::Image(ComboboxDownArrowIcon);
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - DropDownArrowIcon.Size.x * 2.f);
+			FImGui::Image(DropDownArrowIcon);
 			ImGui::PopStyleVar(1);
 
 			const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
