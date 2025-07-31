@@ -16,7 +16,8 @@ public class ImGuiWidgets : ModuleRules
 				"Engine",
 				"SlateCore",
 				"CoreUObject",
-			}
+                "AssetRegistry",
+            }
 		);
 
 		// for using ImGui
@@ -31,8 +32,9 @@ public class ImGuiWidgets : ModuleRules
 				new string[]
 				{
 					"UnrealEd",
-					"AssetRegistry",
-				}
+                    "Blutility",
+					"ContentBrowserData",
+                }
 			);
 		}
 	}

@@ -4,28 +4,29 @@
 
 #if WITH_IMGUI
 
-#include "Editor.h"
-#include "imgui_internal.h"
+#if WITH_EDITOR
 #include "AssetThumbnail.h"
-#include "ClassIconFinder.h"
+#include "ThumbnailRendering/ThumbnailManager.h"
+#endif
+
 #include "Algo/BinarySearch.h"
 #include "ImGuiCommonWidgets.h"
-#include "EditorUtilityLibrary.h"
-#include "Styling/SlateIconFinder.h"
 #include "AssetRegistry/AssetData.h"
 #include "Blueprint/BlueprintSupport.h"
-#include "Subsystems/AssetEditorSubsystem.h"
 #include "AssetRegistry/AssetRegistryModule.h"
-#include "ThumbnailRendering/ThumbnailManager.h"
 
 namespace FImGuiContentBrowserUtils
 {
-	IMGUIEDITORWIDGETS_API extern bool bShowProjectConent;
-	IMGUIEDITORWIDGETS_API extern bool bShowEngineConent;
-	IMGUIEDITORWIDGETS_API extern bool bShowPluginConent;
-	IMGUIEDITORWIDGETS_API extern bool bShowDeveloperConent;
+	IMGUIWIDGETS_API extern bool bShowProjectConent;
+	IMGUIWIDGETS_API extern bool bShowEngineConent;
+	IMGUIWIDGETS_API extern bool bShowPluginConent;
+	IMGUIWIDGETS_API extern bool bShowDeveloperConent;
 
-	IMGUIEDITORWIDGETS_API extern bool FilterAsset(FName AssetPath);
+	IMGUIWIDGETS_API extern const FSlateBrush* GetIconForClass(UClass* AssetClass);
+	IMGUIWIDGETS_API extern bool FilterAsset(FName AssetPath);
+	IMGUIWIDGETS_API extern UObject* GetSelectedAsset(UClass* AssetClass);
+	IMGUIWIDGETS_API extern void OpenEditorForAsset(UObject* Asset);
+	IMGUIWIDGETS_API extern void SyncContentBrowserToAsset(UObject* Asset);
 };
 
 #ifdef TCHAR_TO_ANSI_PATH
@@ -69,7 +70,8 @@ class FImGuiAssetPicker : FNoncopyable
 
 		FORCEINLINE FSlateShaderResource* GetAssetThumbnail(const FAssetData& AssetData)
 		{
-			const int32 AssetTypeHash = GetTypeHash(AssetData);
+#if WITH_EDITOR
+			const uint32 AssetTypeHash = GetTypeHash(AssetData);
 			TSharedPtr<FAssetThumbnail>* AssetThumbnailPtr = AssetThumbnailIcons.Find(AssetTypeHash);
 			if (!AssetThumbnailPtr)
 			{
@@ -77,12 +79,15 @@ class FImGuiAssetPicker : FNoncopyable
 				*AssetThumbnailPtr = MakeShareable(new FAssetThumbnail(AssetData, 50.f, 50.f, UThumbnailManager::Get().GetSharedThumbnailPool()));
 			}
 			return AssetThumbnailPtr->Get()->GetViewportRenderTargetTexture();
+#else
+			return nullptr;
+#endif
 		}
 
 	private:
 		FAssetContainer()
 		{
-			ClassIconBrush = FClassIconFinder::FindThumbnailForClass(TAssetType::StaticClass(), NAME_None);
+			ClassIconBrush = FImGuiContentBrowserUtils::GetIconForClass(TAssetType::StaticClass());
 
 			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(FName("AssetRegistry")))
 			{
@@ -169,8 +174,9 @@ class FImGuiAssetPicker : FNoncopyable
 
 	private:
 		TArray<FAssetData> AvailableAssets;
-		TMap<int32, TSharedPtr<FAssetThumbnail>> AssetThumbnailIcons;
-
+#if WITH_EDITOR
+		TMap<uint32, TSharedPtr<FAssetThumbnail>> AssetThumbnailIcons;
+#endif
 		const FSlateBrush* ClassIconBrush = nullptr;
 		uint32 RevisionId = 0;
 	};
@@ -200,6 +206,7 @@ public:
 		TAssetType* SelectedAsset = InOutSelectedAsset;
 		if (SelectedAsset)
 		{
+#if WITH_EDITOR
 			if (!SelectedAssetThumbnail || (SelectedAsset != SelectedAssetThumbnail->GetAsset()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
 			{
 				ContainerRevisionId = AssetContainer.GetRevisionId();
@@ -210,6 +217,17 @@ public:
 				FilterAvailableAssets();
 			}
 			SelectedAssetTexture = SelectedAssetThumbnail->GetViewportRenderTargetTexture();
+#else
+			if ((SelectedAsset != LastSelectedAssetPtr.Get()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
+			{
+				ContainerRevisionId = AssetContainer.GetRevisionId();
+				
+				LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::None));
+				
+				FilterAvailableAssets();
+			}
+			SelectedAssetTexture = nullptr;
+#endif
 		}
 		if (PackedAssetPathFilter != GetGlobalAssetPathFilter())
 		{
@@ -220,9 +238,9 @@ public:
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale, 1.f);		
-		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Use"), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.BrowseContent"), FVector2D(18.) * GlobalScale, 1.f);
-		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("PropertyWindow.DiffersFromDefault"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.UseSelectedAsset"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.BrowseToAsset"), FVector2D(18.) * GlobalScale, 1.f);
+		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(18.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale, 1.f);
 		const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale, 1.f);
@@ -258,11 +276,7 @@ public:
 
 				if (Asset && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 				{
-					UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
-					if (AssetEditorSubsystem)
-					{
-						AssetEditorSubsystem->OpenEditorForAsset(Asset);
-					}
+					FImGuiContentBrowserUtils::OpenEditorForAsset(Asset);
 				}
 			}
 		};
@@ -277,13 +291,9 @@ public:
 
 			if (FImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 			{
-				for (auto Asset : UEditorUtilityLibrary::GetSelectedAssets())
+				if (auto SelectedAsset = Cast<TAssetType>(FImGuiContentBrowserUtils::GetSelectedAsset(TAssetType::StaticClass())))
 				{
-					if (Asset->IsA(TAssetType::StaticClass()) && (Asset != InOutAsset))
-					{
-						InOutAsset = Cast<TAssetType>(Asset);
-						break;
-					}
+					InOutAsset = SelectedAsset;
 				}
 			}
 			if (ImGui::IsItemHovered())
@@ -313,9 +323,7 @@ public:
 			{
 				if (FImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 				{
-					TArray<UObject*> Objects;
-					Objects.Add(InAsset);
-					GEditor->SyncBrowserToObjects(Objects);
+					FImGuiContentBrowserUtils::SyncContentBrowserToAsset(InAsset);
 				}
 				if (ImGui::IsItemHovered())
 				{
@@ -568,7 +576,9 @@ public:
 				Add_AssetViewer(SelectedAsset);
 
 				// icons
+				ImGui::BeginDisabled(WITH_EDITOR == 0);
 				Add_UseSelectedAssetButton(SelectedAsset); ImGui::SameLine(); Add_BrowseToAssetButton(SelectedAsset);
+				ImGui::EndDisabled();
 			}
 			ImGui::EndGroup();
 		}
@@ -586,6 +596,7 @@ public:
 		if (bSelectionChanged)
 		{
 			InOutSelectedAsset = SelectedAsset;
+			LastSelectedAssetPtr = SelectedAsset;
 			LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::None));
 			LastSelectedAssetIndexInFilteredList = FilteredAssets.IndexOfByKey(LastSelectedAssetIndex);
 		}
@@ -645,7 +656,10 @@ private:
 
 private:
 	FImGuiTextFilter<64> TextFilter = {};
+#if WITH_EDITOR
 	TSharedPtr<FAssetThumbnail> SelectedAssetThumbnail = nullptr;
+#endif
+	TWeakObjectPtr<TAssetType> LastSelectedAssetPtr = nullptr;
 
 	TArray<int32> FilteredAssets;
 	uint8 PackedAssetPathFilter = 0;

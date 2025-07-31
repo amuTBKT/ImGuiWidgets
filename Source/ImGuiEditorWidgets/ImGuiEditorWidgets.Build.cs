@@ -20,10 +20,7 @@ public class ImGuiEditorWidgets : ModuleRules
 				"CoreUObject",
 
 				"UnrealEd",
-				"Blutility",
-				"AssetRegistry",
 				"MaterialEditor",
-				"ContentBrowserData",
 				"ShaderCompilerCommon",
 			}
 		);
