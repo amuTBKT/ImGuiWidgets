@@ -167,8 +167,11 @@ public:
 
 			if (FilterKeywordTokens.IsEmpty())
 			{
-				// TODO: doesn't need to be a button (ImageButton and Image don't use consistent frame padding)
-				FImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f));
+				if (FImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f)))
+				{
+					// set focus to input text
+					bSetFocus = true;
+				}
 			}
 			else
 			{
