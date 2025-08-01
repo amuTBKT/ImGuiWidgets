@@ -1,7 +1,5 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
-#if WITH_IMGUI
-
 #include "ShaderCompiler.h"
 #include "ImGuiAssetPicker.h"
 #include "ImGuiStaticWidget.h"
@@ -267,7 +265,7 @@ namespace ImGuiMaterialStats
 
 			static FImGuiAssetPicker<UMaterial> MaterialPicker;
 			static TWeakObjectPtr<UMaterial> SelectedMaterial;
-			static FImGuiTextFilter<64> ShaderFilter;
+			static FImGuiTextFilter ShaderFilter = FImGuiTextFilter::MakeWidget(64u);
 			static uint32 EnabledShaderTypes = (1u << SF_Vertex) | (1u << SF_Pixel);
 
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
@@ -532,5 +530,3 @@ namespace ImGuiMaterialStats
 
 	IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
 }
-
-#endif //#if WITH_IMGUI

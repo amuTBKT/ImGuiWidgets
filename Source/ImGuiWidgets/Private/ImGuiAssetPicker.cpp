@@ -1,7 +1,5 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
-#if WITH_IMGUI
-
 #include "ImGuiAssetPicker.h"
 
 #if WITH_EDITOR
@@ -124,5 +122,3 @@ namespace FImGuiContentBrowserUtils
 	}
 #endif
 }
-
-#endif //#if WITH_IMGUI

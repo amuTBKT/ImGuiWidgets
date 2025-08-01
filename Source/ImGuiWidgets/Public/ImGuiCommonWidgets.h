@@ -2,11 +2,11 @@
 
 #pragma once
 
-#if WITH_IMGUI
-
 #include "ImGuiSubsystem.h"
 #include "imgui_internal.h"
 #include "String/ParseTokens.h"
+
+//TODO: functions are statically linked because otherwise we'll have to set GImGui context before making any ImGui call
 
 namespace FImGui
 {
@@ -87,103 +87,66 @@ namespace FImGui
 	}
 }
 
-template <size_t MaxLength = 64>
-class FImGuiTextFilter : FNoncopyable
+class FImGuiTextFilter
 {
 public:
-	FORCEINLINE void Reset()
+	static FImGuiTextFilter MakeWidget(uint32 MaxLength)
 	{
-		FilterString_ANSI[0] = '\0';
-		FilterKeywords_ANSI.Reset();
-		FilterString.Reset();
-		FilterKeywords.Reset();
+		FImGuiTextFilter Widget = {};
+		Widget.FilterStringBuffer.Reserve(MaxLength);
+		Widget.FilterStringBuffer_ANSI.Reserve(MaxLength);
+		Widget.Reset();
+		return Widget;
+	}
 
+	void Reset()
+	{
+		if (!ensure(FilterStringBuffer_ANSI.Max() > 0))
+		{
+			return;
+		}
+
+		FilterStringBuffer.Reset();
+		FilterKeywordTokens.Reset();
+		FilterStringBuffer_ANSI.Reset();
+		FilterStringBuffer_ANSI.GetData()[0] = '\0';
+		
 		SearchIconTint = 0.75f;
 		ClearIconTint = 0.75f;
 	}
 
 	FORCEINLINE bool IsActive() const
 	{
-		return !FilterKeywords.IsEmpty();
+		return !FilterKeywordTokens.IsEmpty();
 	}
 
 	FORCEINLINE bool PassFilter(FStringView StringToCheck) const
 	{
-		if (!IsActive())
-		{
-			return true;
-		}
-
-		for (FStringView Keyword : FilterKeywords)
-		{
-			if ((Keyword.Len() > 1) && (Keyword[0] == TCHAR('!')))
-			{
-				if (StringToCheck.Contains(Keyword.Right(1), ESearchCase::IgnoreCase))
-				{
-					return false;
-				}
-			}
-			else if (!StringToCheck.Contains(Keyword, ESearchCase::IgnoreCase))
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-	FORCEINLINE bool PassFilter(const FString& StringToCheck) const
+		return PassFilterInternal(GetFilterString(), StringToCheck);
+	}	
+	FORCEINLINE bool PassFilter(FAnsiStringView StringToCheck) const
 	{
-		return PassFilter(FStringView{ *StringToCheck, StringToCheck.Len() });
+		return PassFilterInternal(GetFilterStringANSI(), StringToCheck);
 	}
-
-	FORCEINLINE bool PassFilterANSI(FAnsiStringView StringToCheck) const
-	{
-		if (!IsActive())
-		{
-			return true;
-		}
-
-		for (FAnsiStringView Keyword : FilterKeywords_ANSI)
-		{
-			if ((Keyword.Len() > 1) && (Keyword[0] == ('!')))
-			{
-				if (StringToCheck.Contains(Keyword.Right(1), ESearchCase::IgnoreCase))
-				{
-					return false;
-				}
-			}
-			else if (!StringToCheck.Contains(Keyword, ESearchCase::IgnoreCase))
-			{
-				return false;
-			}
-		}
-		return true;
-	}
-	FORCEINLINE bool PassFilterANSI(const FAnsiString& StringToCheck) const
-	{
-		return PassFilterANSI(FAnsiStringView{ *StringToCheck, StringToCheck.Len() });
-	}
-
-	FORCEINLINE const TArray<FStringView>& GetFilterKeywords() const
-	{
-		return FilterKeywords;
-	}
-	FORCEINLINE const TArray<FAnsiStringView>& GetFilterKeywordsANSI() const
-	{
-		return FilterKeywords_ANSI;
-	}
-
+	
 	FORCEINLINE FStringView GetFilterString() const
 	{
-		return FStringView{ *FilterString, FilterString.Len() };
+		return FStringView{ FilterStringBuffer.GetData(), FilterStringBuffer.Num() };
 	}
 	FORCEINLINE FAnsiStringView GetFilterStringANSI() const
 	{
-		return FAnsiStringView{ FilterString_ANSI, FilterString.Len()};
+		return FAnsiStringView{ FilterStringBuffer_ANSI.GetData(), FilterStringBuffer_ANSI.Num() };
 	}
 
 	bool Draw(const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f)
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("TextFilter::Draw"), STAT_ImGuiTextFilter_Draw, STATGROUP_ImGui);
+
+		const int32 MaxLength = FilterStringBuffer_ANSI.Max();
+		if (MaxLength == 0)
+		{
+			return false;
+		}
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
@@ -202,9 +165,9 @@ public:
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
 
-			if (FilterKeywords.IsEmpty())
+			if (FilterKeywordTokens.IsEmpty())
 			{
-				// TODO: doesn't need to be a button
+				// TODO: doesn't need to be a button (ImageButton and Image don't use consistent frame padding)
 				FImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f));
 			}
 			else
@@ -212,10 +175,7 @@ public:
 				if (FImGui::ImageButton("ClearFilter", ClearIcon, ImVec4(0, 0, 0, 0), ImVec4(ClearIconTint, ClearIconTint, ClearIconTint, 1.f)))
 				{
 					bFilterChanged = true;
-					FilterString_ANSI[0] = '\0';
-					FilterKeywords_ANSI.Reset();
-					FilterString.Reset();
-					FilterKeywords.Reset();
+					Reset();
 
 					// set focus to input text
 					bSetFocus = true;
@@ -234,35 +194,41 @@ public:
 			{
 				ImGui::SetKeyboardFocusHere();
 			}
-			const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("##Filter", HintText, FilterString_ANSI, sizeof(FilterString_ANSI)) : ImGui::InputText("##Filter", FilterString_ANSI, sizeof(FilterString_ANSI));
+
+			char* TextBuffer = FilterStringBuffer_ANSI.GetData();
+			const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("##Filter", HintText, TextBuffer, MaxLength) : ImGui::InputText("##Filter", TextBuffer, MaxLength);
 			if (bInputTextChanged)
 			{
 				bFilterChanged = true;
 
-				ANSICHAR* Src = FilterString_ANSI;
-				FilterString.Reset();
+				const ANSICHAR* Src = TextBuffer;
+				FilterStringBuffer.Reset();
 				while (*Src)
 				{
-					FilterString.AppendChar(CharCast<TCHAR>(*Src++));
+					FilterStringBuffer.Add(CharCast<TCHAR>(*Src++));
 				}
+				// patch ansi string buffer
+				FilterStringBuffer_ANSI.SetNum(FilterStringBuffer.Num(), EAllowShrinking::No);
+				FilterStringBuffer_ANSI.GetData()[FilterStringBuffer_ANSI.Num()] = '\0';
 
-				FilterKeywords.Reset();
-				FilterKeywords_ANSI.Reset();
-				if (FilterString.Len() > 0)
+				FilterKeywordTokens.Reset();
+				if (FilterStringBuffer_ANSI.Num() > 0)
 				{
 					static const FAnsiStringView Delimiter = FAnsiStringView{ " " };
-					
-					const FStringView SourceStringView = GetFilterString();
-					const FAnsiStringView SourceStringView_ANSI = GetFilterStringANSI();
+					const FAnsiStringView SourceStringView = GetFilterStringANSI();
 
 					UE::String::EParseTokensOptions ParseOptions = UE::String::EParseTokensOptions::IgnoreCase | UE::String::EParseTokensOptions::SkipEmpty;
-					UE::String::ParseTokens(SourceStringView_ANSI, Delimiter,
+					UE::String::ParseTokens(SourceStringView, Delimiter,
 						[&](FAnsiStringView Token)
 						{
-							FilterKeywords_ANSI.Emplace(Token);
+							Token.TrimStartAndEndInline();
 
-							// copy matching token to TCHAR version
-							FilterKeywords.Emplace(SourceStringView.Mid((int32)std::distance(SourceStringView_ANSI.GetData(), Token.GetData()), Token.Len()));
+							int16 StartPosition = (int16)std::distance(SourceStringView.GetData(), Token.GetData());
+							int16 CharCount = (int16)Token.Len();
+							if (CharCount > 0)
+							{
+								FilterKeywordTokens.Emplace(StartPosition, CharCount);
+							}
 						},
 						ParseOptions);
 				}
@@ -285,12 +251,36 @@ public:
 	}
 
 private:
-	char FilterString_ANSI[MaxLength] = { 0 };
-	TArray<FAnsiStringView> FilterKeywords_ANSI;
-	FString FilterString = FString::ConstructWithSlack(TEXT("\0"), MaxLength);
-	TArray<FStringView> FilterKeywords;
+	template <typename TStringViewType>
+	bool PassFilterInternal(TStringViewType SourceString, TStringViewType StringToCheck) const
+	{
+		if (!IsActive())
+		{
+			return true;
+		}
+
+		for (TPair<int16, int16> KeywordTokens : FilterKeywordTokens)
+		{
+			TStringViewType Keyword = SourceString.Mid(KeywordTokens.Key, KeywordTokens.Value);
+			if ((Keyword.Len() > 1) && (Keyword[0] == TStringViewType::ElementType('!')))
+			{
+				if (StringToCheck.Contains(Keyword.RightChop(1), ESearchCase::IgnoreCase))
+				{
+					return false;
+				}
+			}
+			else if (!StringToCheck.Contains(Keyword, ESearchCase::IgnoreCase))
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+private:
+	TArray<TCHAR> FilterStringBuffer;
+	TArray<ANSICHAR> FilterStringBuffer_ANSI;
+	TArray<TPair<int16, int16>> FilterKeywordTokens;
 	float SearchIconTint = 0.75f;
 	float ClearIconTint = 0.75f;
 };
-
-#endif //#if WITH_IMGUI

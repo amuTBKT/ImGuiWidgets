@@ -2,8 +2,6 @@
 
 #pragma once
 
-#if WITH_IMGUI
-
 #include "Algo/BinarySearch.h"
 #include "ImGuiCommonWidgets.h"
 #include "AssetRegistry/AssetData.h"
@@ -619,17 +617,15 @@ private:
 	}
 
 private:
-	FImGuiTextFilter<64> TextFilter = {};
-	TWeakObjectPtr<TAssetType> LastSelectedAssetPtr = nullptr;
+	FImGuiTextFilter TextFilter = FImGuiTextFilter::MakeWidget(64u);
 
 	TArray<int32> FilteredAssets;
-	uint8 PackedAssetPathFilter = 0;
-	bool bIsAssetViewerVisible = false;
+	uint8 PackedAssetPathFilter : 7 = 0;
+	uint8 bIsAssetViewerVisible : 1 = false;
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedAssetIndex = INDEX_NONE;
 	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;
+	TWeakObjectPtr<TAssetType> LastSelectedAssetPtr = nullptr;
 };
 
 #undef TCHAR_TO_ANSI_PATH
-
-#endif //#if WITH_IMGUI

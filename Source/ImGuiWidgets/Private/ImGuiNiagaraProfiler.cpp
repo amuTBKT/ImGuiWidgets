@@ -101,7 +101,7 @@ namespace ImGuiNiagaraProfiler
 
 	static TMap<TWeakObjectPtr<UWorld>, FWorldStatData> WorldStatData;
 	static TUniquePtr<FNiagaraGpuProfilerListener> NiagaraGPUProfilerListener;
-	static FImGuiTextFilter<32> SimStageFilter;
+	static FImGuiTextFilter SimStageFilter = FImGuiTextFilter::MakeWidget(32u);
 	static bool bIsCapturing = false;
 
 	static void Initialize()

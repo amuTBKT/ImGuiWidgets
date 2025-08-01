@@ -2,7 +2,7 @@
 
 #include "Misc/Build.h"
 
-#if WITH_IMGUI && STATS
+#if STATS
 
 #include "GPUProfiler.h"
 #include "Engine/Engine.h"
@@ -28,7 +28,7 @@ namespace ImGuiStatsVizualizer
 	};
 	static TMap<FName, FStatGroupData> StatGroups;
 
-	static FImGuiTextFilter<64> StatFilter;
+	static FImGuiTextFilter StatFilter = FImGuiTextFilter::MakeWidget(64u);
 	static FImGuiImageBindingParams EditAssetIcon;
 	static FImGuiImageBindingParams BrowseAssetIcon;
 
@@ -747,4 +747,4 @@ namespace ImGuiStatsVizualizer
 	IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
 }
 
-#endif //#if WITH_IMGUI && STATS
+#endif //#if STATS
