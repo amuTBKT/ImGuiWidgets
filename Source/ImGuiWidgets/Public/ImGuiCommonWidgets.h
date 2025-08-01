@@ -2,14 +2,20 @@
 
 #pragma once
 
-#include "ImGuiSubsystem.h"
+#include "CoreMinimal.h"
 #include "imgui_internal.h"
-#include "String/ParseTokens.h"
-
-//TODO: functions are statically linked because otherwise we'll have to set GImGui context before making any ImGui call
+#include "ImGuiPluginTypes.h"
 
 namespace FImGui
 {
+	// Required to have valid ImGui context across dll boundaries
+	FORCEINLINE void EnsureValidImGuiContext(ImGuiContext* Context)
+	{
+		const auto CurrentContext = ImGui::GetCurrentContext();
+		check(Context && (CurrentContext == nullptr || Context == CurrentContext));
+		ImGui::SetCurrentContext(Context);
+	}
+
 	// Similar to `ImGui::ImageButton` but allows tinting the image depending on button state (inactive/active|hovered)
 	FORCEINLINE bool ImageButtonWithTint(const char* str_id, ImTextureID user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, ImU32 normal_tint_col, ImU32 active_tint_col, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
 	{
@@ -90,168 +96,15 @@ namespace FImGui
 class FImGuiTextFilter
 {
 public:
-	static FImGuiTextFilter MakeWidget(uint32 MaxLength)
-	{
-		FImGuiTextFilter Widget = {};
-		Widget.FilterStringBuffer.Reserve(MaxLength);
-		Widget.FilterStringBuffer_ANSI.Reserve(MaxLength);
-		Widget.Reset();
-		return Widget;
-	}
+	IMGUIWIDGETS_API static FImGuiTextFilter MakeWidget(uint32 MaxLength);
+	IMGUIWIDGETS_API bool Draw(ImGuiContext* Context, const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f);
+	IMGUIWIDGETS_API void Reset();
 
-	void Reset()
-	{
-		if (!ensure(FilterStringBuffer_ANSI.Max() > 0))
-		{
-			return;
-		}
-
-		FilterStringBuffer.Reset();
-		FilterKeywordTokens.Reset();
-		FilterStringBuffer_ANSI.Reset();
-		FilterStringBuffer_ANSI.GetData()[0] = '\0';
-		
-		SearchIconTint = 0.75f;
-		ClearIconTint = 0.75f;
-	}
-
-	FORCEINLINE bool IsActive() const
-	{
-		return !FilterKeywordTokens.IsEmpty();
-	}
-
-	FORCEINLINE bool PassFilter(FStringView StringToCheck) const
-	{
-		return PassFilterInternal(GetFilterString(), StringToCheck);
-	}	
-	FORCEINLINE bool PassFilter(FAnsiStringView StringToCheck) const
-	{
-		return PassFilterInternal(GetFilterStringANSI(), StringToCheck);
-	}
-	
-	FORCEINLINE FStringView GetFilterString() const
-	{
-		return FStringView{ FilterStringBuffer.GetData(), FilterStringBuffer.Num() };
-	}
-	FORCEINLINE FAnsiStringView GetFilterStringANSI() const
-	{
-		return FAnsiStringView{ FilterStringBuffer_ANSI.GetData(), FilterStringBuffer_ANSI.Num() };
-	}
-
-	bool Draw(const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f)
-	{
-		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("TextFilter::Draw"), STAT_ImGuiTextFilter_Draw, STATGROUP_ImGui);
-
-		const int32 MaxLength = FilterStringBuffer_ANSI.Max();
-		if (MaxLength == 0)
-		{
-			return false;
-		}
-
-		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
-		const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.X"), FVector2D(ImGui::GetFontSize()), 1.f);
-
-		FImGuiNamedWidgetScope WidgetScope{ WidgetName };
-
-		bool bFilterChanged = false;
-		bool bSearchBoxHasFocus = false;
-
-		ImGui::BeginGroup();
-		{
-			// blend button with input text widget
-			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
-
-			if (FilterKeywordTokens.IsEmpty())
-			{
-				if (FImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f)))
-				{
-					// set focus to input text
-					bSetFocus = true;
-				}
-			}
-			else
-			{
-				if (FImGui::ImageButton("ClearFilter", ClearIcon, ImVec4(0, 0, 0, 0), ImVec4(ClearIconTint, ClearIconTint, ClearIconTint, 1.f)))
-				{
-					bFilterChanged = true;
-					Reset();
-
-					// set focus to input text
-					bSetFocus = true;
-				}
-				ClearIconTint = ImGui::IsItemHovered() ? 1.f : 0.75f;
-			}
-
-			ImGui::SameLine();
-
-			const float SearchBoxWidth = WidgetWidth - SearchIcon.Size.x - ImGui::GetStyle().FramePadding.x * 2.f;
-			if (SearchBoxWidth > KINDA_SMALL_NUMBER)
-			{
-				ImGui::SetNextItemWidth(SearchBoxWidth);
-			}
-			if (bSetFocus)
-			{
-				ImGui::SetKeyboardFocusHere();
-			}
-
-			char* TextBuffer = FilterStringBuffer_ANSI.GetData();
-			const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("##Filter", HintText, TextBuffer, MaxLength) : ImGui::InputText("##Filter", TextBuffer, MaxLength);
-			if (bInputTextChanged)
-			{
-				bFilterChanged = true;
-
-				const ANSICHAR* Src = TextBuffer;
-				FilterStringBuffer.Reset();
-				while (*Src)
-				{
-					FilterStringBuffer.Add(CharCast<TCHAR>(*Src++));
-				}
-				// patch ansi string buffer
-				FilterStringBuffer_ANSI.SetNum(FilterStringBuffer.Num(), EAllowShrinking::No);
-				FilterStringBuffer_ANSI.GetData()[FilterStringBuffer_ANSI.Num()] = '\0';
-
-				FilterKeywordTokens.Reset();
-				if (FilterStringBuffer_ANSI.Num() > 0)
-				{
-					static const FAnsiStringView Delimiter = FAnsiStringView{ " " };
-					const FAnsiStringView SourceStringView = GetFilterStringANSI();
-
-					UE::String::EParseTokensOptions ParseOptions = UE::String::EParseTokensOptions::IgnoreCase | UE::String::EParseTokensOptions::SkipEmpty;
-					UE::String::ParseTokens(SourceStringView, Delimiter,
-						[&](FAnsiStringView Token)
-						{
-							Token.TrimStartAndEndInline();
-
-							int16 StartPosition = (int16)std::distance(SourceStringView.GetData(), Token.GetData());
-							int16 CharCount = (int16)Token.Len();
-							if (CharCount > 0)
-							{
-								FilterKeywordTokens.Emplace(StartPosition, CharCount);
-							}
-						},
-						ParseOptions);
-				}
-			}
-			bSearchBoxHasFocus = ImGui::IsItemActive();
-			SearchIconTint = bSearchBoxHasFocus ? 1.f : 0.75f;
-
-			ImGui::PopStyleVar(1);
-			ImGui::PopStyleColor(3);
-		}
-		ImGui::EndGroup();
-
-		if (bSearchBoxHasFocus)
-		{
-			ImDrawList* DrawList = ImGui::GetWindowDrawList();
-			DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(ImGuiCol_FrameBgActive), 0.f, ImDrawFlags_None, 1.f);
-		}
-
-		return bFilterChanged;
-	}
+	bool IsActive()									const { return !FilterKeywordTokens.IsEmpty(); }
+	bool PassFilter(FStringView StringToCheck)		const { return PassFilterInternal(GetFilterString(), StringToCheck); }
+	bool PassFilter(FAnsiStringView StringToCheck)  const { return PassFilterInternal(GetFilterStringANSI(), StringToCheck); }	
+	FStringView GetFilterString()					const { return FStringView{ FilterStringBuffer.GetData(), FilterStringBuffer.Num() }; }
+	FAnsiStringView GetFilterStringANSI()			const { return FAnsiStringView{ FilterStringBuffer_ANSI.GetData(), FilterStringBuffer_ANSI.Num() }; }
 
 private:
 	template <typename TStringViewType>

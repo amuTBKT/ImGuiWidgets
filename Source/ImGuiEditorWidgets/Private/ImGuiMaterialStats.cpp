@@ -308,7 +308,7 @@ namespace ImGuiMaterialStats
 				}
 			}
 			
-			if (MaterialPicker.Draw("Selected Material", SelectedMaterial))
+			if (MaterialPicker.Draw(Context, "Selected Material", SelectedMaterial))
 			{
 				Reset();
 			}
@@ -407,13 +407,13 @@ namespace ImGuiMaterialStats
 							}
 						};
 					
-					ShaderFilter.Draw("FilterShaders", "Filter Shaders");
+					ShaderFilter.Draw(Context, "FilterShaders", "Filter Shaders");
 
 					ImGui::SameLine(); AddCheckboxButton("VS", "Toggle Vertex Shaders", EnabledShaderTypes, (1u << SF_Vertex));
 					ImGui::SameLine(); AddCheckboxButton("PS", "Toggle Pixel Shaders", EnabledShaderTypes, (1u << SF_Pixel));
 					ImGui::SameLine(); AddCheckboxButton("CS", "Toggle Compute Shaders", EnabledShaderTypes, (1u << SF_Compute));
 					ImGui::SameLine(); AddCheckboxButton("RTX", "Toggle RayTracing Shaders", EnabledShaderTypes, ((1u << SF_RayMiss) | (1u << SF_RayHitGroup)));
-					//ImGui::SameLine(); AddCheckboxButton("MS", "Toggle Mesh/Amplification Shaders",  EnabledShaderTypes, ((1u << SF_Mesh) | (1u << SF_Amplification)));
+					//ImGui::SameLine(); AddCheckboxButton("MS", "Toggle Mesh/Amplification Shaders", EnabledShaderTypes, ((1u << SF_Mesh) | (1u << SF_Amplification)));
 				}
 				ImGui::Separator();
 

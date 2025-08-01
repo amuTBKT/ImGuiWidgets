@@ -4,9 +4,13 @@
 
 #include "Algo/BinarySearch.h"
 #include "ImGuiCommonWidgets.h"
+#include "ImGuiSubsystem.h"
 #include "AssetRegistry/AssetData.h"
 #include "Blueprint/BlueprintSupport.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+
+struct FSlateBrush;
+class FSlateShaderResource;
 
 namespace FImGuiContentBrowserUtils
 {
@@ -157,10 +161,10 @@ class FImGuiAssetPicker : FNoncopyable
 	};
 
 public:
-	bool Draw(const char* Label, TWeakObjectPtr<TAssetType>& InOutSelectedAssetPtr)
+	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TWeakObjectPtr<TAssetType>& InOutSelectedAssetPtr)
 	{
 		TAssetType* SelectedAsset = InOutSelectedAssetPtr.Get();
-		if (Draw(Label, SelectedAsset))
+		if (Draw(Context, Label, SelectedAsset))
 		{
 			InOutSelectedAssetPtr = SelectedAsset;
 			return true;
@@ -168,7 +172,7 @@ public:
 		return false;
 	}
 
-	bool Draw(const char* Label, TAssetType*& InOutSelectedAsset)
+	bool Draw(ImGuiContext* Context, const char* Label, TAssetType*& InOutSelectedAsset)
 	{
 		DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
@@ -378,7 +382,7 @@ public:
 				
 				ImGui::BeginGroup();
 				{
-					if (TextFilter.Draw("Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth))
+					if (TextFilter.Draw(Context, "Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth))
 					{
 						bFilterAvailableAssets = true;
 					}

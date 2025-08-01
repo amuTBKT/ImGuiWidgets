@@ -679,7 +679,7 @@ namespace ImGuiStatsVizualizer
 
 		ImGui::Separator();
 
-		StatFilter.Draw("FilterLabel", "Filter Stats", false, ImGui::GetWindowWidth() * 0.75f);
+		StatFilter.Draw(ImGui::GetCurrentContext(), "FilterLabel", "Filter Stats", false, ImGui::GetWindowWidth() * 0.75f);
 	}
 
 	static void Initialize()

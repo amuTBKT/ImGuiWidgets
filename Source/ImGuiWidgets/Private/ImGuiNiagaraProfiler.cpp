@@ -247,7 +247,7 @@ namespace ImGuiNiagaraProfiler
 				ImGui::Separator();
 
 				ImGui::BeginDisabled(!bIsCapturing);
-				SimStageFilter.Draw("SimStageFilter", "Filter Simulation Stages", false, ImGui::GetWindowWidth() * 0.75f);
+				SimStageFilter.Draw(Context, "SimStageFilter", "Filter Simulation Stages", false, ImGui::GetWindowWidth() * 0.75f);
 				ImGui::EndDisabled();
 			}
 			ImGui::EndChild();
