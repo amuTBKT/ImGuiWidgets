@@ -7,13 +7,14 @@ public class ImGuiWidgets : ModuleRules
 {
 	public ImGuiWidgets(ReadOnlyTargetRules Target) : base(Target)
 	{
-		//PCHUsage = PCHUsageMode.NoPCHs;
+        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PrivateDependencyModuleNames.AddRange(
+        PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
 				"Engine",
+				"Projects",
 				"SlateCore",
 				"CoreUObject",
 				"AssetRegistry",
@@ -33,7 +34,6 @@ public class ImGuiWidgets : ModuleRules
 				{
 					"UnrealEd",
 					"Blutility",
-					"ContentBrowserData",
 				}
 			);
 		}
