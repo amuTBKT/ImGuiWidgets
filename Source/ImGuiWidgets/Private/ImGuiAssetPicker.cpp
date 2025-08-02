@@ -8,7 +8,6 @@
 #include "ClassIconFinder.h"
 #include "EditorUtilityLibrary.h"
 #include "Styling/SlateIconFinder.h"
-#include "ContentBrowserDataUtils.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 #endif
@@ -17,6 +16,7 @@
 #include "Engine/Blueprint.h"
 #include "Algo/BinarySearch.h"
 #include "AssetRegistry/AssetData.h"
+#include "Interfaces/IPluginManager.h"
 #include "Blueprint/BlueprintSupport.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
@@ -186,60 +186,148 @@ namespace AssetPickerUtils
 #endif
 	}
 
-	static bool bShowProjectConent = true;
-	static bool bShowEngineConent = true;
-	static bool bShowPluginConent = true;
-	static bool bShowDeveloperConent = true;
+	static bool bShowProjectContent = true;
+	static bool bShowEngineContent = true;
+	static bool bShowPluginContent = true;
+	static bool bShowDeveloperContent = true;
+	static bool bShowLocalizedContent = false;
 
 	FORCEINLINE static uint8 GetPackedAssetPathFilter()
 	{
 		uint8 Filter = 0u;
-		if (bShowProjectConent)
+		if (bShowProjectContent)
 		{
 			Filter |= 1u << 0;
 		}
-		if (bShowEngineConent)
+		if (bShowEngineContent)
 		{
 			Filter |= 1u << 1;
 		}
-		if (bShowPluginConent)
+		if (bShowPluginContent)
 		{
 			Filter |= 1u << 2;
 		}
-		if (bShowDeveloperConent)
+		if (bShowDeveloperContent)
 		{
 			Filter |= 1u << 3;
+		}
+		if (bShowLocalizedContent)
+		{
+			Filter |= 1u << 4;
 		}
 		return Filter;
 	}
 
-	static bool FilterAssetPath(FName AssetPath)
+	// NOTE: based on `ContentBrowserDataUtils::PathPassesAttributeFilter` since that is not available at runtime.
+	static bool FilterAssetPath(const FStringView InPath)
 	{
-#if WITH_EDITOR
-		EContentBrowserItemAttributeFilter ContentBrowserItemFilter = EContentBrowserItemAttributeFilter::IncludeNone;
-		if (bShowProjectConent)
+		static const FString ProjectContentRootName = TEXT("Game");
+		static const FString EngineContentRootName = TEXT("Engine");
+		static const FString LocalizationFolderName = TEXT("L10N");
+		static const FString ExternalActorsFolderName = FPackagePath::GetExternalActorsFolderName();
+		static const FString ExternalObjectsFolderName = FPackagePath::GetExternalObjectsFolderName();
+		static const FString DeveloperPathWithoutSlash = FPackageName::FilenameToLongPackageName(FPaths::GameDevelopersDir()).LeftChop(1);
+
+		auto GetRootFolderNameFromPath = [](const FStringView InFullPath)
 		{
-			ContentBrowserItemFilter |= EContentBrowserItemAttributeFilter::IncludeProject;
-		}
-		if (bShowEngineConent)
+			FStringView Result(InFullPath);
+
+			// Remove '/' from start
+			if (Result.StartsWith(TEXT('/')))
+			{
+				Result.RightChopInline(1);
+			}
+
+			// Return up until just before next '/'
+			int32 FoundIndex = INDEX_NONE;
+			if (Result.FindChar(TEXT('/'), FoundIndex))
+			{
+				Result.LeftInline(FoundIndex);
+			}
+
+			return Result;
+		};
+
+		FStringView RootName = GetRootFolderNameFromPath(InPath);
+		if (RootName.Len() == 0)
 		{
-			ContentBrowserItemFilter |= EContentBrowserItemAttributeFilter::IncludeEngine;
-		}
-		if (bShowPluginConent)
-		{
-			ContentBrowserItemFilter |= EContentBrowserItemAttributeFilter::IncludePlugins;
-		}
-		if (bShowDeveloperConent)
-		{
-			ContentBrowserItemFilter |= EContentBrowserItemAttributeFilter::IncludeDeveloper;
+			return false;
 		}
 
-		// TODO: ContentBrowserDataUtils::PathPassesAttributeFilter is not quite what we want here
-		FNameBuilder PathBufferStr(AssetPath);
-		return ContentBrowserDataUtils::PathPassesAttributeFilter(PathBufferStr, 0, ContentBrowserItemFilter);
-#else
+		if (!bShowPluginContent || !bShowEngineContent || !bShowProjectContent)
+		{
+			if (RootName.Equals(ProjectContentRootName))
+			{
+				if (!bShowProjectContent)
+				{
+					return false;
+				}
+			}
+			else if (RootName.Equals(EngineContentRootName))
+			{
+				if (!bShowEngineContent)
+				{
+					return false;
+				}
+			}
+			else
+			{
+				if (TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(RootName))
+				{
+					if (Plugin->IsEnabled() && Plugin->CanContainContent())
+					{
+						if (!bShowPluginContent)
+						{
+							return false;
+						}
+
+						const EPluginLoadedFrom PluginSource = Plugin->GetLoadedFrom();
+						if (PluginSource == EPluginLoadedFrom::Engine)
+						{
+							if (!bShowEngineContent)
+							{
+								return false;
+							}
+						}
+						else if (PluginSource == EPluginLoadedFrom::Project)
+						{
+							if (!bShowProjectContent)
+							{
+								return false;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		const FStringView AfterFirstFolder = InPath.RightChop(RootName.Len() + 2);
+		if (AfterFirstFolder.StartsWith(ExternalActorsFolderName) && (AfterFirstFolder.Len() == ExternalActorsFolderName.Len() || AfterFirstFolder[ExternalActorsFolderName.Len()] == TEXT('/')))
+		{
+			return false;
+		}
+		if (AfterFirstFolder.StartsWith(ExternalObjectsFolderName) && (AfterFirstFolder.Len() == ExternalObjectsFolderName.Len() || AfterFirstFolder[ExternalObjectsFolderName.Len()] == TEXT('/')))
+		{
+			return false;
+		}
+
+		if (!bShowDeveloperContent)
+		{
+			if (AfterFirstFolder.StartsWith(LocalizationFolderName) && (AfterFirstFolder.Len() == LocalizationFolderName.Len() || AfterFirstFolder[LocalizationFolderName.Len()] == TEXT('/')))
+			{
+				return false;
+			}
+		}
+
+		if (bShowLocalizedContent)
+		{
+			if (InPath.StartsWith(DeveloperPathWithoutSlash) && (InPath.Len() == DeveloperPathWithoutSlash.Len() || InPath[DeveloperPathWithoutSlash.Len()] == TEXT('/')))
+			{
+				return false;
+			}
+		}
+
 		return true;
-#endif
 	}
 }
 
@@ -315,6 +403,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale, 1.f);
 	const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale, 1.f);
 	const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DeveloperFolder"), FVector2D(16.) * GlobalScale, 1.f);
+	const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale, 1.f);
 
 	auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, UObject* Asset)
 	{
@@ -601,10 +690,11 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 						return bWasActive != bInOutState;
 					};
 
-				bFilterAvailableAssets |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectConent, ProjectContentIcon, "Show Project Content?");
-				bFilterAvailableAssets |= AddButton("ToggleEngineContent", AssetPickerUtils::bShowEngineConent, EngineContentIcon, "Show Engine Content?");
-				bFilterAvailableAssets |= AddButton("TogglePluginContent", AssetPickerUtils::bShowPluginConent, PluginContentIcon, "Show Plugin Content?");
-				bFilterAvailableAssets |= AddButton("ToggleDeveloperContent", AssetPickerUtils::bShowDeveloperConent, DeveloperContentIcon, "Show Developer Folder Content?");
+				bFilterAvailableAssets |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectContent, ProjectContentIcon, "Show Project Content?");
+				bFilterAvailableAssets |= AddButton("ToggleEngineContent", AssetPickerUtils::bShowEngineContent, EngineContentIcon, "Show Engine Content?");
+				bFilterAvailableAssets |= AddButton("TogglePluginContent", AssetPickerUtils::bShowPluginContent, PluginContentIcon, "Show Plugin Content?");
+				bFilterAvailableAssets |= AddButton("ToggleDeveloperContent", AssetPickerUtils::bShowDeveloperContent, DeveloperContentIcon, "Show Developer Folder Content?");
+				bFilterAvailableAssets |= AddButton("ToggleLocaizedContent", AssetPickerUtils::bShowLocalizedContent, LocalizedContentIcon, "Show Localized Content?");
 			}
 			ImGui::EndGroup();
 
@@ -691,7 +781,9 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 		{
 			continue;
 		}
-		if (!AssetPickerUtils::FilterAssetPath(AvailableAssets[AssetIndex].PackagePath))
+
+		FNameBuilder AssetPath{ AvailableAssets[AssetIndex].PackagePath };
+		if (!AssetPickerUtils::FilterAssetPath(AssetPath))
 		{
 			continue;
 		}
