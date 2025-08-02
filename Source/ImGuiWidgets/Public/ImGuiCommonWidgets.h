@@ -8,12 +8,21 @@
 
 namespace FImGui
 {
-	// Required to have valid ImGui context across dll boundaries
+	// Required to have valid ImGui context across modules
 	FORCEINLINE void EnsureValidImGuiContext(ImGuiContext* Context)
 	{
+		check(Context);
+
 		const auto CurrentContext = ImGui::GetCurrentContext();
-		check(Context && (CurrentContext == nullptr || Context == CurrentContext));
-		ImGui::SetCurrentContext(Context);
+		if (CurrentContext == nullptr)
+		{
+			ImGui::SetCurrentContext(Context);
+		}
+		else
+		{
+			// only need to be set once per module
+			check(Context == CurrentContext);
+		}
 	}
 
 	// Similar to `ImGui::ImageButton` but allows tinting the image depending on button state (inactive/active|hovered)

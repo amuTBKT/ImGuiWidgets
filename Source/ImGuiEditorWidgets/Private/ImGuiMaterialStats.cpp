@@ -1,8 +1,9 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
 #include "ShaderCompiler.h"
-#include "ImGuiAssetPicker.h"
+#include "UObject/Package.h"
 #include "ImGuiStaticWidget.h"
+#include "ImGuiAssetPicker.h"
 #include "Materials/Material.h"
 #include "MaterialStatsCommon.h"
 #include "ShaderCompilerCommon.h"
@@ -263,7 +264,7 @@ namespace ImGuiMaterialStats
 			static int32 DumpShaderInfoCVarRestoreValue = INDEX_NONE;
 			static bool bIsCompilingPermutations = false;
 
-			static FImGuiAssetPicker<UMaterial> MaterialPicker;
+			static FImGuiAssetPicker MaterialPicker = FImGuiAssetPicker::MakeWidget(UMaterial::StaticClass());
 			static TWeakObjectPtr<UMaterial> SelectedMaterial;
 			static FImGuiTextFilter ShaderFilter = FImGuiTextFilter::MakeWidget(64u);
 			static uint32 EnabledShaderTypes = (1u << SF_Vertex) | (1u << SF_Pixel);
