@@ -9,13 +9,30 @@
 class FImGuiAssetPicker
 {
 public:
-	IMGUIWIDGETS_API static FImGuiAssetPicker MakeWidget(UClass* Class);
+	struct FFilter
+	{
+		FName AssetTag = NAME_None;
+		FString TagValue;
+	};
+	IMGUIWIDGETS_API FFilter MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass);
+
+	IMGUIWIDGETS_API static FImGuiAssetPicker MakeWidget(const TNonNullPtr<UClass>& Class, TArray<FFilter> OptionalFilters = {});
+	FORCEINLINE static FImGuiAssetPicker MakeWidget(const TNonNullPtr<UClass>& Class, FFilter OptionalFilter)
+	{
+		return MakeWidget(Class, { MoveTemp(OptionalFilter) });
+	}
 	
 	template <typename TAssetType>
 	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TAssetType*& InOutSelectedAssetPtr)
 	{
-		if (!ensure(TAssetType::StaticClass() == AssetType))
+		if (AssetType == nullptr)
 		{
+			DrawInvalidWidget(Context, Label, "'AssetType' unset!");
+			return false;
+		}
+		if (TAssetType::StaticClass() != AssetType)
+		{
+			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!");
 			return false;
 		}
 
@@ -41,12 +58,13 @@ public:
 	}
 
 private:
+	IMGUIWIDGETS_API void DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage);
 	IMGUIWIDGETS_API bool DrawInternal(ImGuiContext* Context, const char* Label, UObject*& InOutSelectedAsset);
 	void FilterAvailableAssets();
 
 private:
 	const UClass* AssetType = nullptr;
-	const UClass* AssetSubType = nullptr;
+	TArray<FFilter> OptionalFilters;
 
 	FImGuiTextFilter TextFilter = FImGuiTextFilter::MakeWidget(64u);
 
