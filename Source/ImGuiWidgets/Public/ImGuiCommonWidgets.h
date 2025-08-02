@@ -100,13 +100,15 @@ namespace FImGui
 	{
 		ImGui::Image(image.Id, image.Size, image.UV0, image.UV1, tint_col, border_col);
 	}
+
+	IMGUIWIDGETS_API void AddWarningMessageBox(ImGuiContext* Context, float padding, const ImVec4& col, const char* message);
 }
 
 class FImGuiTextFilter
 {
 public:
 	IMGUIWIDGETS_API static FImGuiTextFilter MakeWidget(uint32 MaxLength);
-	IMGUIWIDGETS_API bool Draw(ImGuiContext* Context, const char* WidgetName, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f);
+	IMGUIWIDGETS_API bool Draw(ImGuiContext* Context, const char* Label, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f);
 	IMGUIWIDGETS_API void Reset();
 
 	bool IsActive()									const { return !FilterKeywordTokens.IsEmpty(); }

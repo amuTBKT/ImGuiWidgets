@@ -263,38 +263,7 @@ void FImGuiAssetPicker::DrawInvalidWidget(ImGuiContext* Context, const char* Lab
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
-	FImGui::EnsureValidImGuiContext(Context);
-
-	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-	const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Warning"), FVector2D(ImGui::GetFontSize()), 1.f);
-
-	/*
-	TODO: there must be a better way to add this ^^'
-	_____________________________________
-	|<PADDING>							|
-	|<PADDING><IMAGE><MESSAGE><PADDING>	|
-	|<PADDING>							|
-	-------------------------------------
-	*/
-
-	ImGui::BeginGroup();
-	{
-		ImGui::NewLine();
-
-		ImGui::Dummy(ImVec2(ImGui::GetFontSize(), 0.f));
-		ImGui::SameLine();
-		FImGui::Image(WarningIcon, ImVec4(1.f, 0.f, 0.f, 1.f));
-		ImGui::SameLine();
-		ImGui::Text("AssetPicker('%s') : %s", Label, ErrorMessage);
-		ImGui::SameLine();
-		ImGui::Dummy(ImVec2(ImGui::GetFontSize(), 0.f));
-		
-		ImGui::NewLine();
-	}
-	ImGui::EndGroup();
-
-	ImDrawList* DrawList = ImGui::GetWindowDrawList();
-	DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), 0xFF0000FF, 0.f, ImDrawFlags_None, 1.f);
+	FImGui::AddWarningMessageBox(Context, 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("AssetPicker('%s') : %s", Label, ErrorMessage));
 }
 
 bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, UObject*& InOutSelectedAsset)

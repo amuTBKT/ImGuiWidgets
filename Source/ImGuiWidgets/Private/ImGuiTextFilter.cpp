@@ -15,23 +15,24 @@ FImGuiTextFilter FImGuiTextFilter::MakeWidget(uint32 MaxLength)
 	return Widget;
 }
 
-bool FImGuiTextFilter::Draw(ImGuiContext* Context, const char* WidgetName, const char* HintText, bool bSetFocus, float WidgetWidth)
+bool FImGuiTextFilter::Draw(ImGuiContext* Context, const char* Label, const char* HintText, bool bSetFocus, float WidgetWidth)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("TextFilter::Draw"), STAT_ImGuiTextFilter_Draw, STATGROUP_ImGui);
-
-	FImGui::EnsureValidImGuiContext(Context);
 
 	const int32 MaxLength = FilterStringBuffer_ANSI.Max();
 	if (MaxLength == 0)
 	{
+		FImGui::AddWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("TextFilter('%s') not initialized!", Label));
 		return false;
 	}
+
+	FImGui::EnsureValidImGuiContext(Context);
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 	const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
 	const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.X"), FVector2D(ImGui::GetFontSize()), 1.f);
 
-	FImGuiNamedWidgetScope WidgetScope{ WidgetName };
+	FImGuiNamedWidgetScope WidgetScope{ Label };
 
 	bool bFilterChanged = false;
 	bool bSearchBoxHasFocus = false;
