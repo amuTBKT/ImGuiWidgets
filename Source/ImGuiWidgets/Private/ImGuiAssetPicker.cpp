@@ -800,6 +800,8 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 void FImGuiAssetPicker::FilterAvailableAssets()
 {
+	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::FilterAssets"), STAT_ImGuiAssetPicker_FilterAssets, STATGROUP_ImGui);
+
 	FilteredAssetIndices.Reset();
 	LastSelectedAssetIndexInFilteredList = INDEX_NONE;
 	PackedAssetPathFilter = AssetPickerUtils::GetPackedAssetPathFilter();
