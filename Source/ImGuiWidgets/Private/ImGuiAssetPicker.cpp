@@ -128,7 +128,7 @@ namespace AssetPickerUtils
 			{
 				for (auto Itr = AvailableAssets.CreateIterator(); Itr; ++Itr)
 				{
-					if (Itr->ObjectPath == FName(*OldName))
+					if (Itr->GetSoftObjectPath().ToString().Equals(OldName, ESearchCase::IgnoreCase))
 					{
 						Itr.RemoveCurrent();
 						bReAddAsset = true;
