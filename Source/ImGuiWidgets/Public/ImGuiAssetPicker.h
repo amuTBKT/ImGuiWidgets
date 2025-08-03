@@ -14,12 +14,12 @@ public:
 		FName AssetTag = NAME_None;
 		FString TagValue;
 	};
-	IMGUIWIDGETS_API FFilter MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass);
+	IMGUIWIDGETS_API static FFilter MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass);
 
 	IMGUIWIDGETS_API static FImGuiAssetPicker MakeWidget(const TNonNullPtr<UClass>& Class, TArray<FFilter> OptionalFilters = {});
 	FORCEINLINE static FImGuiAssetPicker MakeWidget(const TNonNullPtr<UClass>& Class, FFilter OptionalFilter)
 	{
-		return MakeWidget(Class, { MoveTemp(OptionalFilter) });
+		return MakeWidget(Class, TArray<FFilter>{ MoveTemp(OptionalFilter) });
 	}
 	
 	template <typename TAssetType>
