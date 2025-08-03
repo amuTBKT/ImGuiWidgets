@@ -12,6 +12,7 @@
 #include "ThumbnailRendering/ThumbnailManager.h"
 #endif
 
+#include "Algo/AllOf.h"
 #include "ImGuiSubsystem.h"
 #include "Engine/Blueprint.h"
 #include "Algo/BinarySearch.h"
@@ -43,6 +44,7 @@ namespace AssetPickerUtils
 				GatherAssets(AssetRegistry);
 				AssetRegistry.OnAssetAdded().AddRaw(this, &FAssetContainer::OnAssetAdded);
 				AssetRegistry.OnAssetRemoved().AddRaw(this, &FAssetContainer::OnAssetRemoved);
+				AssetRegistry.OnAssetRenamed().AddRaw(this, &FAssetContainer::OnAssetRenamed);
 			}
 		}
 
@@ -53,6 +55,7 @@ namespace AssetPickerUtils
 				IAssetRegistry& AssetRegistry = AssetRegistryModulePtr->Get();
 				AssetRegistry.OnAssetAdded().RemoveAll(this);
 				AssetRegistry.OnAssetRemoved().RemoveAll(this);
+				AssetRegistry.OnAssetRenamed().RemoveAll(this);
 			}
 		}
 
@@ -90,7 +93,7 @@ namespace AssetPickerUtils
 
 		void OnAssetAdded(const FAssetData& AssetData)
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::AddAsset"), STAT_ImGuiAssetPicker_AddAsset, STATGROUP_ImGui);
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::OnAssetAdded"), STAT_ImGuiAssetPicker_OnAssetAdded, STATGROUP_ImGui);
 
 			if (FilterAsset(AssetData))
 			{
@@ -107,12 +110,40 @@ namespace AssetPickerUtils
 
 		void OnAssetRemoved(const FAssetData& AssetData)
 		{
-			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::RemoveAsset"), STAT_ImGuiAssetPicker_AddAsset, STATGROUP_ImGui);
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::OnAssetRemoved"), STAT_ImGuiAssetPicker_OnAssetRemoved, STATGROUP_ImGui);
 
 			if (FilterAsset(AssetData))
 			{
 				RevisionId++;
 				AvailableAssets.Remove(AssetData);
+			}
+		}
+
+		void OnAssetRenamed(const FAssetData& AssetData, const FString& OldName)
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::OnAssetRenamed"), STAT_ImGuiAssetPicker_OnAssetRenamed, STATGROUP_ImGui);
+
+			bool bReAddAsset = false;
+			if (FilterAsset(AssetData))
+			{
+				for (auto Itr = AvailableAssets.CreateIterator(); Itr; ++Itr)
+				{
+					if (Itr->ObjectPath == FName(*OldName))
+					{
+						Itr.RemoveCurrent();
+						bReAddAsset = true;
+					}
+					else if (*Itr == AssetData)
+					{
+						Itr.RemoveCurrent();
+						bReAddAsset = true;
+					}
+				}
+			}
+
+			if (bReAddAsset)
+			{
+				OnAssetAdded(AssetData);
 			}
 		}
 
@@ -123,16 +154,16 @@ namespace AssetPickerUtils
 		uint32 RevisionId = 0;
 	};
 
-	static TMap<uint32, FAssetContainer> AssetContainerInstances;
+	static TMap<uint32, TUniquePtr<FAssetContainer>> AssetContainerInstances;
 	static FAssetContainer& GetAssetContainer(const UClass* Class)
 	{
 		const uint32 ContainerHash = PointerHash(Class);
-		FAssetContainer* ContainerInstance = AssetContainerInstances.Find(ContainerHash);
+		TUniquePtr<FAssetContainer>* ContainerInstance = AssetContainerInstances.Find(ContainerHash);
 		if (!ContainerInstance)
 		{
-			ContainerInstance = &AssetContainerInstances.Emplace(ContainerHash, Class);
+			ContainerInstance = &AssetContainerInstances.Add(ContainerHash, MakeUnique<FAssetContainer>(Class));
 		}
-		return *ContainerInstance;
+		return *ContainerInstance->Get();
 	}
 
 #if WITH_EDITOR
@@ -311,7 +342,7 @@ namespace AssetPickerUtils
 			return false;
 		}
 
-		if (!bShowDeveloperContent)
+		if (!bShowLocalizedContent)
 		{
 			if (AfterFirstFolder.StartsWith(LocalizationFolderName) && (AfterFirstFolder.Len() == LocalizationFolderName.Len() || AfterFirstFolder[LocalizationFolderName.Len()] == TEXT('/')))
 			{
@@ -319,7 +350,7 @@ namespace AssetPickerUtils
 			}
 		}
 
-		if (bShowLocalizedContent)
+		if (!bShowDeveloperContent)
 		{
 			if (InPath.StartsWith(DeveloperPathWithoutSlash) && (InPath.Len() == DeveloperPathWithoutSlash.Len() || InPath[DeveloperPathWithoutSlash.Len()] == TEXT('/')))
 			{
@@ -372,24 +403,22 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 	FSlateShaderResource* SelectedAssetTexture = nullptr;
 	UObject* SelectedAsset = InOutSelectedAsset;
-	if (SelectedAsset)
-	{
-		if ((SelectedAsset != LastSelectedAssetPtr.Get()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
-		{
-			ContainerRevisionId = AssetContainer.GetRevisionId();
 
-			LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering|FAssetData::ECreationFlags::AllowBlueprintClass));
-
-			FilterAvailableAssets();
-		}
-#if WITH_EDITOR
-		SelectedAssetTexture = AssetPickerUtils::GetAssetThumbnail(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering|FAssetData::ECreationFlags::AllowBlueprintClass));
-#endif
-	}
-	if (PackedAssetPathFilter != AssetPickerUtils::GetPackedAssetPathFilter())
+	if ((PackedAssetPathFilter != AssetPickerUtils::GetPackedAssetPathFilter()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
 	{
 		FilterAvailableAssets();
 	}
+
+	if (SelectedAsset != LastSelectedAssetPtr.Get())
+	{
+		LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering|FAssetData::ECreationFlags::AllowBlueprintClass));
+	}
+#if WITH_EDITOR
+	if (SelectedAsset)
+	{
+		SelectedAssetTexture = AssetPickerUtils::GetAssetThumbnail(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering | FAssetData::ECreationFlags::AllowBlueprintClass));
+	}
+#endif	
 
 	const float GlobalScale = ImGui::GetIO().FontGlobalScale;
 
@@ -568,8 +597,11 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 			// reset filter text and set focus when asset viewer is triggered
 			if (!bIsAssetViewerVisible)
 			{
+				if (TextFilter.IsActive())
+				{
+					bFilterAvailableAssets = true;
+				}
 				TextFilter.Reset();
-				bFilterAvailableAssets = true;
 			}
 
 			ImGui::BeginGroup();
@@ -788,13 +820,14 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 			continue;
 		}
 
-		for (const FFilter& RequiredTag : OptionalFilters)
-		{
-			FAssetDataTagMapSharedView::FFindTagResult TagResult = AvailableAssets[AssetIndex].TagsAndValues.FindTag(RequiredTag.AssetTag);
-			if (!TagResult.IsSet() || (!TagResult.Equals(RequiredTag.TagValue)))
+		if ((OptionalFilters.Num() > 0) && !Algo::AllOf(OptionalFilters,
+			[&](const FFilter& RequiredTag)
 			{
-				continue;
-			}
+				FAssetDataTagMapSharedView::FFindTagResult TagResult = AvailableAssets[AssetIndex].TagsAndValues.FindTag(RequiredTag.AssetTag);
+				return (TagResult.IsSet() && TagResult.Equals(RequiredTag.TagValue));
+			}))
+		{
+			continue;
 		}
 
 		if (LastSelectedAssetIndex == AssetIndex)
@@ -803,6 +836,8 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 		}
 		FilteredAssetIndices.Add(AssetIndex);
 	}
+
+	ContainerRevisionId = AssetContainer.GetRevisionId();
 }
 
 #undef TCHAR_TO_ANSI_PATH
