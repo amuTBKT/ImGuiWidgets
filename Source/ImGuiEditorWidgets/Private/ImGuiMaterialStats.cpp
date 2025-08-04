@@ -206,7 +206,7 @@ namespace ImGuiMaterialStats
 			}
 		}
 
-		UMaterial* DuplicatedMaterial = nullptr;
+		UMaterialInterface* DuplicatedMaterial = nullptr;
 		FMaterialResourceStats* Resource = nullptr;
 		TArray<FShaderStatsData> Shaders;
 		TMap<FString, TArray<int32>> ShaderVFLookup;
@@ -264,8 +264,8 @@ namespace ImGuiMaterialStats
 			static int32 DumpShaderInfoCVarRestoreValue = INDEX_NONE;
 			static bool bIsCompilingPermutations = false;
 
-			static FImGuiAssetPicker MaterialPicker = FImGuiAssetPicker::MakeWidget(UMaterial::StaticClass());
-			static TWeakObjectPtr<UMaterial> SelectedMaterial;
+			static FImGuiAssetPicker MaterialPicker = FImGuiAssetPicker::MakeWidget(UMaterialInterface::StaticClass());
+			static TWeakObjectPtr<UMaterialInterface> SelectedMaterial;
 			static FImGuiTextFilter ShaderFilter = FImGuiTextFilter::MakeWidget(64u);
 			static uint32 EnabledShaderTypes = (1u << SF_Vertex) | (1u << SF_Pixel);
 
@@ -336,8 +336,8 @@ namespace ImGuiMaterialStats
 
 					const FString UniqueName = FString::Printf(TEXT("%s_%s"), *SelectedMaterial->GetName(), *FGuid::NewGuid().ToString());
 					const FName Name = FName(*UniqueName);
-					MaterialStats.DuplicatedMaterial = (UMaterial*)StaticDuplicateObject(SelectedMaterial.Get(), GetTransientPackage(), Name);
-					UMaterial* MaterialToUse = MaterialStats.DuplicatedMaterial;
+					MaterialStats.DuplicatedMaterial = (UMaterialInterface*)StaticDuplicateObject(SelectedMaterial.Get(), GetTransientPackage(), Name);
+					UMaterialInterface* MaterialToUse = MaterialStats.DuplicatedMaterial;
 					if (!MaterialToUse->IsRooted())
 					{
 						MaterialToUse->AddToRoot();
@@ -348,7 +348,7 @@ namespace ImGuiMaterialStats
 					Resource->SetMaterial(MaterialToUse, nullptr, PreviewShaderPlatform, PreviewQualityLevel);
 					Resource->CacheShaders(EMaterialShaderPrecompileMode::Default);
 #else
-					Resource->SetMaterial(MaterialToUse, nullptr, ERHIFeatureLevel::SM6, PreviewQualityLevel);
+					Resource->SetMaterial(MaterialToUse->GetMaterial(), Cast<UMaterialInstance>(MaterialToUse), ERHIFeatureLevel::SM6, PreviewQualityLevel);
 					Resource->CacheShaders(PreviewShaderPlatform, EMaterialShaderPrecompileMode::Default);
 #endif
 				}
