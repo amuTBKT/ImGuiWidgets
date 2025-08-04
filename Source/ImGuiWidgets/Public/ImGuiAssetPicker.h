@@ -25,7 +25,7 @@ public:
 	template <typename TAssetType>
 	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TAssetType*& InOutSelectedAssetPtr)
 	{
-		if (AssetType == nullptr)
+		if (!IsValid(AssetType))
 		{
 			DrawInvalidWidget(Context, Label, "'AssetType' unset!");
 			return false;

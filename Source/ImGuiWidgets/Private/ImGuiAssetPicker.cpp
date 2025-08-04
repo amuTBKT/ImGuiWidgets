@@ -389,7 +389,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
-	if (!IsValid(AssetType))
+	if (!ensure(IsValid(AssetType)))
 	{
 		return false;
 	}
