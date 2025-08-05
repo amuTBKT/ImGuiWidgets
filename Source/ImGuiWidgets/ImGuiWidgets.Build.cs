@@ -34,6 +34,7 @@ public class ImGuiWidgets : ModuleRules
 				{
 					"UnrealEd",
 					"Blutility",
+					"CollectionManager",
 				}
 			);
 		}

@@ -113,7 +113,7 @@ public:
 
 	bool IsActive()									const { return !FilterKeywordTokens.IsEmpty(); }
 	bool PassFilter(FStringView StringToCheck)		const { return PassFilterInternal(GetFilterString(), StringToCheck); }
-	bool PassFilter(FAnsiStringView StringToCheck)  const { return PassFilterInternal(GetFilterStringANSI(), StringToCheck); }	
+	bool PassFilter(FAnsiStringView StringToCheck)  const { return PassFilterInternal(GetFilterStringANSI(), StringToCheck); }
 	FStringView GetFilterString()					const { return FStringView{ FilterStringBuffer.GetData(), FilterStringBuffer.Num() }; }
 	FAnsiStringView GetFilterStringANSI()			const { return FAnsiStringView{ FilterStringBuffer_ANSI.GetData(), FilterStringBuffer_ANSI.Num() }; }
 

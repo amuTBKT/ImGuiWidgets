@@ -6,13 +6,16 @@
 #include "Editor.h"
 #include "AssetThumbnail.h"
 #include "ClassIconFinder.h"
+#include "ICollectionManager.h"
 #include "EditorUtilityLibrary.h"
+#include "CollectionManagerModule.h"
 #include "Styling/SlateIconFinder.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 #endif
 
 #include "Algo/AllOf.h"
+#include "Misc/Paths.h"
 #include "ImGuiSubsystem.h"
 #include "Engine/Blueprint.h"
 #include "Algo/BinarySearch.h"
@@ -36,6 +39,8 @@ namespace AssetPickerUtils
 		{
 #if WITH_EDITOR
 			ClassIconBrush = FClassIconFinder::FindThumbnailForClass(AssetType, NAME_None);
+#else
+			ClassIconBrush = IMGUI_ICON("Icon.FallbackAssetIcon");
 #endif
 
 			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(FName("AssetRegistry")))
@@ -221,6 +226,7 @@ namespace AssetPickerUtils
 	static bool bShowEngineContent = true;
 	static bool bShowPluginContent = true;
 	static bool bShowDeveloperContent = true;
+	static bool bSearchAssetCollections = true;
 	static bool bShowLocalizedContent = false;
 
 	FORCEINLINE static uint8 GetPackedAssetPathFilter()
@@ -242,9 +248,13 @@ namespace AssetPickerUtils
 		{
 			Filter |= 1u << 3;
 		}
-		if (bShowLocalizedContent)
+		if (bSearchAssetCollections)
 		{
 			Filter |= 1u << 4;
+		}
+		if (bShowLocalizedContent)
+		{
+			Filter |= 1u << 5;
 		}
 		return Filter;
 	}
@@ -389,7 +399,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
-	if (!ensure(IsValid(AssetType)))
+	if (!ensure(AssetType))
 	{
 		return false;
 	}
@@ -432,6 +442,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale, 1.f);
 	const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale, 1.f);
 	const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DeveloperFolder"), FVector2D(16.) * GlobalScale, 1.f);
+	const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.AssetCollection"), FVector2D(16.) * GlobalScale, 1.f);
 	const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale, 1.f);
 
 	auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, UObject* Asset)
@@ -725,7 +736,13 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 				bFilterAvailableAssets |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectContent, ProjectContentIcon, "Show Project Content?");
 				bFilterAvailableAssets |= AddButton("ToggleEngineContent", AssetPickerUtils::bShowEngineContent, EngineContentIcon, "Show Engine Content?");
 				bFilterAvailableAssets |= AddButton("TogglePluginContent", AssetPickerUtils::bShowPluginContent, PluginContentIcon, "Show Plugin Content?");
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Spacing();
 				bFilterAvailableAssets |= AddButton("ToggleDeveloperContent", AssetPickerUtils::bShowDeveloperContent, DeveloperContentIcon, "Show Developer Folder Content?");
+#if WITH_EDITOR
+				bFilterAvailableAssets |= AddButton("SearchCollectionNames", AssetPickerUtils::bSearchAssetCollections, AssetCollectionsIcon, "Search Collection Names?");
+#endif
 				bFilterAvailableAssets |= AddButton("ToggleLocaizedContent", AssetPickerUtils::bShowLocalizedContent, LocalizedContentIcon, "Show Localized Content?");
 			}
 			ImGui::EndGroup();
@@ -806,12 +823,40 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 	LastSelectedAssetIndexInFilteredList = INDEX_NONE;
 	PackedAssetPathFilter = AssetPickerUtils::GetPackedAssetPathFilter();
 
+#if WITH_EDITOR
+	const ICollectionManager* CollectionManager = AssetPickerUtils::bSearchAssetCollections ? &FCollectionManagerModule::GetModule().Get() : nullptr;
+#endif
+
 	const auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetType);
 	const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
 	for (int32 AssetIndex = 0; AssetIndex < AvailableAssets.Num(); ++AssetIndex)
 	{
 		FNameBuilder AssetName{ AvailableAssets[AssetIndex].AssetName };
-		if (!TextFilter.PassFilter(AssetName.ToView()))
+
+		bool bCollectionNamePassed = false;
+#if WITH_EDITOR
+		if (CollectionManager)
+		{
+			TArray<FName> AssetCollectionNames;
+			CollectionManager->GetCollectionsContainingObject(
+				AvailableAssets[AssetIndex].ToSoftObjectPath(),
+				ECollectionShareType::CST_All,
+				AssetCollectionNames,
+				ECollectionRecursionFlags::SelfAndChildren);
+			
+			for (const FName& CollectionName : AssetCollectionNames)
+			{
+				FNameBuilder Collection{ CollectionName };
+				if (TextFilter.PassFilter(Collection.ToView()))
+				{
+					bCollectionNamePassed = true;
+					break;
+				}
+			}
+		}
+#endif
+
+		if (!bCollectionNamePassed && !TextFilter.PassFilter(AssetName.ToView()))
 		{
 			continue;
 		}
