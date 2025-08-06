@@ -559,6 +559,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		const float AssetViewerRowHeight = 36.f * GlobalScale;
 		const int32 PreviewTextMaxLength = 32;
 
+		// TODO: `ImGui::RenderTextEllipsis` already does something similar
 		FString PreviewText = InOutAsset ? InOutAsset->GetName() : FString(TEXT("None"));
 		if (PreviewText.Len() >= PreviewTextMaxLength)
 		{

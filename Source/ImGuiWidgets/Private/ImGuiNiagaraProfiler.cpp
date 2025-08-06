@@ -8,6 +8,7 @@
 #include "NiagaraSystem.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
+#include "Textures/SlateIcon.h"
 #include "NiagaraSimulationStageBase.h"
 
 namespace ImGuiNiagaraProfiler
@@ -270,7 +271,11 @@ namespace ImGuiNiagaraProfiler
 		ImGui::End();
 	}
 
-	IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
+	static FAutoRegisterStandaloneWidget::FParams RegisterParams =
+	{
+		&Initialize, &Tick, FSlateIcon(FName("NiagaraEditorStyle"), FName("Tab.Debugger")), "Niagara GPU Profiler", "Widget for displaying Niagara gpu stats."
+	};
+	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
 }
 
 #endif //#if STATS

@@ -12,16 +12,9 @@ namespace FImGui
 	FORCEINLINE void EnsureValidImGuiContext(ImGuiContext* Context)
 	{
 		check(Context);
-
-		const auto CurrentContext = ImGui::GetCurrentContext();
-		if (CurrentContext == nullptr)
+		if (ImGui::GetCurrentContext() != Context)
 		{
 			ImGui::SetCurrentContext(Context);
-		}
-		else
-		{
-			// only need to be set once per module
-			check(Context == CurrentContext);
 		}
 	}
 

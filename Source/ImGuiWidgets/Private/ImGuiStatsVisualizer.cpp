@@ -6,6 +6,7 @@
 
 #include "GPUProfiler.h"
 #include "Engine/Engine.h"
+#include "ImGuiSubsystem.h"
 #include "Stats/StatsData.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
@@ -744,7 +745,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::End();
 	}
 	
-	IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
+	IMGUI_REGISTER_MAIN_WINDOW_WIDGET(Initialize, Tick);
 }
 
 #endif //#if STATS

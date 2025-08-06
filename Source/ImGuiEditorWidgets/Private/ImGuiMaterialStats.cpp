@@ -1,9 +1,10 @@
 // Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
 
 #include "ShaderCompiler.h"
+#include "ImGuiSubsystem.h"
 #include "UObject/Package.h"
-#include "ImGuiStaticWidget.h"
 #include "ImGuiAssetPicker.h"
+#include "ImGuiStaticWidget.h"
 #include "Materials/Material.h"
 #include "MaterialStatsCommon.h"
 #include "ShaderCompilerCommon.h"
@@ -297,7 +298,7 @@ namespace ImGuiMaterialStats
 					{
 						FImGui::Image(WarningIcon, ImVec4(1.f, 0.721568627f, 0.f, 1.f));
 						ImGui::SameLine();
-						ImGui::TextUnformatted("Browse/Edit functions maybe not work properly without 'r.DumpShaderDebugShortNames' enabled");
+						ImGui::TextUnformatted("Browse/Edit functions may not work properly without 'r.DumpShaderDebugShortNames' enabled");
 
 						bAddSeparator = true;
 					}
@@ -529,5 +530,9 @@ namespace ImGuiMaterialStats
 		ImGui::End();
 	}
 
-	IMGUI_REGISTER_STATIC_WIDGET(Initialize, Tick);
+	static FAutoRegisterStandaloneWidget::FParams RegisterParams =
+	{
+		&Initialize, &Tick, FSlateIcon(FAppStyle::GetAppStyleSetName(), FName("MaterialEditor.ToggleMaterialStats.Tab")), "Material Stats", "Widget for inspecting compiled Material stats."
+	};
+	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
 }
