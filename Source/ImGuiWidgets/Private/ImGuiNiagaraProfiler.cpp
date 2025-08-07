@@ -239,6 +239,12 @@ namespace ImGuiNiagaraProfiler
 	{
 		FImGuiTickScope Scope{ Context };
 
+#if WITH_EDITOR //dockspace already created if not using standlone widgets
+		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar;
+		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
+		ImGui::SetNextWindowDockID(MainDockSpaceID, ImGuiCond_Always);
+#endif
+
 		if (ImGui::Begin("Niagara Profiler", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
 			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
@@ -248,7 +254,7 @@ namespace ImGuiNiagaraProfiler
 				ImGui::Separator();
 
 				ImGui::BeginDisabled(!bIsCapturing);
-				SimStageFilter.Draw(Context, "SimStageFilter", "Filter Simulation Stages", false, ImGui::GetWindowWidth() * 0.75f);
+				SimStageFilter.Draw(Context, "SimStageFilter", "Filter Simulation Stages", ImGui::GetWindowWidth() * 0.75f);
 				ImGui::EndDisabled();
 			}
 			ImGui::EndChild();
@@ -273,7 +279,11 @@ namespace ImGuiNiagaraProfiler
 
 	static FAutoRegisterStandaloneWidget::FParams RegisterParams =
 	{
-		&Initialize, &Tick, FSlateIcon(FName("NiagaraEditorStyle"), FName("Tab.Debugger")), "Niagara GPU Profiler", "Widget for displaying Niagara gpu stats."
+		.InitFunction			= &Initialize,
+		.TickFunction			= &Tick,
+		.TabIcon				= FSlateIcon(FName("NiagaraEditorStyle"), FName("Tab.Debugger")),
+		.TabName				= "Niagara GPU Profiler",
+		.TabTooltip				= "Widget for displaying Niagara gpu stats."
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
 }

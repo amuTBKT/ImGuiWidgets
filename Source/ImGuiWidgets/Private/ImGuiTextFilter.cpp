@@ -15,7 +15,7 @@ FImGuiTextFilter FImGuiTextFilter::MakeWidget(uint32 MaxLength)
 	return Widget;
 }
 
-bool FImGuiTextFilter::Draw(ImGuiContext* Context, const char* Label, const char* HintText, bool bSetFocus, float WidgetWidth)
+bool FImGuiTextFilter::Draw(ImGuiContext* Context, const char* Label, const char* HintText, float WidgetWidth, bool bSetFocus)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("TextFilter::Draw"), STAT_ImGuiTextFilter_Draw, STATGROUP_ImGui);
 

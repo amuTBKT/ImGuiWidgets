@@ -618,7 +618,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 			ImGui::BeginGroup();
 			{
-				if (TextFilter.Draw(Context, "Filter", "Search Assets", /*bSetFocus*/!bIsAssetViewerVisible, AssetViewerWidth))
+				if (TextFilter.Draw(Context, "Filter", "Search Assets", AssetViewerWidth, /*bSetFocus*/!bIsAssetViewerVisible))
 				{
 					bFilterAvailableAssets = true;
 				}

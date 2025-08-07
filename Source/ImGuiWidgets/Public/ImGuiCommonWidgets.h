@@ -101,7 +101,7 @@ class FImGuiTextFilter
 {
 public:
 	IMGUIWIDGETS_API static FImGuiTextFilter MakeWidget(uint32 MaxLength);
-	IMGUIWIDGETS_API bool Draw(ImGuiContext* Context, const char* Label, const char* HintText = nullptr, bool bSetFocus = false, float WidgetWidth = 0.f);
+	IMGUIWIDGETS_API bool Draw(ImGuiContext* Context, const char* Label, const char* HintText = nullptr, float WidgetWidth = 0.f, bool bSetFocus = false);
 	IMGUIWIDGETS_API void Reset();
 
 	bool IsActive()									const { return !FilterKeywordTokens.IsEmpty(); }
