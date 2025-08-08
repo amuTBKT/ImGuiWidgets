@@ -341,9 +341,9 @@ namespace ImGuiMaterialStats
 			bIsAnyWindowCompilingMaterial |= bIsCompilingPermutations;
 		}
 
-		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode;
+		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoCloseButton;
 		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
-		
+
 		for (int32 WindowIndex = 0; WindowIndex < MaterialWindowStates.Num(); ++WindowIndex)
 		{
 			FMaterialWindowState& MaterialWindowState = MaterialWindowStates[WindowIndex];
