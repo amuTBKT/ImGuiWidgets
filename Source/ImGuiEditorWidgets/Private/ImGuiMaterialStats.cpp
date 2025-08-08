@@ -448,7 +448,7 @@ namespace ImGuiMaterialStats
 						auto& Resource = MaterialStats.Resource;
 						Resource = new FMaterialResourceStats();
 #if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 506) //(Version > 5.6)
-						Resource->SetMaterial(MaterialToUse, nullptr, PreviewShaderPlatform, PreviewQualityLevel);
+						Resource->SetMaterial(MaterialToUse->GetMaterial(), Cast<UMaterialInstance>(MaterialToUse), PreviewShaderPlatform, PreviewQualityLevel);
 						Resource->CacheShaders(EMaterialShaderPrecompileMode::Default);
 #else
 						Resource->SetMaterial(MaterialToUse->GetMaterial(), Cast<UMaterialInstance>(MaterialToUse), ERHIFeatureLevel::SM6, PreviewQualityLevel);
