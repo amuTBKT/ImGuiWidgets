@@ -121,7 +121,7 @@ namespace ImGuiNiagaraProfiler
 
 				for (const auto& DispatchResult : FrameResults->DispatchResults)
 				{
-					UWorld* OwnerWorld = DispatchResult.OwnerComponent.IsValid() ? DispatchResult.OwnerComponent->GetWorld() : nullptr;						
+					UWorld* OwnerWorld = DispatchResult.OwnerComponent.IsValid() ? DispatchResult.OwnerComponent->GetWorld() : nullptr;
 					if (/*ensure*/(OwnerWorld))
 					{
 						WorldStatData.FindOrAdd(OwnerWorld)
@@ -273,18 +273,18 @@ namespace ImGuiNiagaraProfiler
 					}
 					ImGui::EndTabBar();
 				}
-			}			
+			}
 		}
 		ImGui::End();
 	}
 
-	static FAutoRegisterStandaloneWidget::FParams RegisterParams =
+	static FStaticWidgetRegisterParams RegisterParams =
 	{
-		.InitFunction			= &Initialize,
-		.TickFunction			= &Tick,
-		.TabIcon				= FSlateIcon(FName("NiagaraEditorStyle"), FName("Tab.Debugger")),
-		.TabName				= "Niagara Profiler",
-		.TabTooltip				= "Widget for displaying Niagara gpu stats."
+		.InitFunction		= &Initialize,
+		.TickFunction		= &Tick,
+		.WidgetIcon			= FSlateIcon(FName("NiagaraEditorStyle"), FName("Tab.Debugger")),
+		.WidgetName			= "Niagara Profiler",
+		.WidgetDescription	= "Widget for displaying Niagara gpu stats."
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
 }

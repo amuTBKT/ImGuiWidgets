@@ -745,7 +745,14 @@ namespace ImGuiStatsVizualizer
 		ImGui::End();
 	}
 	
-	IMGUI_REGISTER_MAIN_WINDOW_WIDGET(Initialize, Tick);
+	static FStaticWidgetRegisterParams RegisterParams =
+	{
+		.InitFunction		= &Initialize,
+		.TickFunction		= &Tick,
+		.WidgetName			= "Stats Visualizer",
+		.WidgetDescription	= "Widget for displaying stat groups."
+	};
+	IMGUI_REGISTER_MAIN_WINDOW_WIDGET(RegisterParams);
 }
 
 #endif //#if STATS
