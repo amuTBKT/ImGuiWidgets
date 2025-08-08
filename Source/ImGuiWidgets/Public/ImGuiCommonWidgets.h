@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "imgui_internal.h"
 #include "ImGuiPluginTypes.h"
 
 namespace FImGui

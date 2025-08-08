@@ -3,7 +3,6 @@
 #include "ImGuiCommonWidgets.h"
 
 #include "ImGuiSubsystem.h"
-#include "imgui_internal.h"
 #include "String/ParseTokens.h"
 
 FImGuiTextFilter FImGuiTextFilter::MakeWidget(uint32 MaxLength)

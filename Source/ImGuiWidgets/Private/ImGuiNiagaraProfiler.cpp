@@ -239,6 +239,7 @@ namespace ImGuiNiagaraProfiler
 	{
 		FImGuiTickScope Scope{ Context };
 
+		// TODO: Find a better/reliable way to check if docknode is already active
 #if WITH_EDITOR //dockspace already created if not using standlone widgets
 		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar;
 		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
@@ -282,7 +283,7 @@ namespace ImGuiNiagaraProfiler
 		.InitFunction			= &Initialize,
 		.TickFunction			= &Tick,
 		.TabIcon				= FSlateIcon(FName("NiagaraEditorStyle"), FName("Tab.Debugger")),
-		.TabName				= "Niagara GPU Profiler",
+		.TabName				= "Niagara Profiler",
 		.TabTooltip				= "Widget for displaying Niagara gpu stats."
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
