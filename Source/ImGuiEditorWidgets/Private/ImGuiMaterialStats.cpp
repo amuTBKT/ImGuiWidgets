@@ -219,7 +219,7 @@ namespace ImGuiMaterialStats
 	struct FMaterialWindowState
 	{
 		FImGuiAssetPicker MaterialPicker = FImGuiAssetPicker::MakeWidget(UMaterialInterface::StaticClass());
-		FImGuiTextFilter ShaderFilter = FImGuiTextFilter::MakeWidget(64u);
+		FImGuiTextFilter ShaderFilter = FImGuiTextFilter::MakeWidget(32u);
 
 		TWeakObjectPtr<UMaterialInterface> SelectedMaterial;
 		FMaterialStatsData MaterialStats = {};
@@ -303,10 +303,10 @@ namespace ImGuiMaterialStats
 		static int32 DumpShaderInfoCVarRestoreValue = INDEX_NONE;
 		
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Warning"), FVector2D(ImGui::GetFontSize()), 1.f);
-		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
-		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()), 1.f);
-		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DerivedData.Cache.Statistics"), FVector2D(ImGui::GetFontSize()), 1.f);
+		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Warning"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DerivedData.Cache.Statistics"), FVector2D(ImGui::GetFontSize()));
 
 		bool bIsAnyWindowCompilingMaterial = false;
 		for (FMaterialWindowState& MaterialWindowState : MaterialWindowStates)
@@ -477,10 +477,7 @@ namespace ImGuiMaterialStats
 								{
 									InOutState ^= BitsToToggle;
 								}
-								if (ImGui::IsItemHovered())
-								{
-									ImGui::SetTooltip(ToolTip);
-								}
+								ImGui::SetItemTooltip(ToolTip);
 
 								if (bApplyStyle)
 								{
@@ -559,10 +556,7 @@ namespace ImGuiMaterialStats
 												{
 													FPlatformProcess::ExploreFolder(*Shader.ShaderFilePath);
 												}
-												if (ImGui::IsItemHovered())
-												{
-													ImGui::SetTooltip("Browse to shader file");
-												}
+												ImGui::SetItemTooltip("Browse to shader file");
 
 												ImGui::SameLine();
 
@@ -570,10 +564,7 @@ namespace ImGuiMaterialStats
 												{
 													FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderFilePath);
 												}
-												if (ImGui::IsItemHovered())
-												{
-													ImGui::SetTooltip("Edit shader file");
-												}
+												ImGui::SetItemTooltip("Edit shader file");
 
 												ImGui::SameLine();
 
@@ -583,10 +574,7 @@ namespace ImGuiMaterialStats
 												{
 													ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
 												}
-												if (ImGui::IsItemHovered())
-												{
-													ImGui::SetTooltip("Analyze shader");
-												}
+												ImGui::SetItemTooltip("Analyze shader");
 												ImGui::EndDisabled();
 #endif
 

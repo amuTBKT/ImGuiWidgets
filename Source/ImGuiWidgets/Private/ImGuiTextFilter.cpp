@@ -28,8 +28,8 @@ bool FImGuiTextFilter::Draw(ImGuiContext* Context, const char* Label, const char
 	FImGui::EnsureValidImGuiContext(Context);
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-	const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()), 1.f);
-	const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.X"), FVector2D(ImGui::GetFontSize()), 1.f);
+	const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()));
+	const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.X"), FVector2D(ImGui::GetFontSize()));
 
 	FImGuiNamedWidgetScope WidgetScope{ Label };
 
@@ -90,7 +90,7 @@ bool FImGuiTextFilter::Draw(ImGuiContext* Context, const char* Label, const char
 				FilterStringBuffer.Add(CharCast<TCHAR>(*Src++));
 			}
 			// patch ansi string buffer
-			FilterStringBuffer_ANSI.SetNum(FilterStringBuffer.Num(), EAllowShrinking::No);
+			FilterStringBuffer_ANSI.SetNumUnsafeInternal(FilterStringBuffer.Num());
 			FilterStringBuffer_ANSI.GetData()[FilterStringBuffer_ANSI.Num()] = '\0';
 
 			FilterKeywordTokens.Reset();

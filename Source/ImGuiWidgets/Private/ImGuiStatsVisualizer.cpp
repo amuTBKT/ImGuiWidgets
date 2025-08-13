@@ -252,10 +252,7 @@ namespace ImGuiStatsVizualizer
 						TArray<UObject*> Objects = { Asset };
 						GEditor->SyncBrowserToObjects(Objects);
 					}
-					if (ImGui::IsItemHovered())
-					{
-						ImGui::SetTooltip("Browse to asset.");
-					}
+					ImGui::SetItemTooltip("Browse to asset.");
 					
 					ImGui::SameLine();
 
@@ -277,10 +274,7 @@ namespace ImGuiStatsVizualizer
 								}
 							}, TStatId(), NULL, ENamedThreads::GameThread);
 					}
-					if (ImGui::IsItemHovered())
-					{
-						ImGui::SetTooltip("Edit asset.");
-					}
+					ImGui::SetItemTooltip("Edit asset.");
 
 					ImGui::PopStyleVar(2);
 					ImGui::PopStyleColor(3);
@@ -696,8 +690,8 @@ namespace ImGuiStatsVizualizer
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale, 1.f);
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale, 1.f);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale);
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()) * ImGui::GetIO().FontGlobalScale);
 	}
 
 	static void Tick(ImGuiContext* Context)

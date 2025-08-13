@@ -69,7 +69,7 @@ namespace AssetPickerUtils
 		const TArray<FAssetData>& GetAvailableAssets()	const { return AvailableAssets; }
 
 	private:
-		static FORCEINLINE bool CompareAssetData(const FAssetData& LHS, const FAssetData& RHS)
+		static FORCEINLINE bool SortAssetDataPredicate(const FAssetData& LHS, const FAssetData& RHS)
 		{
 			if (LHS.AssetName == RHS.AssetName)
 			{
@@ -88,7 +88,7 @@ namespace AssetPickerUtils
 			Filter.bRecursiveClasses = true;
 			AssetRegistry.GetAssets(Filter, AvailableAssets);
 
-			AvailableAssets.Sort([](const auto& A, const auto& B) { return CompareAssetData(A, B); });
+			AvailableAssets.Sort([](const auto& A, const auto& B) { return SortAssetDataPredicate(A, B); });
 		}
 
 		FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
@@ -104,7 +104,7 @@ namespace AssetPickerUtils
 			{
 				RevisionId++;
 
-				int32 InsertIndex = Algo::LowerBound(AvailableAssets, AssetData, [](const auto& A, const auto& B) { return CompareAssetData(A, B); });
+				int32 InsertIndex = Algo::LowerBound(AvailableAssets, AssetData, [](const auto& A, const auto& B) { return SortAssetDataPredicate(A, B); });
 				bool bExists = (AvailableAssets.IsValidIndex(InsertIndex) && AvailableAssets[InsertIndex] == AssetData);
 				if (!bExists && InsertIndex >= 0)
 				{
@@ -232,30 +232,12 @@ namespace AssetPickerUtils
 	FORCEINLINE static uint8 GetPackedAssetPathFilter()
 	{
 		uint8 Filter = 0u;
-		if (bShowProjectContent)
-		{
-			Filter |= 1u << 0;
-		}
-		if (bShowEngineContent)
-		{
-			Filter |= 1u << 1;
-		}
-		if (bShowPluginContent)
-		{
-			Filter |= 1u << 2;
-		}
-		if (bShowDeveloperContent)
-		{
-			Filter |= 1u << 3;
-		}
-		if (bSearchAssetCollections)
-		{
-			Filter |= 1u << 4;
-		}
-		if (bShowLocalizedContent)
-		{
-			Filter |= 1u << 5;
-		}
+		Filter |= bShowProjectContent		? (1u << 0) : 0u;
+		Filter |= bShowEngineContent		? (1u << 1) : 0u;
+		Filter |= bShowPluginContent		? (1u << 2) : 0u;
+		Filter |= bShowDeveloperContent		? (1u << 3) : 0u;
+		Filter |= bSearchAssetCollections	? (1u << 4) : 0u;
+		Filter |= bShowLocalizedContent		? (1u << 5) : 0u;
 		return Filter;
 	}
 
@@ -414,13 +396,13 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	FSlateShaderResource* SelectedAssetTexture = nullptr;
 	UObject* SelectedAsset = InOutSelectedAsset;
 
-	if ((PackedAssetPathFilter != AssetPickerUtils::GetPackedAssetPathFilter()) || (ContainerRevisionId != AssetContainer.GetRevisionId()))
+	const bool bAssetCountainerChanged = (PackedAssetPathFilter != AssetPickerUtils::GetPackedAssetPathFilter()) || (ContainerRevisionId != AssetContainer.GetRevisionId());
+	if (bAssetCountainerChanged || LastSelectedAssetPtr.IsStale() || (SelectedAsset != LastSelectedAssetPtr.Get()))
 	{
-		FilterAvailableAssets();
-	}
-
-	if (SelectedAsset != LastSelectedAssetPtr.Get())
-	{
+		if (LastSelectedAssetPtr.IsStale())
+		{
+			LastSelectedAssetPtr.Reset();
+		}
 		LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering|FAssetData::ECreationFlags::AllowBlueprintClass));
 	}
 #if WITH_EDITOR
@@ -428,22 +410,27 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	{
 		SelectedAssetTexture = AssetPickerUtils::GetAssetThumbnail(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering | FAssetData::ECreationFlags::AllowBlueprintClass));
 	}
-#endif	
+#endif
+
+	if (bAssetCountainerChanged)
+	{
+		FilterAvailableAssets();
+	}
 
 	const float GlobalScale = ImGui::GetIO().FontGlobalScale;
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-	const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.UseSelectedAsset"), FVector2D(18.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.BrowseToAsset"), FVector2D(18.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(18.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(18.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DeveloperFolder"), FVector2D(16.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.AssetCollection"), FVector2D(16.) * GlobalScale, 1.f);
-	const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale, 1.f);
+	const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale);
+	const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.UseSelectedAsset"), FVector2D(18.) * GlobalScale);
+	const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.BrowseToAsset"), FVector2D(18.) * GlobalScale);
+	const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(18.) * GlobalScale);
+	const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(18.) * GlobalScale);
+	const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale);
+	const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale);
+	const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale);
+	const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DeveloperFolder"), FVector2D(16.) * GlobalScale);
+	const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.AssetCollection"), FVector2D(16.) * GlobalScale);
+	const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale);
 
 	auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, UObject* Asset)
 	{
@@ -494,11 +481,8 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 				InOutAsset = SelectedAsset;
 			}
 		}
-		if (ImGui::IsItemHovered())
-		{
-			ImGui::SetTooltip("Use Selected Asset from Content Browser");
-		}
-
+		ImGui::SetItemTooltip("Use Selected Asset from Content Browser");
+		
 		ImGui::PopStyleVar(2);
 		ImGui::PopStyleColor(3);
 	};
@@ -523,10 +507,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 			{
 				AssetPickerUtils::SyncContentBrowserToAsset(InAsset);
 			}
-			if (ImGui::IsItemHovered())
-			{
-				ImGui::SetTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InAsset->GetName()));
-			}
+			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InAsset->GetName()));
 		}
 
 		ImGui::PopStyleVar(2);
@@ -543,9 +524,9 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		{
 			InOutAsset = nullptr;
 		}
-		if (InOutAsset && ImGui::IsItemHovered())
+		if (InOutAsset)
 		{
-			ImGui::SetTooltip("Reset this property to its default value");
+			ImGui::SetItemTooltip("Reset this property to its default value");
 		}
 
 		ImGui::PopStyleColor(3);
@@ -557,6 +538,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		const float AssetViewerWidth = 400.f * GlobalScale;
 		const char* AssetViewerPopupName = "AssetViewerPopup";
 		const float AssetViewerRowHeight = 36.f * GlobalScale;
+		const float AssetViewerRowHeightWithSpacing = AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
 		const int32 PreviewTextMaxLength = 32;
 
 		// TODO: `ImGui::RenderTextEllipsis` already does something similar
@@ -590,7 +572,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
 		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;
 		const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
-		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeight * (AvailableAssets.Num() + 1));
+		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeightWithSpacing * (FilteredAssetIndices.Num() + 1));
 		if (AvailableSpaceBelow > AvailableSpaceAbove)
 		{
 			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
@@ -623,7 +605,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 					bFilterAvailableAssets = true;
 				}
 
-				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, PopupHeight - ImGui::GetItemRectSize().y)))
+				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, FMath::Max(AssetViewerRowHeightWithSpacing, PopupHeight - ImGui::GetItemRectSize().y))))
 				{
 					auto Add_AssetListEntry = [&](int32 AssetIndex, int32 RowIndex)
 						{
@@ -723,10 +705,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 						{
 							bInOutState = !bInOutState;
 						}
-						if (ImGui::IsItemHovered())
-						{
-							ImGui::SetItemTooltip(ToolTip);
-						}
+						ImGui::SetItemTooltip(ToolTip);
 
 						ImGui::PopStyleVar(2);
 						ImGui::PopStyleColor(3);
@@ -768,42 +747,46 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		}
 	};
 
-	if (strstr(Label, "##") == nullptr)
-	{
-		ImGui::BeginGroup();
-		ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 25.f * GlobalScale - ImGui::GetFontSize() * 0.5f);
-		ImGui::TextUnformatted(Label);
-		ImGui::EndGroup();
-
-		ImGui::SameLine();
-	}
-
 	ImGui::BeginGroup();
 	{
-		Add_AssetThumbnail(SelectedAssetTexture, 50.f * GlobalScale, SelectedAsset);
-		ImGui::SameLine();
+		if (strstr(Label, "##") == nullptr)
+		{
+			ImGui::BeginGroup();
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 25.f * GlobalScale - ImGui::GetFontSize() * 0.5f);
+			ImGui::TextUnformatted(Label);
+			ImGui::EndGroup();
+
+			ImGui::SameLine();
+		}
 
 		ImGui::BeginGroup();
 		{
-			// combo box
-			Add_AssetViewer(SelectedAsset);
+			Add_AssetThumbnail(SelectedAssetTexture, 50.f * GlobalScale, SelectedAsset);
+			ImGui::SameLine();
 
-			// icons
-			ImGui::BeginDisabled(WITH_EDITOR == 0);
-			Add_UseSelectedAssetButton(SelectedAsset); ImGui::SameLine(); Add_BrowseToAssetButton(SelectedAsset);
-			ImGui::EndDisabled();
+			ImGui::BeginGroup();
+			{
+				// combo box
+				Add_AssetViewer(SelectedAsset);
+
+				// icons
+				ImGui::BeginDisabled(WITH_EDITOR == 0);
+				Add_UseSelectedAssetButton(SelectedAsset); ImGui::SameLine(); Add_BrowseToAssetButton(SelectedAsset);
+				ImGui::EndDisabled();
+			}
+			ImGui::EndGroup();
 		}
 		ImGui::EndGroup();
+		const ImVec2 GroupSize = ImGui::GetItemRectSize();
+
+		// reset icon
+		if (SelectedAsset)
+		{
+			ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y * 0.5f - ResetToDefaultIcon.Size.y);
+			Add_ResetSelectionButton(SelectedAsset);
+		}
 	}
 	ImGui::EndGroup();
-	const ImVec2 GroupSize = ImGui::GetItemRectSize();
-
-	// reset icon
-	if (SelectedAsset)
-	{
-		ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y * 0.5f - ResetToDefaultIcon.Size.y);
-		Add_ResetSelectionButton(SelectedAsset);
-	}
 
 	const bool bSelectionChanged = (SelectedAsset != InOutSelectedAsset);
 	if (bSelectionChanged)
