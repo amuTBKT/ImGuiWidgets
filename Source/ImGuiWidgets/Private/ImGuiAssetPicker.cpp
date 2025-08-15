@@ -417,7 +417,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		FilterAvailableAssets();
 	}
 
-	const float GlobalScale = ImGui::GetIO().FontGlobalScale;
+	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 	const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale);

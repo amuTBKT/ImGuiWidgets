@@ -88,9 +88,9 @@ namespace FImGui
 		return ImGui::ImageButton(str_id, image.Id, image.Size, image.UV0, image.UV1, bg_col, tint_col);
 	}
 
-	FORCEINLINE void Image(const FImGuiImageBindingParams& image, const ImVec4& tint_col = ImVec4(1, 1, 1, 1), const ImVec4& border_col = ImVec4(0, 0, 0, 0))
+	FORCEINLINE void Image(const FImGuiImageBindingParams& image, const ImVec4& tint_col = ImVec4(1, 1, 1, 1))
 	{
-		ImGui::Image(image.Id, image.Size, image.UV0, image.UV1, tint_col, border_col);
+		ImGui::ImageWithBg(image.Id, image.Size, image.UV0, image.UV1, /*bg_col=*/ImVec4(0, 0, 0, 0), tint_col);
 	}
 
 	IMGUIWIDGETS_API void AddWarningMessageBox(ImGuiContext* Context, float padding, const ImVec4& col, const char* message);

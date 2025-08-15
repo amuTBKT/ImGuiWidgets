@@ -337,7 +337,7 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	const auto* SelectedClassData = AvailableClasses.IsValidIndex(LastSelectedClassIndex) ? &AvailableClasses[LastSelectedClassIndex] : nullptr;
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();		
-	const float GlobalScale = ImGui::GetIO().FontGlobalScale;
+	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
 	auto Add_ClassViewer = [&](UClass*& InOutClass) -> ImVec2
 	{
