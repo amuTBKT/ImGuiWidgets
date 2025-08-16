@@ -7,9 +7,9 @@ public class ImGuiWidgets : ModuleRules
 {
 	public ImGuiWidgets(ReadOnlyTargetRules Target) : base(Target)
 	{
-        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PrivateDependencyModuleNames.AddRange(
+		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
@@ -33,7 +33,7 @@ public class ImGuiWidgets : ModuleRules
 				new string[]
 				{
 					"UnrealEd",
-					"Blutility",
+					"ContentBrowser",
 					"CollectionManager",
 				}
 			);

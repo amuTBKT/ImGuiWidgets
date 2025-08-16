@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "ImGuiCommonWidgets.h"
 #include "UObject/WeakObjectPtr.h"
+#include "UObject/SoftObjectPtr.h"
 
 class FImGuiAssetPicker
 {
@@ -23,6 +24,29 @@ public:
 	}
 	
 	template <typename TAssetType>
+	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TSoftObjectPtr<TAssetType>& InOutSelectedAssetPtr)
+	{
+		if (!AssetType)
+		{
+			DrawInvalidWidget(Context, Label, "'AssetType' unset!");
+			return false;
+		}
+		if (TAssetType::StaticClass() != AssetType)
+		{
+			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!");
+			return false;
+		}
+
+		FSoftObjectPtr SelectedAsset{ InOutSelectedAssetPtr.ToSoftObjectPath() };
+		if (DrawInternal(Context, Label, SelectedAsset))
+		{
+			InOutSelectedAssetPtr = TSoftObjectPtr<TAssetType>{ SelectedAsset.ToSoftObjectPath() };
+			return true;
+		}
+		return false;
+	}
+
+	template <typename TAssetType>
 	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TAssetType*& InOutSelectedAssetPtr)
 	{
 		if (!AssetType)
@@ -36,10 +60,10 @@ public:
 			return false;
 		}
 
-		UObject* SelectedAsset = InOutSelectedAssetPtr;
+		FSoftObjectPtr SelectedAsset{ InOutSelectedAssetPtr };
 		if (DrawInternal(Context, Label, SelectedAsset))
 		{
-			InOutSelectedAssetPtr = Cast<TAssetType>(SelectedAsset);
+			InOutSelectedAssetPtr = Cast<TAssetType>(SelectedAsset.LoadSynchronous());
 			return true;
 		}
 		return false;
@@ -57,9 +81,21 @@ public:
 		return false;
 	}
 
+	template <typename TAssetType>
+	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TObjectPtr<TAssetType>& InOutSelectedAssetPtr)
+	{
+		TAssetType* SelectedAsset = InOutSelectedAssetPtr.Get();
+		if (Draw(Context, Label, SelectedAsset))
+		{
+			InOutSelectedAssetPtr = SelectedAsset;
+			return true;
+		}
+		return false;
+	}
+
 private:
 	IMGUIWIDGETS_API void DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage);
-	IMGUIWIDGETS_API bool DrawInternal(ImGuiContext* Context, const char* Label, UObject*& InOutSelectedAsset);
+	IMGUIWIDGETS_API bool DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset);
 	void FilterAvailableAssets();
 
 private:
@@ -74,5 +110,5 @@ private:
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedAssetIndex = INDEX_NONE;
 	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;
-	TWeakObjectPtr<UObject> LastSelectedAssetPtr;
+	FSoftObjectPtr LastSelectedAssetPtr;
 };

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "ImGuiCommonWidgets.h"
+#include "UObject/SoftObjectPtr.h"
 #include "UObject/WeakObjectPtr.h"
 
 class FImGuiClassPicker
@@ -18,6 +19,24 @@ public:
 	};
 	IMGUIWIDGETS_API static FImGuiClassPicker MakeWidget(const TNonNullPtr<UClass>& Class, FFilters OptionalFilters = {});
 	
+	template <typename TClassType>
+	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TSoftClassPtr<TClassType>& InOutSelectedClassPtr)
+	{
+		if (!BaseClassType)
+		{
+			DrawInvalidWidget(Context, Label, "'BaseClassType' unset!");
+			return false;
+		}
+
+		FSoftObjectPtr SelectedClass{ InOutSelectedClassPtr.ToSoftObjectPath() };
+		if (DrawInternal(Context, Label, SelectedClass))
+		{
+			InOutSelectedClassPtr = TSoftClassPtr<TClassType>{ SelectedClass.ToSoftObjectPath() };
+			return true;
+		}
+		return false;
+	}
+
 	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, UClass*& InOutSelectedClassPtr)
 	{
 		if (!BaseClassType)
@@ -26,17 +45,16 @@ public:
 			return false;
 		}
 
-		UClass* SelectedClass = InOutSelectedClassPtr;
+		FSoftObjectPtr SelectedClass{ InOutSelectedClassPtr };
 		if (DrawInternal(Context, Label, SelectedClass))
 		{
-			InOutSelectedClassPtr = SelectedClass;
+			InOutSelectedClassPtr = Cast<UClass>(SelectedClass.LoadSynchronous());
 			return true;
 		}
 		return false;
 	}
 
-	template <typename TAssetType>
-	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TWeakObjectPtr<TAssetType>& InOutSelectedClassPtr)
+	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TWeakObjectPtr<UClass>& InOutSelectedClassPtr)
 	{
 		UClass* SelectedClass = InOutSelectedClassPtr.Get();
 		if (Draw(Context, Label, SelectedClass))
@@ -49,7 +67,7 @@ public:
 
 private:
 	IMGUIWIDGETS_API void DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage);
-	IMGUIWIDGETS_API bool DrawInternal(ImGuiContext* Context, const char* Label, UClass*& InOutSelectedClass);
+	IMGUIWIDGETS_API bool DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass);
 	void FilterAvailableClasses();
 
 private:
@@ -62,5 +80,5 @@ private:
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedClassIndex = INDEX_NONE;
 	int32 LastSelectedClassIndexInFilteredList = INDEX_NONE;
-	TWeakObjectPtr<UClass> LastSelectedClassPtr;
+	FSoftObjectPtr LastSelectedClassPtr;
 };

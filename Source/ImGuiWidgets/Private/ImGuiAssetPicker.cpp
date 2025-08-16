@@ -7,9 +7,10 @@
 #include "AssetThumbnail.h"
 #include "ClassIconFinder.h"
 #include "ICollectionManager.h"
-#include "EditorUtilityLibrary.h"
+#include "ContentBrowserModule.h"
 #include "CollectionManagerModule.h"
 #include "Styling/SlateIconFinder.h"
+#include "IContentBrowserSingleton.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 #endif
@@ -186,39 +187,42 @@ namespace AssetPickerUtils
 	}
 #endif
 
-	static UObject* GetSelectedAssetOfType(const UClass* AssetClass)
+	static FSoftObjectPtr GetSelectedAssetOfType(const UClass* AssetClass)
 	{
 #if WITH_EDITOR
-		for (auto Asset : UEditorUtilityLibrary::GetSelectedAssets())
+		FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+		TArray<FAssetData> SelectedAssets;
+		ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
+
+		for (const FAssetData& Asset : SelectedAssets)
 		{
-			if (Asset->IsA(AssetClass))
+			if (Asset.GetClass()->IsChildOf(AssetClass))
 			{
-				return Asset;
+				return FSoftObjectPtr{ Asset.ToSoftObjectPath() };
 			}
 		}
-		return nullptr;
+		return {};
 #else
-		return nullptr;
+		return {};
 #endif
 	}
 
-	static void OpenEditorForAsset(UObject* Asset)
+	static void OpenEditorForAsset(const FSoftObjectPtr& SoftAssetPtr)
 	{
 #if WITH_EDITOR
 		UAssetEditorSubsystem* AssetEditorSubsystem = GEditor->GetEditorSubsystem<UAssetEditorSubsystem>();
 		if (AssetEditorSubsystem)
 		{
-			AssetEditorSubsystem->OpenEditorForAsset(Asset);
+			// NOTE: this is the only place where we HAVE to load the asset!
+			AssetEditorSubsystem->OpenEditorForAsset(SoftAssetPtr.LoadSynchronous());
 		}
 #endif
 	}
 
-	static void SyncContentBrowserToAsset(UObject* Asset)
+	static void SyncContentBrowserToAsset(FAssetData Asset)
 	{
 #if WITH_EDITOR
-		TArray<UObject*> Objects;
-		Objects.Add(Asset);
-		GEditor->SyncBrowserToObjects(Objects);
+		GEditor->SyncBrowserToObjects(TArray<FAssetData>{ Asset });
 #endif
 	}
 
@@ -377,7 +381,7 @@ void FImGuiAssetPicker::DrawInvalidWidget(ImGuiContext* Context, const char* Lab
 	FImGui::AddWarningMessageBox(Context, 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("AssetPicker('%s') : %s", Label, ErrorMessage));
 }
 
-bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, UObject*& InOutSelectedAsset)
+bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
@@ -394,21 +398,23 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
 
 	FSlateShaderResource* SelectedAssetTexture = nullptr;
-	UObject* SelectedAsset = InOutSelectedAsset;
+	FSoftObjectPtr SelectedSoftAssetPtr = InOutSelectedAsset;
 
 	const bool bAssetCountainerChanged = (PackedAssetPathFilter != AssetPickerUtils::GetPackedAssetPathFilter()) || (ContainerRevisionId != AssetContainer.GetRevisionId());
-	if (bAssetCountainerChanged || LastSelectedAssetPtr.IsStale() || (SelectedAsset != LastSelectedAssetPtr.Get()))
+	if (bAssetCountainerChanged || LastSelectedAssetPtr.IsStale() || (SelectedSoftAssetPtr != LastSelectedAssetPtr))
 	{
-		if (LastSelectedAssetPtr.IsStale())
+		LastSelectedAssetIndex = AvailableAssets.IndexOfByPredicate(
+			[SoftObjectPath=SelectedSoftAssetPtr.ToSoftObjectPath()](const auto& InAssetData) { return InAssetData.GetSoftObjectPath() == SoftObjectPath; });
+		
+		if (LastSelectedAssetPtr.IsStale() || (LastSelectedAssetIndex == INDEX_NONE))
 		{
-			LastSelectedAssetPtr.Reset();
+			SelectedSoftAssetPtr.Reset();
 		}
-		LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering|FAssetData::ECreationFlags::AllowBlueprintClass));
 	}
 #if WITH_EDITOR
-	if (SelectedAsset)
+	if (!SelectedSoftAssetPtr.IsNull())
 	{
-		SelectedAssetTexture = AssetPickerUtils::GetAssetThumbnail(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering | FAssetData::ECreationFlags::AllowBlueprintClass));
+		SelectedAssetTexture = AssetPickerUtils::GetAssetThumbnail(FAssetData(SelectedSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), SelectedSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetType->GetClassPathName()));
 	}
 #endif
 
@@ -432,7 +438,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.AssetCollection"), FVector2D(16.) * GlobalScale);
 	const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale);
 
-	auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, UObject* Asset)
+	auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, const FSoftObjectPtr& InSoftAssetPtr)
 	{
 		if (AssetThumbnail)
 		{
@@ -446,7 +452,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 			ImGui::Image(DefaultClassIcon.Id, ImVec2(IconSize, IconSize), DefaultClassIcon.UV0, DefaultClassIcon.UV1);
 		}
 
-		if (Asset && ImGui::IsItemHovered())
+		if (!InSoftAssetPtr.IsNull() && ImGui::IsItemHovered())
 		{
 			const ImVec2 BorderRectSize = ImVec2(IconSize, IconSize);
 			const ImVec2 CursorPosition = ImGui::GetCursorScreenPos();
@@ -457,16 +463,16 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 			ImDrawList* DrawList = ImGui::GetWindowDrawList();
 			DrawList->AddRect(p0, p1, 0x80FFFFFF, 0.f, ImDrawFlags_None, 1.f);
 
-			ImGui::SetTooltip("%s", TCHAR_TO_ANSI_PATH(*Asset->GetPathName()));
+			ImGui::SetTooltip("%s", TCHAR_TO_ANSI_PATH(*InSoftAssetPtr.GetLongPackageName()));
 
-			if (Asset && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 			{
-				AssetPickerUtils::OpenEditorForAsset(Asset);
+				AssetPickerUtils::OpenEditorForAsset(InSoftAssetPtr);
 			}
 		}
 	};
 
-	auto Add_UseSelectedAssetButton = [&](UObject*& InOutAsset)
+	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftAssetPtr)
 	{
 		ImGui::PushStyleColor(ImGuiCol_Button, 0);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
@@ -474,20 +480,30 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
 
-		if (FImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+		if (WITH_EDITOR == 0)
 		{
-			if (auto SelectedAsset = (AssetPickerUtils::GetSelectedAssetOfType(AssetType)))
-			{
-				InOutAsset = SelectedAsset;
-			}
+			ImGui::BeginDisabled();
+			FImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF);
+			ImGui::EndDisabled();
 		}
-		ImGui::SetItemTooltip("Use Selected Asset from Content Browser");
+		else
+		{
+			if (FImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+			{
+				FSoftObjectPtr AssetPtr = (AssetPickerUtils::GetSelectedAssetOfType(AssetType));
+				if (!AssetPtr.IsNull())
+				{
+					InOutSoftAssetPtr = AssetPtr;
+				}
+			}
+			ImGui::SetItemTooltip("Use Selected Asset from Content Browser");
+		}
 		
 		ImGui::PopStyleVar(2);
 		ImGui::PopStyleColor(3);
 	};
 
-	auto Add_BrowseToAssetButton = [&](UObject* InAsset)
+	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftAssetPtr)
 	{
 		ImGui::PushStyleColor(ImGuiCol_Button, 0);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
@@ -495,7 +511,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
 		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
 
-		if (!InAsset)
+		if (InSoftAssetPtr.IsNull() || (WITH_EDITOR == 0))
 		{
 			ImGui::BeginDisabled();
 			FImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF);
@@ -505,16 +521,16 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		{
 			if (FImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 			{
-				AssetPickerUtils::SyncContentBrowserToAsset(InAsset);
+				AssetPickerUtils::SyncContentBrowserToAsset(FAssetData(InSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), InSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetType->GetClassPathName()));
 			}
-			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InAsset->GetName()));
+			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InSoftAssetPtr.GetAssetName()));
 		}
 
 		ImGui::PopStyleVar(2);
 		ImGui::PopStyleColor(3);
 	};
 
-	auto Add_ResetSelectionButton = [&](UObject*& InOutAsset)
+	auto Add_ResetSelectionButton = [&](FSoftObjectPtr& InOutSoftAssetPtr)
 	{
 		ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -522,17 +538,17 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 		if (FImGui::TransparentImageButton("ResetToDefault", ResetToDefaultIcon))
 		{
-			InOutAsset = nullptr;
+			InOutSoftAssetPtr.Reset();
 		}
-		if (InOutAsset)
+		if (!InOutSoftAssetPtr.IsNull())
 		{
-			ImGui::SetItemTooltip("Reset this property to its default value");
+			ImGui::SetItemTooltip("Reset this property");
 		}
 
 		ImGui::PopStyleColor(3);
 	};
 
-	auto Add_AssetViewer = [&](UObject*& InOutAsset)
+	auto Add_AssetViewer = [&](FSoftObjectPtr& InOutSoftAssetPtr)
 	{
 		// configuration
 		const float AssetViewerWidth = 400.f * GlobalScale;
@@ -541,8 +557,8 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		const float AssetViewerRowHeightWithSpacing = AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
 		const int32 PreviewTextMaxLength = 32;
 
-		// TODO: `ImGui::RenderTextEllipsis` already does something similar
-		FString PreviewText = InOutAsset ? InOutAsset->GetName() : FString(TEXT("None"));
+		// TODO: `ImGui::RenderTextEllipsis` does something similar
+		FString PreviewText = !InOutSoftAssetPtr.IsNull() ? InOutSoftAssetPtr.GetAssetName() : FString(TEXT("None"));
 		if (PreviewText.Len() >= PreviewTextMaxLength)
 		{
 			PreviewText.MidInline(0, PreviewTextMaxLength);
@@ -633,7 +649,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 #else
 							FSlateShaderResource* PreviewTexture = nullptr;
 #endif
-							Add_AssetThumbnail(PreviewTexture, AssetViewerRowHeight, nullptr);
+							Add_AssetThumbnail(PreviewTexture, AssetViewerRowHeight, FSoftObjectPtr());
 
 							ImGui::SameLine();
 							{
@@ -742,8 +758,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 		if (NewSelectedIndex != INDEX_NONE)
 		{
-			// TODO: this performs a synchronous load, flushing async loading thread :(
-			InOutAsset = (AvailableAssets[NewSelectedIndex].GetAsset());
+			InOutSoftAssetPtr = FSoftObjectPtr(AvailableAssets[NewSelectedIndex].ToSoftObjectPath());
 		}
 	};
 
@@ -761,17 +776,17 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 		ImGui::BeginGroup();
 		{
-			Add_AssetThumbnail(SelectedAssetTexture, 50.f * GlobalScale, SelectedAsset);
+			Add_AssetThumbnail(SelectedAssetTexture, 50.f * GlobalScale, SelectedSoftAssetPtr);
 			ImGui::SameLine();
 
 			ImGui::BeginGroup();
 			{
 				// combo box
-				Add_AssetViewer(SelectedAsset);
+				Add_AssetViewer(SelectedSoftAssetPtr);
 
 				// icons
 				ImGui::BeginDisabled(WITH_EDITOR == 0);
-				Add_UseSelectedAssetButton(SelectedAsset); ImGui::SameLine(); Add_BrowseToAssetButton(SelectedAsset);
+				Add_UseSelectedAssetButton(SelectedSoftAssetPtr); ImGui::SameLine(); Add_BrowseToAssetButton(SelectedSoftAssetPtr);
 				ImGui::EndDisabled();
 			}
 			ImGui::EndGroup();
@@ -780,20 +795,21 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		const ImVec2 GroupSize = ImGui::GetItemRectSize();
 
 		// reset icon
-		if (SelectedAsset)
+		if (!SelectedSoftAssetPtr.IsNull())
 		{
 			ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y * 0.5f - ResetToDefaultIcon.Size.y);
-			Add_ResetSelectionButton(SelectedAsset);
+			Add_ResetSelectionButton(SelectedSoftAssetPtr);
 		}
 	}
 	ImGui::EndGroup();
 
-	const bool bSelectionChanged = (SelectedAsset != InOutSelectedAsset);
+	const bool bSelectionChanged = (SelectedSoftAssetPtr != InOutSelectedAsset);
 	if (bSelectionChanged)
 	{
-		InOutSelectedAsset = SelectedAsset;
-		LastSelectedAssetPtr = SelectedAsset;
-		LastSelectedAssetIndex = AvailableAssets.IndexOfByKey(FAssetData(SelectedAsset, FAssetData::ECreationFlags::SkipAssetRegistryTagsGathering|FAssetData::ECreationFlags::AllowBlueprintClass));
+		InOutSelectedAsset = SelectedSoftAssetPtr;
+		LastSelectedAssetPtr = SelectedSoftAssetPtr;
+		LastSelectedAssetIndex = AvailableAssets.IndexOfByPredicate(
+			[SoftObjectPath=SelectedSoftAssetPtr.ToSoftObjectPath()](const auto& InAssetData) { return InAssetData.GetSoftObjectPath() == SoftObjectPath; });
 		LastSelectedAssetIndexInFilteredList = FilteredAssetIndices.IndexOfByKey(LastSelectedAssetIndex);
 	}
 	return bSelectionChanged;

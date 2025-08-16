@@ -4,7 +4,8 @@
 
 #if WITH_EDITOR
 #include "Editor.h"
-#include "EditorUtilityLibrary.h"
+#include "ContentBrowserModule.h"
+#include "IContentBrowserSingleton.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #endif
@@ -19,10 +20,22 @@
 
 namespace ClassPickerUtils
 {
-	static FORCEINLINE FSoftClassPath GetClassPathForAsset(const FAssetData& Asset)
+	static FORCEINLINE FSoftClassPath GetClassPathForAsset(const FString& AssetObjectPath)
 	{
 		// NOTE: FSoftClassPath(ClassPtr) expects '_C' to be present
-		return FSoftClassPath(Asset.GetObjectPathString() + TEXT("_C"));
+		return FSoftClassPath(AssetObjectPath + TEXT("_C"));
+	}
+	static FORCEINLINE FSoftClassPath GetClassPathForAsset(const FAssetData& Asset)
+	{
+		return GetClassPathForAsset(Asset.GetObjectPathString());
+	}
+	static FORCEINLINE FAssetData GetAssetDataFromClassPath(const FSoftObjectPath& ClassPath, const UClass* ClassType)
+	{
+		FString PackageName = ClassPath.GetLongPackageName();
+		FString AssetName = ClassPath.GetAssetPathString();
+		AssetName.RemoveFromEnd(TEXT("_C"));
+
+		return FAssetData(MoveTemp(PackageName), MoveTemp(AssetName), ClassType->GetClassPathName());
 	}
 
 	static TMap<FSoftClassPath, FSoftClassPath> BlueprintAssetParentClassMap;
@@ -225,8 +238,7 @@ namespace ClassPickerUtils
 			bool bReAddAsset = false;
 			if (FilterAsset(AssetData))
 			{
-				// NOTE: FSoftClassPath(ClassPtr) expects '_C' to be present
-				FSoftClassPath ClassPath = FSoftClassPath(OldName + TEXT("_C"));
+				FSoftClassPath ClassPath = GetClassPathForAsset(OldName);
 
 				for (auto Itr = AvailableClasses.CreateIterator(); Itr; ++Itr)
 				{
@@ -255,29 +267,30 @@ namespace ClassPickerUtils
 		return Instance;
 	}
 
-	static UClass* GetSelectedClassOfType(const UClass* AssetClass)
+	static FSoftObjectPtr GetSelectedClassOfType(const UClass* AssetClass)
 	{
 #if WITH_EDITOR
-		for (auto Asset : UEditorUtilityLibrary::GetSelectedAssets())
+		FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+		TArray<FAssetData> SelectedAssets;
+		ContentBrowserModule.Get().GetSelectedAssets(SelectedAssets);
+
+		for (const FAssetData& Asset : SelectedAssets)
 		{
-			UBlueprint* BlueprintAsset = Cast<UBlueprint>(Asset);
-			if (BlueprintAsset && BlueprintAsset->GeneratedClass && BlueprintAsset->GeneratedClass->IsChildOf(AssetClass))
+			if (ClassPickerUtils::IsClassDerivedFrom(GetClassPathForAsset(Asset), FSoftClassPath(AssetClass)))
 			{
-				return BlueprintAsset->GeneratedClass;
+				return FSoftObjectPtr{ GetClassPathForAsset(Asset) };
 			}
 		}
-		return nullptr;
+		return {};
 #else
-		return nullptr;
+		return {};
 #endif
 	}
 
-	static void SyncContentBrowserToAsset(UClass* Asset)
+	static void SyncContentBrowserToAsset(const FSoftObjectPtr& InSoftClassPtr, const UClass* ClassType)
 	{
 #if WITH_EDITOR
-		TArray<UObject*> Objects;
-		Objects.Add(Asset);
-		GEditor->SyncBrowserToObjects(Objects);
+		GEditor->SyncBrowserToObjects(TArray<FAssetData>{ GetAssetDataFromClassPath(InSoftClassPtr.ToSoftObjectPath(), ClassType) });
 #endif
 	}
 
@@ -301,7 +314,7 @@ void FImGuiClassPicker::DrawInvalidWidget(ImGuiContext* Context, const char* Lab
 	FImGui::AddWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("ClassPicker('%s') : %s", Label, ErrorMessage));
 }
 
-bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, UClass*& InOutSelectedClass)
+bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
 
@@ -317,16 +330,17 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	auto& ClassContainer = ClassPickerUtils::GetClassContainer();
 	const auto& AvailableClasses = ClassContainer.GetAvailableClasses();
 
-	UClass* SelectedClass = InOutSelectedClass;
+	FSoftObjectPtr SelectedSoftClassPtr = InOutSelectedClass;
 
 	const bool bClassContainerChanged = (PackedClassFilter != ClassPickerUtils::GetPackedClassFilter()) || (ContainerRevisionId != ClassContainer.GetRevisionId());
-	if (bClassContainerChanged || LastSelectedClassPtr.IsStale() || (SelectedClass != LastSelectedClassPtr.Get()))
+	if (bClassContainerChanged || LastSelectedClassPtr.IsStale() || (SelectedSoftClassPtr != LastSelectedClassPtr))
 	{
-		if (LastSelectedClassPtr.IsStale())
+		LastSelectedClassIndex = !SelectedSoftClassPtr.IsNull() ? AvailableClasses.IndexOfByKey(FSoftClassPath(SelectedSoftClassPtr.ToString())) : INDEX_NONE;
+		
+		if (LastSelectedClassPtr.IsStale() || (LastSelectedClassIndex == INDEX_NONE))
 		{
-			LastSelectedClassPtr.Reset();
+			SelectedSoftClassPtr.Reset();
 		}
-		LastSelectedClassIndex = SelectedClass ? AvailableClasses.IndexOfByKey(FSoftClassPath(SelectedClass)) : INDEX_NONE;
 	}
 
 	if (bClassContainerChanged)
@@ -336,10 +350,10 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 	const auto* SelectedClassData = AvailableClasses.IsValidIndex(LastSelectedClassIndex) ? &AvailableClasses[LastSelectedClassIndex] : nullptr;
 
-	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();		
+	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
-	auto Add_ClassViewer = [&](UClass*& InOutClass) -> ImVec2
+	auto Add_ClassViewer = [&](FSoftObjectPtr& InOutSoftClassPtr) -> ImVec2
 	{
 		// configuration
 		const float ClassViewerWidth = 256.f * GlobalScale;
@@ -353,7 +367,7 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
 		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), ClassViewerRowHeightWithSpacing * (FilteredClassIndices.Num() + 1));
 
-		// TODO: `ImGui::RenderTextEllipsis` already does something similar
+		// TODO: `ImGui::RenderTextEllipsis` does something similar
 		FAnsiString PreviewText = SelectedClassData ? SelectedClassData->DisplayName : "None";
 		if (PreviewText.Len() >= PreviewTextMaxLength)
 		{
@@ -380,7 +394,7 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 			}
 			if (SelectedClassData)
 			{
-				ImGui::SetItemTooltip("%s", *SelectedClassData->DisplayName);
+				ImGui::SetItemTooltip("%s", *SelectedClassData->ObjectPath);
 			}
 			ComboBoxSize = ImGui::GetItemRectSize();
 			
@@ -505,29 +519,39 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 		if (NewSelectedIndex != INDEX_NONE)
 		{
-			InOutClass = AvailableClasses[NewSelectedIndex].ResolveClass();
+			InOutSoftClassPtr = { AvailableClasses[NewSelectedIndex].ClassPath };
 		}
 
 		return ComboBoxSize;
 	};
 
-	auto Add_UseSelectedAssetButton = [&](UClass*& InOutClass, float IconSize)
+	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.UseSelectedAsset"), FVector2D(IconSize));
-		if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
+		if (WITH_EDITOR == 0)
 		{
-			if (auto SelectedAssetClass = (ClassPickerUtils::GetSelectedClassOfType(BaseClassType)))
-			{
-				InOutClass = SelectedAssetClass;
-			}
+			ImGui::BeginDisabled();
+			FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon);
+			ImGui::EndDisabled();
 		}
-		ImGui::SetItemTooltip("Use Selected Asset from Content Browser");
+		else
+		{
+			if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
+			{
+				FSoftObjectPtr ClassPtr = ClassPickerUtils::GetSelectedClassOfType(BaseClassType);
+				if (!ClassPtr.IsNull())
+				{
+					InOutSoftClassPtr = ClassPtr;
+				}
+			}
+			ImGui::SetItemTooltip("Use Selected Asset from Content Browser");
+		}
 	};
 
-	auto Add_BrowseToAssetButton = [&](UClass* InClass, float IconSize)
+	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.BrowseToAsset"), FVector2D(IconSize));
-		if (!InClass || (!SelectedClassData || !SelectedClassData->bIsAsset) || (WITH_EDITOR == 0))
+		if (InSoftClassPtr.IsNull() || (!SelectedClassData || !SelectedClassData->bIsAsset) || (WITH_EDITOR == 0))
 		{
 			ImGui::BeginDisabled();
 			FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon);
@@ -537,13 +561,13 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 		{
 			if (FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon))
 			{
-				ClassPickerUtils::SyncContentBrowserToAsset(InClass);
+				ClassPickerUtils::SyncContentBrowserToAsset(InSoftClassPtr, BaseClassType);
 			}
-			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InClass->GetName()));
+			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InSoftClassPtr.GetAssetName()));
 		}
 	};
 
-	auto Add_CreateBlueprintButton = [&](UClass*& InOutClass, float IconSize)
+	auto Add_CreateBlueprintButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams CreateNewBlueprintIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.PlusCircle"), FVector2D(IconSize));		
 #if WITH_EDITOR
@@ -559,9 +583,8 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 					FBlueprintEditorUtils::ImplementNewInterface(Blueprint, RequiredInterface->GetClassPathName());
 				}
 
-				InOutClass = Blueprint->GeneratedClass;
-				//LastSelectedClassPtr = Blueprint->GeneratedClass;
-				//LastSelectedClassIndex = INDEX_NONE;
+				FString GeneratedClassPath = Blueprint->GeneratedClass->GetPathName();
+				InOutSoftClassPtr = FSoftObjectPtr{ GeneratedClassPath };
 			}
 		}
 		ImGui::SetItemTooltip("Create New Blueprint");
@@ -572,15 +595,15 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 #endif
 	};
 
-	auto Add_ClearValueButton = [&](UClass*& InOutClass, float IconSize)
+	auto Add_ClearValueButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams ClearValueIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.X"), FVector2D(IconSize));
-		ImGui::BeginDisabled(InOutClass == nullptr);
+		ImGui::BeginDisabled(InOutSoftClassPtr.IsNull());
 		if (FImGui::TransparentImageButton("ClearValue", ClearValueIcon))
 		{
-			InOutClass = nullptr;
+			InOutSoftClassPtr.Reset();
 		}
-		if (InOutClass)
+		if (!InOutSoftClassPtr.IsNull())
 		{
 			ImGui::SetItemTooltip("Clear");
 		}
@@ -599,7 +622,7 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 			ImGui::SameLine();
 		}
 
-		const ImVec2 ClassViewerComboBoxSize = Add_ClassViewer(SelectedClass);
+		const ImVec2 ClassViewerComboBoxSize = Add_ClassViewer(SelectedSoftClassPtr);
 		
 		{
 			const float IconSize = ClassViewerComboBoxSize.y * 0.9f;
@@ -613,19 +636,19 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 
 			ImGui::SameLine();
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_UseSelectedAssetButton(SelectedClass, IconSize);
+			Add_UseSelectedAssetButton(SelectedSoftClassPtr, IconSize);
 			
 			ImGui::SameLine();
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_BrowseToAssetButton(SelectedClass, IconSize);
+			Add_BrowseToAssetButton(SelectedSoftClassPtr, IconSize);
 			
 			ImGui::SameLine();
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_CreateBlueprintButton(SelectedClass, IconSize);
+			Add_CreateBlueprintButton(SelectedSoftClassPtr, IconSize);
 			
 			ImGui::SameLine();
 			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_ClearValueButton(SelectedClass, IconSize);
+			Add_ClearValueButton(SelectedSoftClassPtr, IconSize);
 
 			ImGui::PopStyleVar(2);
 			ImGui::PopStyleColor(3);
@@ -633,12 +656,13 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, U
 	}
 	ImGui::EndGroup();
 	
-	const bool bSelectionChanged = (SelectedClass != InOutSelectedClass);
+	const bool bSelectionChanged = (SelectedSoftClassPtr != InOutSelectedClass);
 	if (bSelectionChanged)
 	{
-		InOutSelectedClass = SelectedClass;
-		LastSelectedClassPtr = SelectedClass;
-		LastSelectedClassIndex = SelectedClass ? AvailableClasses.IndexOfByKey(FSoftClassPath(SelectedClass)) : INDEX_NONE;
+		InOutSelectedClass = SelectedSoftClassPtr;
+		LastSelectedClassPtr = SelectedSoftClassPtr;
+		LastSelectedClassIndex = !SelectedSoftClassPtr.IsNull() ? AvailableClasses.IndexOfByKey(FSoftClassPath(SelectedSoftClassPtr.ToString())) : INDEX_NONE;
+		LastSelectedClassIndexInFilteredList = FilteredClassIndices.IndexOfByKey(LastSelectedClassIndex);
 	}
 	return bSelectionChanged;
 }
