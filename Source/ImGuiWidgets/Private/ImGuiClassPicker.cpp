@@ -29,35 +29,40 @@ namespace ClassPickerUtils
 	{
 		return GetClassPathForAsset(Asset.GetObjectPathString());
 	}
-	static FORCEINLINE FAssetData GetAssetDataFromClassPath(const FSoftObjectPath& ClassPath, const UClass* ClassType)
+	static FORCEINLINE FAssetData MakeAssetDataFromClassPath(const FSoftObjectPath& AssetClassPath, const FSoftClassPath& BaseClassPath)
 	{
-		FString PackageName = ClassPath.GetLongPackageName();
-		FString AssetName = ClassPath.GetAssetPathString();
+		FString PackageName = AssetClassPath.GetLongPackageName();
+		FString AssetName = AssetClassPath.GetAssetPathString();
 		AssetName.RemoveFromEnd(TEXT("_C"));
 
-		return FAssetData(MoveTemp(PackageName), MoveTemp(AssetName), ClassType->GetClassPathName());
+		return FAssetData(MoveTemp(PackageName), MoveTemp(AssetName), FTopLevelAssetPath{ BaseClassPath.ToString()});
 	}
 
-	static TMap<FSoftClassPath, FSoftClassPath> BlueprintAssetParentClassMap;
+	static TMap<FSoftClassPath, FSoftClassPath> ParentClassMap;
 	static void CacheAssetParentClass(const FAssetData& AssetData)
 	{
 		FString ParentClassPathString;
 		if (AssetData.GetTagValue(FBlueprintTags::ParentClassPath, ParentClassPathString))
 		{
 			FSoftClassPath ClassPath = GetClassPathForAsset(AssetData);
-			BlueprintAssetParentClassMap.FindOrAdd(ClassPath) = FSoftClassPath(ParentClassPathString);
+			ParentClassMap.FindOrAdd(ClassPath) = FSoftClassPath(ParentClassPathString);
 		}
 	}
-	static bool IsClassDerivedFrom(const FSoftClassPath& ClassPath, const FSoftClassPath& ParentClassPath)
+	static bool IsClassChildOf(const FSoftClassPath& ClassPath, const FSoftClassPath& ParentClassPath)
 	{
-		const FSoftClassPath* Found = BlueprintAssetParentClassMap.Find(ClassPath);
+		if (ClassPath == ParentClassPath)
+		{
+			return true;
+		}
+
+		const FSoftClassPath* Found = ParentClassMap.Find(ClassPath);
 		while (Found)
 		{
 			if (*Found == ParentClassPath)
 			{
 				return true;
 			}
-			Found = BlueprintAssetParentClassMap.Find(*Found);
+			Found = ParentClassMap.Find(*Found);
 		}
 		return false;
 	}
@@ -160,6 +165,11 @@ namespace ClassPickerUtils
 				ClassData.DisplayName = TCHAR_TO_ANSI(*CurrentClass->GetName());
 				ClassData.ObjectPath = TCHAR_TO_ANSI(*ClassData.ClassPath.ToString());
 				AvailableClasses.AddUnique(ClassData);
+
+				if (CurrentClass->GetSuperClass())
+				{
+					ParentClassMap.FindOrAdd(FSoftClassPath{ CurrentClass }, FSoftClassPath{ CurrentClass->GetSuperClass() });
+				}
 			}
 
 			AvailableClasses.Sort([](const auto& A, const auto& B) { return SortClassDataPredicate(A, B); });
@@ -267,7 +277,7 @@ namespace ClassPickerUtils
 		return Instance;
 	}
 
-	static FSoftObjectPtr GetSelectedClassOfType(const UClass* AssetClass)
+	static FSoftObjectPtr GetSelectedClassOfType(const FSoftClassPath& AssetClassPath)
 	{
 #if WITH_EDITOR
 		FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
@@ -276,7 +286,7 @@ namespace ClassPickerUtils
 
 		for (const FAssetData& Asset : SelectedAssets)
 		{
-			if (ClassPickerUtils::IsClassDerivedFrom(GetClassPathForAsset(Asset), FSoftClassPath(AssetClass)))
+			if (ClassPickerUtils::IsClassChildOf(GetClassPathForAsset(Asset), AssetClassPath))
 			{
 				return FSoftObjectPtr{ GetClassPathForAsset(Asset) };
 			}
@@ -287,10 +297,10 @@ namespace ClassPickerUtils
 #endif
 	}
 
-	static void SyncContentBrowserToAsset(const FSoftObjectPtr& InSoftClassPtr, const UClass* ClassType)
+	static void SyncContentBrowserToAsset(const FSoftObjectPtr& InSoftClassPtr, const FSoftClassPath& BaseClassPath)
 	{
 #if WITH_EDITOR
-		GEditor->SyncBrowserToObjects(TArray<FAssetData>{ GetAssetDataFromClassPath(InSoftClassPtr.ToSoftObjectPath(), ClassType) });
+		GEditor->SyncBrowserToObjects(TArray<FAssetData>{ MakeAssetDataFromClassPath(InSoftClassPtr.ToSoftObjectPath(), BaseClassPath) });
 #endif
 	}
 
@@ -300,10 +310,10 @@ namespace ClassPickerUtils
 	}
 }
 
-FImGuiClassPicker FImGuiClassPicker::MakeWidget(const TNonNullPtr<UClass>& Class, FFilters OptionalFilters)
+FImGuiClassPicker FImGuiClassPicker::MakeWidget(const FSoftClassPath& ClassPath, FFilters OptionalFilters)
 {
 	FImGuiClassPicker Widget = {};
-	Widget.BaseClassType = Class;
+	Widget.BaseClassPath = ClassPath;
 	return Widget;
 }
 
@@ -318,7 +328,7 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
 
-	if (!ensure(BaseClassType))
+	if (!ensure(BaseClassPath.IsValid()))
 	{
 		return false;
 	}
@@ -538,7 +548,7 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		{
 			if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
 			{
-				FSoftObjectPtr ClassPtr = ClassPickerUtils::GetSelectedClassOfType(BaseClassType);
+				FSoftObjectPtr ClassPtr = ClassPickerUtils::GetSelectedClassOfType(BaseClassPath);
 				if (!ClassPtr.IsNull())
 				{
 					InOutSoftClassPtr = ClassPtr;
@@ -561,7 +571,7 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		{
 			if (FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon))
 			{
-				ClassPickerUtils::SyncContentBrowserToAsset(InSoftClassPtr, BaseClassType);
+				ClassPickerUtils::SyncContentBrowserToAsset(InSoftClassPtr, BaseClassPath);
 			}
 			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InSoftClassPtr.GetAssetName()));
 		}
@@ -569,11 +579,11 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 
 	auto Add_CreateBlueprintButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
-		const FImGuiImageBindingParams CreateNewBlueprintIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.PlusCircle"), FVector2D(IconSize));		
+		const FImGuiImageBindingParams CreateNewBlueprintIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.PlusCircle"), FVector2D(IconSize));
 #if WITH_EDITOR
 		if (FImGui::TransparentImageButton("CreateNewBP", CreateNewBlueprintIcon))
 		{
-			UBlueprint* Blueprint = FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), (UClass*)BaseClassType, FString::Printf(TEXT("New%s"), *BaseClassType->GetName()));
+			UBlueprint* Blueprint = FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), Cast<UClass>(BaseClassPath.TryLoad()), FString::Printf(TEXT("New%s"), *BaseClassPath.GetAssetName()));
 
 			UClass* RequiredInterface = nullptr;
 			if (Blueprint != NULL && Blueprint->GeneratedClass)
@@ -678,18 +688,9 @@ void FImGuiClassPicker::FilterAvailableClasses()
 	auto& ClassContainer = ClassPickerUtils::GetClassContainer();
 	const auto& AvailableClasses = ClassContainer.GetAvailableClasses();
 
-	FSoftClassPath BaseClassPath = FSoftClassPath(BaseClassType);
-
 	for (int32 ClassIndex = 0; ClassIndex < AvailableClasses.Num(); ++ClassIndex)
 	{
-		if (AvailableClasses[ClassIndex].bIsAsset) //process asset classes without loading/resolving them
-		{
-			if (!ClassPickerUtils::IsClassDerivedFrom(AvailableClasses[ClassIndex].ClassPath, BaseClassPath))
-			{
-				continue;
-			}
-		}
-		else if (!AvailableClasses[ClassIndex].ResolveClass()->IsChildOf(BaseClassType))
+		if (!ClassPickerUtils::IsClassChildOf(AvailableClasses[ClassIndex].ClassPath, BaseClassPath))
 		{
 			continue;
 		}

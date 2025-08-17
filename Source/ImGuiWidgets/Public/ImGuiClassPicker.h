@@ -17,12 +17,12 @@ public:
 		// disallowed classes
 		// required interface
 	};
-	IMGUIWIDGETS_API static FImGuiClassPicker MakeWidget(const TNonNullPtr<UClass>& Class, FFilters OptionalFilters = {});
+	IMGUIWIDGETS_API static FImGuiClassPicker MakeWidget(const FSoftClassPath& ClassPath, FFilters OptionalFilters = {});
 	
 	template <typename TClassType>
 	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TSoftClassPtr<TClassType>& InOutSelectedClassPtr)
 	{
-		if (!BaseClassType)
+		if (!BaseClassPath.IsValid())
 		{
 			DrawInvalidWidget(Context, Label, "'BaseClassType' unset!");
 			return false;
@@ -39,7 +39,7 @@ public:
 
 	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, UClass*& InOutSelectedClassPtr)
 	{
-		if (!BaseClassType)
+		if (!BaseClassPath.IsValid())
 		{
 			DrawInvalidWidget(Context, Label, "'BaseClassType' unset!");
 			return false;
@@ -71,7 +71,7 @@ private:
 	void FilterAvailableClasses();
 
 private:
-	const UClass* BaseClassType = nullptr;
+	FSoftClassPath BaseClassPath;
 	FImGuiTextFilter TextFilter = FImGuiTextFilter::MakeWidget(32u);
 
 	TArray<int32> FilteredClassIndices;
