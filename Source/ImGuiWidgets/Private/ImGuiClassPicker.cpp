@@ -583,7 +583,9 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 #if WITH_EDITOR
 		if (FImGui::TransparentImageButton("CreateNewBP", CreateNewBlueprintIcon))
 		{
-			UBlueprint* Blueprint = FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), Cast<UClass>(BaseClassPath.TryLoad()), FString::Printf(TEXT("New%s"), *BaseClassPath.GetAssetName()));
+			// TODO: add validation/error handline if the class is invalid
+			UClass* Class = Cast<UClass>(BaseClassPath.TryLoad());
+			UBlueprint* Blueprint = Class ? FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), Class, FString::Printf(TEXT("New%s"), *BaseClassPath.GetAssetName())) : nullptr;
 
 			UClass* RequiredInterface = nullptr;
 			if (Blueprint != NULL && Blueprint->GeneratedClass)
