@@ -94,6 +94,10 @@ namespace FImGui
 	}
 
 	IMGUIWIDGETS_API void AddWarningMessageBox(ImGuiContext* Context, float padding, const ImVec4& col, const char* message);
+
+	// Hacky/Experimental widget
+	IMGUIWIDGETS_API bool SliderWithTwoHandles(ImGuiContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width);
+	IMGUIWIDGETS_API bool SliderWithTwoHandles(ImGuiContext* context, const char* label, double& p_data_0, double& p_data_1, double& p_data_min, double& p_data_max, float input_width, float slider_width);
 }
 
 class FImGuiTextFilter
