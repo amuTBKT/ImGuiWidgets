@@ -3,6 +3,7 @@
 #include "ImGuiSubsystem.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
+#include "ImGuiTextureDisplayShaders.h"
 
 #include "Engine/Engine.h"
 #include "RHICommandList.h"
@@ -16,7 +17,6 @@
 #include "CommonRenderResources.h"
 #include "RenderCaptureInterface.h"
 #include "PostProcess/DrawRectangle.h"
-#include "ImGuiTextureDisplayShaders.h"
 
 UE_DISABLE_OPTIMIZATION
 
@@ -927,7 +927,7 @@ namespace ImGuiTextureVisualizer
 			}
 		}
 
-		// range controls (on new row)
+		// range controls (on a new row)
 		ImGui::Dummy(ImVec2(0.f, 4.f));
 		{
 			ImGui::SetNextItemWidth(256.f);
@@ -943,7 +943,7 @@ namespace ImGuiTextureVisualizer
 
 			ImGui::SameLine();
 			{
-				const FImGuiImageBindingParams ZoomToTextureIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("Icons.Find"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams ZoomToTextureIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("Icon.Find"), FVector2D(CurrentLineHeight));
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -971,7 +971,7 @@ namespace ImGuiTextureVisualizer
 
 			ImGui::SameLine();
 			{
-				const FImGuiImageBindingParams ZoomToFitIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("GenericCurveEditor.ZoomToFit"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams ZoomToFitIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("Icon.FrameSelected"), FVector2D(CurrentLineHeight));
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
