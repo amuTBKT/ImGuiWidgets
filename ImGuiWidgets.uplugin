@@ -16,6 +16,12 @@
 	"Installed": false,
 	"Modules": [
 		{
+			"Name": "ImGuiWidgetShaders",
+			"Type": "Runtime",
+			"LoadingPhase": "PostConfigInit",
+			"PlatformAllowList": [ "Win64" ]
+		},
+		{
 			"Name": "ImGuiWidgets",
 			"Type": "Runtime",
 			"LoadingPhase": "PostDefault",

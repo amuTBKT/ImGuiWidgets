@@ -1,4 +1,4 @@
-// Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
+// Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
 
 #include "Misc/Build.h"
 
@@ -679,7 +679,7 @@ namespace ImGuiStatsVizualizer
 
 	static void Initialize()
 	{
-		StatGroups.Add(FName(TEXT("STATGROUP_GPU0_Graphics0")),  { "GPU",              TEXT("GPU0_Graphics0"),    false });
+		StatGroups.Add(FName(TEXT("STATGROUP_GPU")),			 { "GPU",              TEXT("GPU"),				  false });
 		StatGroups.Add(FName(TEXT("STATGROUP_SceneRendering")),  { "Scene Rendering",  TEXT("SceneRendering"),    false });
 		StatGroups.Add(FName(TEXT("STATGROUP_Niagara")),         { "Niagara",          TEXT("Niagara"),           false });
 		StatGroups.Add(FName(TEXT("STATGROUP_NiagaraSystems")),  { "Niagara Systems",  TEXT("NiagaraSystems"),    false });
@@ -698,8 +698,25 @@ namespace ImGuiStatsVizualizer
 	{
 		FImGuiTickScope Scope{ Context };
 
+		static ImFont* ProggyVectorFont = nullptr;// UImGuiSubsystem::Get()->GetSharedFontAtlas()->AddFontFromFileTTF("C:/Users/amu/Downloads/ProggyVector-Regular.ttf", 13.f, nullptr);
+
 		if (ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
+			static bool bUseVectorFont = false;
+			//ImGui::Checkbox("UseVectorFont", &bUseVectorFont);
+
+			if (bUseVectorFont)
+			{
+				ImGui::PushFont(ProggyVectorFont, 0.f);
+			}
+			ON_SCOPE_EXIT
+			{
+				if (bUseVectorFont)
+				{
+					ImGui::PopFont();
+				}
+			};
+
 			RegisterOneFrameResources();
 			
 			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))

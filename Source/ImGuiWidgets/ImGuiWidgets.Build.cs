@@ -1,4 +1,4 @@
-// Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
+// Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
 
 using System.IO;
 using UnrealBuildTool;
@@ -18,6 +18,11 @@ public class ImGuiWidgets : ModuleRules
 				"SlateCore",
 				"CoreUObject",
 				"AssetRegistry",
+
+				"RHI",
+				"Renderer",
+				"RenderCore",
+				"ImGuiWidgetShaders",
 			}
 		);
 

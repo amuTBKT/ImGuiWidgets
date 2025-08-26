@@ -1,0 +1,128 @@
+#include "TextureDisplayCommon.ush"
+
+RWBuffer<shader_base_type> MinMaxDest;
+
+int3 TextureExtents;
+uint CurrentMip_ArraySliceOrDepth;
+
+[numthreads(HGRAM_TILES_PER_BLOCK, HGRAM_TILES_PER_BLOCK, 1)]
+void TileMinMaxCS(uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+	const uint3 HistogramTextureResolution = uint3(TextureExtents);
+	const int HistogramMip = CurrentMip_ArraySliceOrDepth >> 24;
+	const int HistogramSlice = CurrentMip_ArraySliceOrDepth & 0x00FFFFFF;
+	const int HistogramSample = 0;
+
+	uint3 texDim = uint3(HistogramTextureResolution);
+	uint blocksX = (int)ceil(float(texDim.x) / float(HGRAM_PIXELS_PER_TILE * HGRAM_TILES_PER_BLOCK));
+
+	uint2 topleft = (gid.xy * HGRAM_TILES_PER_BLOCK + tid.xy) * HGRAM_PIXELS_PER_TILE;
+
+	uint outIdx = (tid.y * HGRAM_TILES_PER_BLOCK + tid.x) +
+		(gid.y * blocksX + gid.x) * (HGRAM_TILES_PER_BLOCK * HGRAM_TILES_PER_BLOCK);
+
+	int i = 0;
+
+#if (SHADER_BASETYPE==BASETYPE_UINT)
+	uint4 minval = 0;
+	uint4 maxval = 0;
+#elif (SHADER_BASETYPE==BASETYPE_SINT)
+	int4 minval = 0;
+	int4 maxval = 0;
+#elif (SHADER_BASETYPE==BASETYPE_FLOAT)
+	float4 minval = 0;
+	float4 maxval = 0;
+#endif
+
+	for (uint y = topleft.y; y < min(texDim.y, topleft.y + HGRAM_PIXELS_PER_TILE); y++)
+	{
+		for (uint x = topleft.x; x < min(texDim.x, topleft.x + HGRAM_PIXELS_PER_TILE); x++)
+		{
+#if (SHADER_BASETYPE==BASETYPE_UINT)
+			uint4 data = SampleTextureUInt4(float2(x + 0.1f, y + 0.1f) / float2(texDim.xy),
+				HistogramSlice, HistogramMip, HistogramSample, texDim);
+#elif (SHADER_BASETYPE==BASETYPE_SINT)
+			int4 data = SampleTextureInt4(float2(x + 0.1f, y + 0.1f) / float2(texDim.xy),
+				HistogramSlice, HistogramMip, HistogramSample, texDim);
+#elif (SHADER_BASETYPE==BASETYPE_FLOAT)
+			float4 data = SampleTextureFloat4(float2(x + 0.1f, y + 0.1f) / float2(texDim.xy),
+				HistogramSlice, HistogramMip, HistogramSample, texDim);
+#endif
+
+			if (i == 0)
+			{
+				minval = maxval = data;
+			}
+			else
+			{
+				minval = min(minval, data);
+				maxval = max(maxval, data);
+			}
+
+			i++;
+		}
+	}
+
+#if (SHADER_BASETYPE==BASETYPE_SINT)
+	// NOTE: PF_R32G32B32A32_SINT is not available
+	MinMaxDest[outIdx * 2 + 0] = asuint(minval);
+	MinMaxDest[outIdx * 2 + 1] = asuint(maxval);
+#else
+	MinMaxDest[outIdx * 2 + 0] = minval;
+	MinMaxDest[outIdx * 2 + 1] = maxval;
+#endif
+}
+
+uint3 HistogramTextureResolution;
+Buffer<shader_base_type> MinMaxResultSource;
+RWBuffer<shader_base_type> MinMaxResultDest;
+
+[numthreads(1, 1, 1)]
+void ResultMinMaxCS()
+{
+	uint3 texDim = uint3(HistogramTextureResolution);
+	uint blocksX = (int)ceil(float(texDim.x) / float(HGRAM_PIXELS_PER_TILE * HGRAM_TILES_PER_BLOCK));
+	uint blocksY = (int)ceil(float(texDim.y) / float(HGRAM_PIXELS_PER_TILE * HGRAM_TILES_PER_BLOCK));
+
+#if (SHADER_BASETYPE==BASETYPE_UINT)
+	uint4 minval = MinMaxResultSource[0];
+	uint4 maxval = MinMaxResultSource[1];
+#elif (SHADER_BASETYPE==BASETYPE_SINT)
+	// NOTE: PF_R32G32B32A32_SINT is not available
+	int4 minval = asint(MinMaxResultSource[0]);
+	int4 maxval = asint(MinMaxResultSource[1]);
+#elif (SHADER_BASETYPE==BASETYPE_FLOAT)
+	float4 minval = MinMaxResultSource[0];
+	float4 maxval = MinMaxResultSource[1];
+#endif
+
+	// i is the tile we're looking at
+	for(uint i = 1; i < blocksX * blocksY * HGRAM_TILES_PER_BLOCK * HGRAM_TILES_PER_BLOCK; i++)
+	{
+		uint blockIdx = i / (HGRAM_TILES_PER_BLOCK * HGRAM_TILES_PER_BLOCK);
+		uint tileIdx = i % (HGRAM_TILES_PER_BLOCK * HGRAM_TILES_PER_BLOCK);
+
+		// which block and tile is this in
+		uint2 blockXY = uint2(blockIdx % blocksX, blockIdx / blocksX);
+		uint2 tileXY = uint2(tileIdx % HGRAM_TILES_PER_BLOCK, tileIdx / HGRAM_TILES_PER_BLOCK);
+
+		// if this is at least partially within the texture, include it.
+		if (blockXY.x * (HGRAM_TILES_PER_BLOCK * HGRAM_PIXELS_PER_TILE) + tileXY.x * HGRAM_PIXELS_PER_TILE <
+			texDim.x &&
+			blockXY.y * (HGRAM_TILES_PER_BLOCK * HGRAM_PIXELS_PER_TILE) + tileXY.y * HGRAM_PIXELS_PER_TILE <
+			texDim.y)
+		{
+			minval = min(minval, MinMaxResultSource[i * 2 + 0]);
+			maxval = max(maxval, MinMaxResultSource[i * 2 + 1]);
+		}
+	}
+
+#if (SHADER_BASETYPE==BASETYPE_SINT)
+	// NOTE: PF_R32G32B32A32_SINT is not available
+	MinMaxResultDest[0] = asuint(minval);
+	MinMaxResultDest[1] = asuint(maxval);
+#else
+	MinMaxResultDest[0] = minval;
+	MinMaxResultDest[1] = maxval;
+#endif
+}

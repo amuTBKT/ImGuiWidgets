@@ -1,0 +1,142 @@
+#pragma once
+
+#include "/Engine/Private/Common.ush"
+
+#define RESTYPE_TEX1D					0u
+#define RESTYPE_TEX2D					1u
+#define RESTYPE_TEX3D					2u
+#define RESTYPE_DEPTH					3u
+#define RESTYPE_STENCIL					4u
+#define RESTYPE_DEPTH_MS				5u
+#define RESTYPE_STENCIL_MS				6u
+#define RESTYPE_TEX2D_MS				7u
+
+#define BASETYPE_UINT					0u
+#define BASETYPE_SINT					1u
+#define BASETYPE_FLOAT					2u
+
+#define SHOWFLAG_RedChannelMask			(1u << 0)
+#define SHOWFLAG_GreenChannelMask		(1u << 1)
+#define SHOWFLAG_BlueChannelMask		(1u << 2)
+#define SHOWFLAG_AlphaChannelMask		(1u << 3)
+#define SHOWFLAG_DepthChannelMask		(1u << 4)
+#define SHOWFLAG_StencilChannelMask		(1u << 5)
+#define SHOWFLAG_sRGBMask				(1u << 6)
+
+#if		(SHADER_BASETYPE==BASETYPE_UINT)
+#define shader_base_type uint4
+#elif	(SHADER_BASETYPE==BASETYPE_SINT)
+// NOTE: PF_R32G32B32A32_SINT is not available
+#define shader_base_type uint4
+#elif	(SHADER_BASETYPE==BASETYPE_FLOAT)
+#define shader_base_type float4
+#else
+#error SHADER_BASETYPE not supported!
+#endif
+
+#if		(SHADER_RESTYPE==RESTYPE_TEX1D)
+Texture1DArray<shader_base_type> Texture;
+#elif	(SHADER_RESTYPE==RESTYPE_TEX2D)
+Texture2DArray<shader_base_type> Texture;
+#elif	(SHADER_RESTYPE==RESTYPE_TEX3D)
+Texture3D<shader_base_type> Texture;
+#elif	(SHADER_RESTYPE==RESTYPE_DEPTH)
+Texture2DArray<shader_base_type> Texture;
+#elif	(SHADER_RESTYPE==RESTYPE_STENCIL)
+Texture2DArray<shader_base_type> Texture;
+#elif	(SHADER_RESTYPE==RESTYPE_DEPTH_MS)
+Texture2DMSArray<shader_base_type> Texture;
+#elif	(SHADER_RESTYPE==RESTYPE_STENCIL_MS)
+Texture2DMSArray<shader_base_type> Texture;
+#elif	(SHADER_RESTYPE==RESTYPE_TEX2D_MS)
+Texture2DMSArray<shader_base_type> Texture;
+#else
+#error SHADER_RESTYPE not supported!
+#endif
+
+SamplerState TextureSampler;
+
+uint4 SampleTextureUInt4(float2 uv, float slice, float mip, int sample, float3 texRes)
+{
+#if (SHADER_RESTYPE==RESTYPE_TEX1D)
+	uint4 col = Texture.Load(int3(uv.x * texRes.x, slice, mip));
+#elif (SHADER_RESTYPE==RESTYPE_TEX2D)
+	uint4 col = Texture.Load(int4(uv.xy * texRes.xy, slice, mip));
+#elif (SHADER_RESTYPE==RESTYPE_TEX3D)
+	uint4 col = Texture.Load(int4(uv.xy * texRes.xy, slice, mip));
+#elif (SHADER_RESTYPE==RESTYPE_STENCIL)
+	uint4 col = 0;
+	col.r = Texture.Load(int4(uv.xy * texRes.xy, slice, mip)).g;
+	col.a = 1.f;
+#elif (SHADER_RESTYPE==RESTYPE_STENCIL_MS)
+	uint4 col = 0;
+	if (sample < 0)
+	{
+		sample = 0;
+	}
+	col.r = Texture.Load(int3(uv.xy * texRes.xy, slice), sample).g;
+	col.a = 1.f;
+#elif (SHADER_RESTYPE==RESTYPE_TEX2D_MS)
+	if (sample < 0)
+	{
+		sample = 0;
+	}
+	uint4 col = Texture.Load(int3(uv.xy * texRes.xy, slice), sample);
+#else
+	uint4 col = 0;
+#endif
+
+	return col;
+}
+
+int4 SampleTextureInt4(float2 uv, float slice, float mip, int sample, float3 texRes)
+{
+#if (SHADER_RESTYPE==RESTYPE_TEX1D)
+	int4 col = asint(Texture.Load(int3(uv.x * texRes.x, slice, mip)));
+#elif (SHADER_RESTYPE==RESTYPE_TEX2D)
+	int4 col = asint(Texture.Load(int4(uv.xy * texRes.xy, slice, mip)));
+#elif (SHADER_RESTYPE==RESTYPE_TEX3D)
+	int4 col = asint(Texture.Load(int4(uv.xy * texRes.xy, slice, mip)));
+#elif (SHADER_RESTYPE==RESTYPE_TEX2D_MS)
+	if (sample < 0)
+	{
+		sample = 0;
+	}
+	int4 col = asint(Texture.Load(int3(uv.xy * texRes.xy, slice), sample));
+#else
+	int4 col = 0;
+#endif
+	
+	return col;
+}
+
+float4 SampleTextureFloat4(float2 uv, float slice, float mip, int sample, float3 texRes)
+{
+	float4 col = 0;
+
+#if (SHADER_RESTYPE==RESTYPE_TEX1D)
+	col = Texture.Load(int3(uv.x * texRes.x, slice, mip));
+#elif (SHADER_RESTYPE==RESTYPE_TEX2D)
+	col = Texture.Load(int4(uv.xy * texRes.xy, slice, mip));
+#elif (SHADER_RESTYPE==RESTYPE_TEX3D)
+	col = Texture.Load(int4(uv.xy * texRes.xy, slice, mip));
+#elif (SHADER_RESTYPE==RESTYPE_DEPTH)
+	col.r = Texture.Load(int4(uv.xy * texRes.xy, slice, mip)).r;
+	col.gba = float3(0, 0, 1);
+#elif (SHADER_RESTYPE==RESTYPE_DEPTH_MS)
+	if (sample < 0)
+	{
+		sample = 0;
+	}
+	col.r = Texture.Load(int3(uv.xy * texRes.xy, slice), sample).r;
+	col.gba = float3(0, 0, 1);
+#elif (SHADER_RESTYPE==RESTYPE_TEX2D_MS)
+	if(sample < 0)
+	{
+		sample = 0;
+	}
+	col = Texture.Load(int3(uv.xy * texRes.xy, slice), sample);
+#endif
+	
+	return col;
+}

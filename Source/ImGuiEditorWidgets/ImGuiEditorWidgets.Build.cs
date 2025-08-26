@@ -1,4 +1,4 @@
-// Copyright 2024 Amit Kumar Mehar. All Rights Reserved.
+// Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
 
 using System.IO;
 using UnrealBuildTool;
@@ -7,9 +7,9 @@ public class ImGuiEditorWidgets : ModuleRules
 {
 	public ImGuiEditorWidgets(ReadOnlyTargetRules Target) : base(Target)
 	{
-        PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-        PrivateDependencyModuleNames.AddRange(
+		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"RHI",

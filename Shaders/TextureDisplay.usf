@@ -1,0 +1,100 @@
+// Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
+
+#include "TextureDisplayCommon.ush"
+#include "/Engine/Private/GammaCorrectionCommon.ush"
+
+uint ShowFlags;
+float2 RangeMin_InvRangeSize;
+int3 TextureExtents;
+uint CurrentMip_ArraySliceOrDepth;
+
+// zoom/panning controls
+float4 UVScaleAndOffset;
+uint BackgroundColor;
+
+void Main(
+	FScreenVertexOutput Input,
+	out float4 OutColor : SV_Target0)
+{
+	const bool bShowRedChannel	 = (ShowFlags & SHOWFLAG_RedChannelMask) > 0;
+	const bool bShowGreenChannel = (ShowFlags & SHOWFLAG_GreenChannelMask) > 0;
+	const bool bShowBlueChannel	 = (ShowFlags & SHOWFLAG_BlueChannelMask) > 0;
+	const bool bShowAlphaChannel = (ShowFlags & SHOWFLAG_AlphaChannelMask) > 0;
+	const bool bShowDepth		 = (ShowFlags & SHOWFLAG_DepthChannelMask) > 0;
+	const bool bShowStencil		 = (ShowFlags & SHOWFLAG_StencilChannelMask) > 0;
+	const bool bsRGBMode		 = (ShowFlags & SHOWFLAG_sRGBMask) > 0;
+
+	const bool bEnableAlphaBlend = bShowAlphaChannel && (bShowRedChannel || bShowGreenChannel || bShowBlueChannel);
+
+	const int Mip = CurrentMip_ArraySliceOrDepth >> 24;
+	const int Slice = CurrentMip_ArraySliceOrDepth & 0x00FFFFFF;
+
+	const float2 TextureUV = Input.UV * UVScaleAndOffset.xy + UVScaleAndOffset.zw;
+
+#if (SHADER_BASETYPE==BASETYPE_UINT)
+	uint4 TextureColor = SampleTextureUInt4(TextureUV, Slice, Mip, /*Sample=*/0, TextureExtents >> Mip);
+#elif (SHADER_BASETYPE==BASETYPE_SINT)
+	int4 TextureColor = SampleTextureInt4(TextureUV, Slice, Mip, /*Sample=*/0, TextureExtents >> Mip);
+#elif (SHADER_BASETYPE==BASETYPE_FLOAT)
+	float4 TextureColor = SampleTextureFloat4(TextureUV, Slice, Mip, /*Sample=*/0, TextureExtents >> Mip);
+#endif
+
+	OutColor = TextureColor;
+
+	if (!(bShowDepth || bShowStencil))
+	{
+		// channel filtering
+		if (!bShowRedChannel)
+		{
+			OutColor.r = 0.f;
+		}
+		if (!bShowGreenChannel)
+		{
+			OutColor.g = 0.f;
+		}
+		if (!bShowBlueChannel)
+		{
+			OutColor.b = 0.f;
+		}
+		if (!bShowAlphaChannel)
+		{
+			OutColor.a = 0.f;
+		}
+	}
+
+	OutColor = (OutColor - RangeMin_InvRangeSize.x) * RangeMin_InvRangeSize.y;
+
+	// source texture is SRGB, need to handle the conversion inside shader
+	if (bsRGBMode)
+	{
+		OutColor.rgb = LinearToSrgb(OutColor.rgb);
+	}
+
+	bool bForceAlphaBlend = false;
+	if (any(int2(TextureUV * float2(TextureExtents.xy)) >= TextureExtents.xy))
+	{
+		bForceAlphaBlend = true;
+		OutColor = float4(0.f, 0.f, 0.f, 1.f);
+	}
+
+	if (bEnableAlphaBlend || bForceAlphaBlend)
+	{
+		const float CheckerSquareDimension = 64.f;
+		const float2 ab = fmod(Input.Position.xy, (CheckerSquareDimension * 2.0f).xx);
+
+		const bool checkerVariant = ((ab.x < CheckerSquareDimension && ab.y < CheckerSquareDimension) ||
+			(ab.x > CheckerSquareDimension && ab.y > CheckerSquareDimension));
+
+		float3 bg_color = checkerVariant ? float3(0.5,0.5,0.5) : float3(1,1,1);
+		if (BackgroundColor > 0)
+		{
+			bg_color = float3((BackgroundColor >> 16) & 0xFF, (BackgroundColor >> 8) & 0xFF, BackgroundColor & 0xFF) / 255.f;
+		}
+
+		OutColor.rgb = lerp(OutColor.rgb, bg_color, OutColor.a);
+	}
+	else if (bShowAlphaChannel && !bEnableAlphaBlend)
+	{
+		OutColor.rgb = 1.f - OutColor.a;
+	}
+}
