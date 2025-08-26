@@ -20,12 +20,14 @@
 			"Type": "Runtime",
 			"LoadingPhase": "PostDefault",
 			"TargetDenyList": [ "Server", "Program" ],
-			"TargetConfigurationDenyList": [ "Shipping" ]
+			"TargetConfigurationDenyList": [ "Shipping" ],
+			"PlatformAllowList": [ "Win64" ]
 		},
 		{
 			"Name": "ImGuiEditorWidgets",
 			"Type": "Editor",
-			"LoadingPhase": "PostDefault"
+			"LoadingPhase": "PostDefault",
+			"PlatformAllowList": [ "Win64" ]
 		}
 	],
 	"Plugins": [
