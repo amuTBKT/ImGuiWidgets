@@ -191,7 +191,7 @@ namespace FImGui
             return value_changed;
         };
 
-        ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y * GlobalScale;
+        ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
         ImGui::TextUnformatted(label);
         ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
 
