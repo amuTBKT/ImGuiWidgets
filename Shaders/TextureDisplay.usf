@@ -69,7 +69,7 @@ float4 RunPixelShader(in int2 PixelCoord, in float2 TextureUV)
 	}
 
 	bool bForceAlphaBlend = false;
-	if (any(int2(TextureUV * float2(TextureExtents.xy)) >= TextureExtents.xy))
+	if (any(int2(TextureUV * float2(TextureExtents.xy)) >= TextureExtents.xy) || any(TextureUV < 0.f))
 	{
 		bForceAlphaBlend = true;
 		OutColor = float4(0.f, 0.f, 0.f, 0.f);
@@ -124,9 +124,13 @@ void Main(
 			abs(Input.Position.x - TextureInspectorRect.z),
 			abs(Input.Position.y - TextureInspectorRect.w)
 		};
-		if (any(FrameBorders <= 1))
+		if (any(FrameBorders == 0))
 		{
-			OutColor = float4(0.f, 0.f, 0.f, 1.f);
+			OutColor = float4(0, 0, 0, 1);
+		}
+		else if (any(FrameBorders == 1))
+		{
+			OutColor = float4(1, 1, 1, 1);
 		}
 
 		// center pixel borders
@@ -168,7 +172,7 @@ void CopyPixelValueCS(uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
 	const int Mip = CurrentMip_ArraySliceOrDepth >> 24;
 	const int Slice = CurrentMip_ArraySliceOrDepth & 0x00FFFFFF;
 
-	const float2 TextureUV = float2(TextureCoords) / (float2)TextureExtents;
+	const float2 TextureUV = float2(TextureCoords) / (float2)(TextureExtents >> Mip);
 
 #if (SHADER_BASETYPE==BASETYPE_UINT)
 	uint4 TextureColor = SampleTextureUInt4(TextureUV, Slice, Mip, /*Sample=*/0, TextureExtents >> Mip);

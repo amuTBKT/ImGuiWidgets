@@ -218,12 +218,12 @@ namespace ImGuiTextureVisualizer
 				if (bReadAsStencil)
 				{
 					FIntVector4 Value = *(FIntVector4*)RawValue;
-					ValueAsString += FAnsiString::Printf("%i ", Value.X);
+					ValueAsString += FAnsiString::Printf("Stencil: %i (0x%x)\n", Value.X, Value.X);
 				}
 				else
 				{
 					FVector4f Value = *(FVector4f*)RawValue;
-					ValueAsString += FAnsiString::Printf("%f ", Value.X);
+					ValueAsString += FAnsiString::Printf("Depth: %f\n", Value.X);
 				}
 			}
 			else if (IsSignedIntegerFormat(Format))
@@ -231,19 +231,19 @@ namespace ImGuiTextureVisualizer
 				FIntVector4 Value = *(FIntVector4*)RawValue;
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					ValueAsString += FAnsiString::Printf("%i ", Value.X);
+					ValueAsString += FAnsiString::Printf("R: %i (0x%x)\n", Value.X, Value.X);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					ValueAsString += FAnsiString::Printf("%i ", Value.Y);
+					ValueAsString += FAnsiString::Printf("G: %i (0x%x)\n", Value.Y, Value.Y);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					ValueAsString += FAnsiString::Printf("%i ", Value.Z);
+					ValueAsString += FAnsiString::Printf("B: %i (0x%x)\n", Value.Z, Value.Z);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					ValueAsString += FAnsiString::Printf("%i ", Value.W);
+					ValueAsString += FAnsiString::Printf("A: %i (0x%x)\n", Value.W, Value.W);
 				}
 			}
 			else if (IsInteger(Format))
@@ -251,19 +251,19 @@ namespace ImGuiTextureVisualizer
 				FUintVector4 Value = *(FUintVector4*)RawValue;
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					ValueAsString += FAnsiString::Printf("%i ", Value.X);
+					ValueAsString += FAnsiString::Printf("R: %i (0x%x)\n", Value.X, Value.X);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					ValueAsString += FAnsiString::Printf("%i ", Value.Y);
+					ValueAsString += FAnsiString::Printf("G: %i (0x%x)\n", Value.Y, Value.Y);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					ValueAsString += FAnsiString::Printf("%i ", Value.Z);
+					ValueAsString += FAnsiString::Printf("B: %i (0x%x)\n", Value.Z, Value.Z);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					ValueAsString += FAnsiString::Printf("%i ", Value.W);
+					ValueAsString += FAnsiString::Printf("A: %i (0x%x)\n", Value.W, Value.W);
 				}
 			}
 			else
@@ -271,19 +271,19 @@ namespace ImGuiTextureVisualizer
 				FVector4f Value = *(FVector4f*)RawValue;
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					ValueAsString += FAnsiString::Printf("%.3f ", Value.X);
+					ValueAsString += FAnsiString::Printf("R: %.5f\n", Value.X);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					ValueAsString += FAnsiString::Printf("%.3f ", Value.Y);
+					ValueAsString += FAnsiString::Printf("G: %.5f\n", Value.Y);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					ValueAsString += FAnsiString::Printf("%.3f ", Value.Z);
+					ValueAsString += FAnsiString::Printf("B: %.5f\n", Value.Z);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					ValueAsString += FAnsiString::Printf("%.3f ", Value.W);
+					ValueAsString += FAnsiString::Printf("A: %.5f\n", Value.W);
 				}
 			}
 
@@ -710,6 +710,9 @@ namespace ImGuiTextureVisualizer
 			case ETexDisplay_ShaderBaseType::Float: BufferFormat = PF_A32B32G32R32F; break;
 			}
 
+			const int32 HoveredTexCoordX = PreviewParams.Options.TextureInspectorCursorPosition.X >> PreviewParams.Options.CurrentMip;
+			const int32 HoveredTexCoordY = PreviewParams.Options.TextureInspectorCursorPosition.Y >> PreviewParams.Options.CurrentMip;
+
 			SetComputePipelineState(RHICommandList, ComputeShader.GetComputeShader());
 			SetShaderParametersLegacyCS(
 				RHICommandList, ComputeShader,
@@ -718,7 +721,7 @@ namespace ImGuiTextureVisualizer
 				FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
 				PreviewParams.Options.CurrentMip,
 				TextureDesc.bIsCubemap ? PreviewParams.Options.CurrentFace : PreviewParams.Options.CurrentArraySlice,
-				PreviewParams.Options.TextureInspectorCursorPosition);
+				FIntPoint(HoveredTexCoordX, HoveredTexCoordY));
 
 			RHICommandList.DispatchComputeShader(1, 1, 1);
 
@@ -1322,17 +1325,21 @@ namespace ImGuiTextureVisualizer
 			TexturePreviewOptions.TextureInspectorRect.Z = RelativeMousePos.x + TextureInspectorOffset.x + TextureInspectorSize;
 			TexturePreviewOptions.TextureInspectorRect.W = RelativeMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
 
+			const int32 HoveredTexCoordX = TexturePreviewOptions.TextureInspectorCursorPosition.X >> TexturePreviewOptions.CurrentMip;
+			const int32 HoveredTexCoordY = TexturePreviewOptions.TextureInspectorCursorPosition.Y >> TexturePreviewOptions.CurrentMip;
+			
 			ImGui::SetNextWindowPos(ImVec2(TexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, TexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
 			ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
-			ImGui::SetTooltip(
-				"UV: %.3f %.3f\n"
-				"Coord: %i %i\n"
-				"Value: %s",
-				(float)TexturePreviewOptions.TextureInspectorCursorPosition.X / (float)InTextureInfo.SizeX,
-				(float)TexturePreviewOptions.TextureInspectorCursorPosition.Y / (float)InTextureInfo.SizeY,
-				TexturePreviewOptions.TextureInspectorCursorPosition.X,
-				TexturePreviewOptions.TextureInspectorCursorPosition.Y,
-				*PixelFormatUtils::GetPixelValueAsString(InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
+			if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))
+			{
+				ImGui::Text("UV: %.4f %.4f",
+					(float)HoveredTexCoordX / (float)InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip),
+					(float)HoveredTexCoordY / (float)InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip));
+				ImGui::Text("Coord: %i %i", HoveredTexCoordX, HoveredTexCoordY);
+				ImGui::Separator();
+				ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString(InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
+				ImGui::EndTooltip();
+			}
 		}
 	}
 
@@ -1400,9 +1407,14 @@ namespace ImGuiTextureVisualizer
 					FAnsiString FormatName = TCHAR_TO_ANSI(GPixelFormats[TextureInfo.Format].Name);
 					ImGui::Text("%s - %ix%i %i mips - %s", *VisTextureName, TextureInfo.SizeX, TextureInfo.SizeY, TextureInfo.NumMips, *FormatName);
 				}
+
+				const int32 HoveredTexCoordX = TexturePreviewOptions.CursorPosition.X >> TexturePreviewOptions.CurrentMip;
+				const int32 HoveredTexCoordY = TexturePreviewOptions.CursorPosition.Y >> TexturePreviewOptions.CurrentMip;
 				ImGui::Text("Hover - %i, %i (%f, %f) - Right click to pick a pixel",
-					TexturePreviewOptions.CursorPosition.X, TexturePreviewOptions.CursorPosition.Y,
-					(float)TexturePreviewOptions.CursorPosition.X / (float)TextureInfo.SizeX, (float)TexturePreviewOptions.CursorPosition.Y / (float)TextureInfo.SizeY);
+					HoveredTexCoordX,
+					HoveredTexCoordY,
+					(float)HoveredTexCoordX / (float)TextureInfo.GetSizeX(TexturePreviewOptions.CurrentMip),
+					(float)HoveredTexCoordY / (float)TextureInfo.GetSizeY(TexturePreviewOptions.CurrentMip));
 			}
 
 			TextureMetadataReadIndex_GT = (TextureMetadataReadIndex_GT + 1) % 2;
