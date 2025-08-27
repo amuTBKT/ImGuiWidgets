@@ -17,7 +17,7 @@ enum class ETexDisplay_ShowFlag
 	AlphaChannelMask	= (1u << 3),
 	DepthChannelMask	= (1u << 4),
 	StencilChannelMask	= (1u << 5),
-	sRGBMask		= (1u << 6),
+	sRGBMask			= (1u << 6),
 };
 
 enum class ETexDisplay_ResourceType
@@ -41,29 +41,31 @@ enum class ETexDisplay_ShaderBaseType
 	MAX
 };
 
-class IMGUIWIDGETSHADERS_API FTextureVisualizerPS : public FGlobalShader
+class IMGUIWIDGETSHADERS_API FTextureDisplayPS : public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FTextureVisualizerPS, Global);
+	DECLARE_SHADER_TYPE(FTextureDisplayPS, Global);
 
 	class FResourceType		: SHADER_PERMUTATION_ENUM_CLASS("SHADER_RESTYPE", ETexDisplay_ResourceType);
 	class FShaderBaseType	: SHADER_PERMUTATION_ENUM_CLASS("SHADER_BASETYPE", ETexDisplay_ShaderBaseType);
 	using FPermutationDomain = TShaderPermutationDomain<FResourceType, FShaderBaseType>;
 
 public:
-	FTextureVisualizerPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FTextureDisplayPS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FGlobalShader(Initializer)
 	{
 		TextureParam.Bind(Initializer.ParameterMap, TEXT("Texture"));
 		TextureSamplerParam.Bind(Initializer.ParameterMap, TEXT("TextureSampler"));
 
 		ShowFlagsParam.Bind(Initializer.ParameterMap, TEXT("ShowFlags"));
-		RangeMin_InvRangeSizeParam.Bind(Initializer.ParameterMap, TEXT("RangeMin_InvRangeSize"));
 		TextureExtentsParam.Bind(Initializer.ParameterMap, TEXT("TextureExtents"));
-		CurrentMip_ArraySliceOrDepthParam.Bind(Initializer.ParameterMap, TEXT("CurrentMip_ArraySliceOrDepth"));
-		UVScaleAndOffsetParam.Bind(Initializer.ParameterMap, TEXT("UVScaleAndOffset"));
 		BackgroundColorParam.Bind(Initializer.ParameterMap, TEXT("BackgroundColor"));
+		UVScaleAndOffsetParam.Bind(Initializer.ParameterMap, TEXT("UVScaleAndOffset"));
+		TextureInspectorRectParam.Bind(Initializer.ParameterMap, TEXT("TextureInspectorRect"));
+		TextureInspectorCursorParam.Bind(Initializer.ParameterMap, TEXT("TextureInspectorCursor"));
+		RangeMin_InvRangeSizeParam.Bind(Initializer.ParameterMap, TEXT("RangeMin_InvRangeSize"));
+		CurrentMip_ArraySliceOrDepthParam.Bind(Initializer.ParameterMap, TEXT("CurrentMip_ArraySliceOrDepth"));
 	}
-	FTextureVisualizerPS() {}
+	FTextureDisplayPS() {}
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
@@ -94,7 +96,9 @@ public:
 		uint32 ArraySliceOrDepthToDisplay,
 		FVector2f RangeMin_InvRangeSize,
 		FVector4f UVScaleAndOffset,
-		uint32 BackgroundColor)
+		uint32 BackgroundColor,
+		FIntPoint TextureInspectorCursor,
+		FIntVector4 TextureInspectorRect)
 	{
 		if (TextureParam.IsBound())
 		{
@@ -106,11 +110,13 @@ public:
 		}
 
 		SetShaderValue(BatchedParameters, ShowFlagsParam, ShowFlags);
-		SetShaderValue(BatchedParameters, RangeMin_InvRangeSizeParam, RangeMin_InvRangeSize);
 		SetShaderValue(BatchedParameters, TextureExtentsParam, TextureExtents);
-		SetShaderValue(BatchedParameters, CurrentMip_ArraySliceOrDepthParam, (uint32(MipToDisplay) << 24) | ArraySliceOrDepthToDisplay);
-		SetShaderValue(BatchedParameters, UVScaleAndOffsetParam, UVScaleAndOffset);
 		SetShaderValue(BatchedParameters, BackgroundColorParam, BackgroundColor);
+		SetShaderValue(BatchedParameters, UVScaleAndOffsetParam, UVScaleAndOffset);
+		SetShaderValue(BatchedParameters, TextureInspectorRectParam, TextureInspectorRect);
+		SetShaderValue(BatchedParameters, TextureInspectorCursorParam, TextureInspectorCursor);
+		SetShaderValue(BatchedParameters, RangeMin_InvRangeSizeParam, RangeMin_InvRangeSize);
+		SetShaderValue(BatchedParameters, CurrentMip_ArraySliceOrDepthParam, (uint32(MipToDisplay) << 24) | ArraySliceOrDepthToDisplay);
 	}
 
 private:
@@ -118,23 +124,101 @@ private:
 	LAYOUT_FIELD(FShaderResourceParameter, TextureSamplerParam);
 
 	LAYOUT_FIELD(FShaderParameter, ShowFlagsParam);
-	LAYOUT_FIELD(FShaderParameter, RangeMin_InvRangeSizeParam);
 	LAYOUT_FIELD(FShaderParameter, TextureExtentsParam);
-	LAYOUT_FIELD(FShaderParameter, CurrentMip_ArraySliceOrDepthParam);
-	LAYOUT_FIELD(FShaderParameter, UVScaleAndOffsetParam);
 	LAYOUT_FIELD(FShaderParameter, BackgroundColorParam);
+	LAYOUT_FIELD(FShaderParameter, UVScaleAndOffsetParam);
+	LAYOUT_FIELD(FShaderParameter, TextureInspectorRectParam);
+	LAYOUT_FIELD(FShaderParameter, TextureInspectorCursorParam);
+	LAYOUT_FIELD(FShaderParameter, RangeMin_InvRangeSizeParam);
+	LAYOUT_FIELD(FShaderParameter, CurrentMip_ArraySliceOrDepthParam);
 };
 
-class IMGUIWIDGETSHADERS_API FHistogramTileMinMaxCS : public FGlobalShader
+class IMGUIWIDGETSHADERS_API FTextureDisplay_CopyPixelValueCS : public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FHistogramTileMinMaxCS, Global);
+	DECLARE_SHADER_TYPE(FTextureDisplay_CopyPixelValueCS, Global);
 
 	class FResourceType : SHADER_PERMUTATION_ENUM_CLASS("SHADER_RESTYPE", ETexDisplay_ResourceType);
 	class FShaderBaseType : SHADER_PERMUTATION_ENUM_CLASS("SHADER_BASETYPE", ETexDisplay_ShaderBaseType);
 	using FPermutationDomain = TShaderPermutationDomain<FResourceType, FShaderBaseType>;
 
 public:
-	FHistogramTileMinMaxCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FTextureDisplay_CopyPixelValueCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+		: FGlobalShader(Initializer)
+	{
+		DestBufferParam.Bind(Initializer.ParameterMap, TEXT("DestBuffer"));
+
+		TextureParam.Bind(Initializer.ParameterMap, TEXT("Texture"));
+		TextureExtentsParam.Bind(Initializer.ParameterMap, TEXT("TextureExtents"));
+		TextureCoordsParam.Bind(Initializer.ParameterMap, TEXT("TextureCoords"));
+		CurrentMip_ArraySliceOrDepthParam.Bind(Initializer.ParameterMap, TEXT("CurrentMip_ArraySliceOrDepth"));
+	}
+	FTextureDisplay_CopyPixelValueCS() {}
+
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		FPermutationDomain PermutationVector(Parameters.PermutationId);
+
+		const auto ResType = PermutationVector.Get<FResourceType>();
+		const auto ShaderBaseType = PermutationVector.Get<FShaderBaseType>();
+
+		if (ResType == ETexDisplay_ResourceType::Stencil || ResType == ETexDisplay_ResourceType::StencilMS)
+		{
+			return ShaderBaseType == ETexDisplay_ShaderBaseType::UInt;
+		}
+		else if (ResType == ETexDisplay_ResourceType::Depth || ResType == ETexDisplay_ResourceType::DepthMS)
+		{
+			return ShaderBaseType == ETexDisplay_ShaderBaseType::Float;
+		}
+
+		return true;
+	}
+
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+	}
+
+	void SetParameters(
+		FRHIBatchedShaderParameters& BatchedParameters,
+		FRHIUnorderedAccessView* DestBufferUAV,
+		FRHIShaderResourceView* TextureSRV,
+		FIntVector3 TextureExtents,
+		uint8 MipToDisplay,
+		uint32 ArraySliceOrDepthToDisplay,
+		FIntPoint TextureCoords)
+	{
+		if (DestBufferParam.IsBound())
+		{
+			SetUAVParameter(BatchedParameters, DestBufferParam, DestBufferUAV);
+		}
+		if (TextureParam.IsBound())
+		{
+			SetSRVParameter(BatchedParameters, TextureParam, TextureSRV);
+		}
+
+		SetShaderValue(BatchedParameters, TextureExtentsParam, TextureExtents);
+		SetShaderValue(BatchedParameters, TextureCoordsParam, TextureCoords);
+		SetShaderValue(BatchedParameters, CurrentMip_ArraySliceOrDepthParam, (uint32(MipToDisplay) << 24) | ArraySliceOrDepthToDisplay);
+	}
+
+private:
+	LAYOUT_FIELD(FShaderResourceParameter, DestBufferParam);
+	LAYOUT_FIELD(FShaderResourceParameter, TextureParam);
+
+	LAYOUT_FIELD(FShaderParameter, TextureExtentsParam);
+	LAYOUT_FIELD(FShaderParameter, TextureCoordsParam);
+	LAYOUT_FIELD(FShaderParameter, CurrentMip_ArraySliceOrDepthParam);
+};
+
+class IMGUIWIDGETSHADERS_API FTextureDisplay_TileMinMaxCS : public FGlobalShader
+{
+	DECLARE_SHADER_TYPE(FTextureDisplay_TileMinMaxCS, Global);
+
+	class FResourceType : SHADER_PERMUTATION_ENUM_CLASS("SHADER_RESTYPE", ETexDisplay_ResourceType);
+	class FShaderBaseType : SHADER_PERMUTATION_ENUM_CLASS("SHADER_BASETYPE", ETexDisplay_ShaderBaseType);
+	using FPermutationDomain = TShaderPermutationDomain<FResourceType, FShaderBaseType>;
+
+public:
+	FTextureDisplay_TileMinMaxCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FGlobalShader(Initializer)
 	{
 		MinMaxDestParam.Bind(Initializer.ParameterMap, TEXT("MinMaxDest"));
@@ -143,7 +227,7 @@ public:
 		TextureExtentsParam.Bind(Initializer.ParameterMap, TEXT("TextureExtents"));
 		CurrentMip_ArraySliceOrDepthParam.Bind(Initializer.ParameterMap, TEXT("CurrentMip_ArraySliceOrDepth"));
 	}
-	FHistogramTileMinMaxCS() {}
+	FTextureDisplay_TileMinMaxCS() {}
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
@@ -203,22 +287,22 @@ private:
 	LAYOUT_FIELD(FShaderParameter, CurrentMip_ArraySliceOrDepthParam);
 };
 
-class IMGUIWIDGETSHADERS_API FHistogramResultMinMaxCS : public FGlobalShader
+class IMGUIWIDGETSHADERS_API FTextureDisplay_ResultMinMaxCS : public FGlobalShader
 {
-	DECLARE_SHADER_TYPE(FHistogramResultMinMaxCS, Global);
+	DECLARE_SHADER_TYPE(FTextureDisplay_ResultMinMaxCS, Global);
 
 	class FShaderBaseType : SHADER_PERMUTATION_ENUM_CLASS("SHADER_BASETYPE", ETexDisplay_ShaderBaseType);
 	using FPermutationDomain = TShaderPermutationDomain<FShaderBaseType>;
 
 public:
-	FHistogramResultMinMaxCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
+	FTextureDisplay_ResultMinMaxCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer)
 		: FGlobalShader(Initializer)
 	{
 		MinMaxResultSourceParam.Bind(Initializer.ParameterMap, TEXT("MinMaxResultSource"));
 		MinMaxResultDestParam.Bind(Initializer.ParameterMap, TEXT("MinMaxResultDest"));
 		HistogramTextureResolutionParam.Bind(Initializer.ParameterMap, TEXT("HistogramTextureResolution"));
 	}
-	FHistogramResultMinMaxCS()
+	FTextureDisplay_ResultMinMaxCS()
 	{
 	}
 

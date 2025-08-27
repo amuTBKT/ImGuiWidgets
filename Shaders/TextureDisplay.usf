@@ -4,32 +4,30 @@
 #include "/Engine/Private/GammaCorrectionCommon.ush"
 
 uint ShowFlags;
-float2 RangeMin_InvRangeSize;
 int3 TextureExtents;
+uint BackgroundColor;
+float4 UVScaleAndOffset;
+int4 TextureInspectorRect;
+int2 TextureInspectorCursor;
+float2 RangeMin_InvRangeSize;
 uint CurrentMip_ArraySliceOrDepth;
 
-// zoom/panning controls
-float4 UVScaleAndOffset;
-uint BackgroundColor;
-
-void Main(
-	FScreenVertexOutput Input,
-	out float4 OutColor : SV_Target0)
+float4 RunPixelShader(in int2 PixelCoord, in float2 TextureUV)
 {
-	const bool bShowRedChannel	 = (ShowFlags & SHOWFLAG_RedChannelMask) > 0;
+	float4 OutColor = 0.f;
+
+	const bool bShowRedChannel = (ShowFlags & SHOWFLAG_RedChannelMask) > 0;
 	const bool bShowGreenChannel = (ShowFlags & SHOWFLAG_GreenChannelMask) > 0;
-	const bool bShowBlueChannel	 = (ShowFlags & SHOWFLAG_BlueChannelMask) > 0;
+	const bool bShowBlueChannel = (ShowFlags & SHOWFLAG_BlueChannelMask) > 0;
 	const bool bShowAlphaChannel = (ShowFlags & SHOWFLAG_AlphaChannelMask) > 0;
-	const bool bShowDepth		 = (ShowFlags & SHOWFLAG_DepthChannelMask) > 0;
-	const bool bShowStencil		 = (ShowFlags & SHOWFLAG_StencilChannelMask) > 0;
-	const bool bsRGBMode		 = (ShowFlags & SHOWFLAG_sRGBMask) > 0;
+	const bool bShowDepth = (ShowFlags & SHOWFLAG_DepthChannelMask) > 0;
+	const bool bShowStencil = (ShowFlags & SHOWFLAG_StencilChannelMask) > 0;
+	const bool bsRGBMode = (ShowFlags & SHOWFLAG_sRGBMask) > 0;
 
 	const bool bEnableAlphaBlend = bShowAlphaChannel && (bShowRedChannel || bShowGreenChannel || bShowBlueChannel);
 
 	const int Mip = CurrentMip_ArraySliceOrDepth >> 24;
 	const int Slice = CurrentMip_ArraySliceOrDepth & 0x00FFFFFF;
-
-	const float2 TextureUV = Input.UV * UVScaleAndOffset.xy + UVScaleAndOffset.zw;
 
 #if (SHADER_BASETYPE==BASETYPE_UINT)
 	uint4 TextureColor = SampleTextureUInt4(TextureUV, Slice, Mip, /*Sample=*/0, TextureExtents >> Mip);
@@ -74,27 +72,116 @@ void Main(
 	if (any(int2(TextureUV * float2(TextureExtents.xy)) >= TextureExtents.xy))
 	{
 		bForceAlphaBlend = true;
-		OutColor = float4(0.f, 0.f, 0.f, 1.f);
+		OutColor = float4(0.f, 0.f, 0.f, 0.f);
 	}
 
 	if (bEnableAlphaBlend || bForceAlphaBlend)
 	{
 		const float CheckerSquareDimension = 64.f;
-		const float2 ab = fmod(Input.Position.xy, (CheckerSquareDimension * 2.0f).xx);
+		const float2 ab = fmod(PixelCoord, (CheckerSquareDimension * 2.0f).xx);
 
 		const bool checkerVariant = ((ab.x < CheckerSquareDimension && ab.y < CheckerSquareDimension) ||
 			(ab.x > CheckerSquareDimension && ab.y > CheckerSquareDimension));
 
-		float3 bg_color = checkerVariant ? float3(0.5,0.5,0.5) : float3(1,1,1);
+		float3 bg_color = checkerVariant ? float3(0.5, 0.5, 0.5) : float3(1, 1, 1);
 		if (BackgroundColor > 0)
 		{
 			bg_color = float3((BackgroundColor >> 16) & 0xFF, (BackgroundColor >> 8) & 0xFF, BackgroundColor & 0xFF) / 255.f;
 		}
 
-		OutColor.rgb = lerp(OutColor.rgb, bg_color, OutColor.a);
+		OutColor.rgb = lerp(bg_color, OutColor.rgb, OutColor.a);
 	}
 	else if (bShowAlphaChannel && !bEnableAlphaBlend)
 	{
-		OutColor.rgb = 1.f - OutColor.a;
+		OutColor.rgb = OutColor.a;
 	}
+
+	return OutColor;
+}
+
+void Main(
+	FScreenVertexOutput Input,
+	out float4 OutColor : SV_Target0)
+{
+	if ((TextureInspectorRect.z - TextureInspectorRect.x) > 0 && 
+		(TextureInspectorRect.w - TextureInspectorRect.y) > 0 &&
+		Input.Position.x > TextureInspectorRect.x && Input.Position.x < TextureInspectorRect.z &&
+		Input.Position.y > TextureInspectorRect.y && Input.Position.y < TextureInspectorRect.w)
+	{
+		const float ZoomPixelSize = 16.f;
+
+		// (-ZoomRadius,ZoomRadius)
+		float2 TextureInspectorPixelCoord = ZoomPixelSize * 0.5f + (Input.Position.xy - TextureInspectorRect.xy) - ((TextureInspectorRect.z - TextureInspectorRect.x) * 0.5f);
+
+		const float2 RemappedSvPosZoomed = TextureInspectorCursor + TextureInspectorPixelCoord / ZoomPixelSize;
+		OutColor = RunPixelShader(Input.Position.xy, float2(RemappedSvPosZoomed) / float2(TextureExtents.xy));
+
+		// frame borders
+		const int4 FrameBorders =
+		{
+			abs(Input.Position.x - TextureInspectorRect.x),
+			abs(Input.Position.y - TextureInspectorRect.y),
+			abs(Input.Position.x - TextureInspectorRect.z),
+			abs(Input.Position.y - TextureInspectorRect.w)
+		};
+		if (any(FrameBorders <= 1))
+		{
+			OutColor = float4(0.f, 0.f, 0.f, 1.f);
+		}
+
+		// center pixel borders
+		const float4 CenterPixelRect = ((TextureInspectorRect.xy + TextureInspectorRect.zw)*0.5).xyxy + float4(-ZoomPixelSize * 0.5f, -ZoomPixelSize * 0.5f, ZoomPixelSize * 0.5f, ZoomPixelSize * 0.5f);
+		if (Input.Position.x > CenterPixelRect.x && Input.Position.x < CenterPixelRect.z &&
+			Input.Position.y > CenterPixelRect.y && Input.Position.y < CenterPixelRect.w)
+		{
+			const int4 CenterPixelBorders =
+			{
+				abs(Input.Position.x - CenterPixelRect.x),
+				abs(Input.Position.y - CenterPixelRect.y),
+				abs(Input.Position.x - CenterPixelRect.z),
+				abs(Input.Position.y - CenterPixelRect.w)
+			};
+			if (any(CenterPixelBorders == 0))
+			{
+				OutColor = float4(0, 0, 0, 1);
+			}
+			else if (any(CenterPixelBorders == 1))
+			{
+				OutColor = float4(1, 1, 1, 1);
+			}
+		}
+	}
+	else
+	{
+		OutColor = RunPixelShader(Input.Position.xy, Input.UV * UVScaleAndOffset.xy + UVScaleAndOffset.zw);
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int2 TextureCoords;
+RWBuffer<shader_base_type> DestBuffer;
+
+[numthreads(1, 1, 1)]
+void CopyPixelValueCS(uint3 tid : SV_GroupThreadID, uint3 gid : SV_GroupID)
+{
+	const int Mip = CurrentMip_ArraySliceOrDepth >> 24;
+	const int Slice = CurrentMip_ArraySliceOrDepth & 0x00FFFFFF;
+
+	const float2 TextureUV = float2(TextureCoords) / (float2)TextureExtents;
+
+#if (SHADER_BASETYPE==BASETYPE_UINT)
+	uint4 TextureColor = SampleTextureUInt4(TextureUV, Slice, Mip, /*Sample=*/0, TextureExtents >> Mip);
+#elif (SHADER_BASETYPE==BASETYPE_SINT)
+	int4 TextureColor = SampleTextureInt4(TextureUV, Slice, Mip, /*Sample=*/0, TextureExtents >> Mip);
+#elif (SHADER_BASETYPE==BASETYPE_FLOAT)
+	float4 TextureColor = SampleTextureFloat4(TextureUV, Slice, Mip, /*Sample=*/0, TextureExtents >> Mip);
+#endif
+
+#if (SHADER_BASETYPE==BASETYPE_SINT)
+	// NOTE: PF_R32G32B32A32_SINT is not available
+	DestBuffer[0] = asuint(TextureColor);
+#else
+	DestBuffer[0] = TextureColor;
+#endif
 }
