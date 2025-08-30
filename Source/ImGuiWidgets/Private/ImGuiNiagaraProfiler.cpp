@@ -112,18 +112,27 @@ namespace ImGuiNiagaraProfiler
 		NiagaraGPUProfilerListener->SetHandler(
 			[](const FNiagaraGpuFrameResultsPtr& FrameResults)
 			{
-				WorldStatData.Reset();
-
 				if (!bIsCapturing)
 				{
 					return;
 				}
 
+				TArray<UWorld*> WorldsUpdatedThisFrame;
 				for (const auto& DispatchResult : FrameResults->DispatchResults)
 				{
 					UWorld* OwnerWorld = DispatchResult.OwnerComponent.IsValid() ? DispatchResult.OwnerComponent->GetWorld() : nullptr;
-					if (/*ensure*/(OwnerWorld))
+					if (OwnerWorld)
 					{
+						// NOTE: it's possible to receive stats for worlds separately, this ensures we don't reset the wrong world stats.
+						if (!WorldsUpdatedThisFrame.Contains(OwnerWorld))
+						{
+							if (auto* WorldStatsToReset = WorldStatData.Find(OwnerWorld))
+							{
+								WorldStatsToReset->SystemStats.Reset();
+							}
+							WorldsUpdatedThisFrame.Add(OwnerWorld);
+						}
+
 						WorldStatData.FindOrAdd(OwnerWorld)
 								.AddStat(DispatchResult.OwnerEmitter, DispatchResult.StageName, (float)DispatchResult.DurationMicroseconds / 1000.f);
 					}
