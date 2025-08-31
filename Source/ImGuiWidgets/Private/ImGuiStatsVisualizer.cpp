@@ -252,7 +252,7 @@ namespace ImGuiStatsVizualizer
 						TArray<UObject*> Objects = { Asset };
 						GEditor->SyncBrowserToObjects(Objects);
 					}
-					ImGui::SetItemTooltip("Browse to asset.");
+					ImGui::SetItemTooltip("Browse to asset");
 					
 					ImGui::SameLine();
 
@@ -274,7 +274,7 @@ namespace ImGuiStatsVizualizer
 								}
 							}, TStatId(), NULL, ENamedThreads::GameThread);
 					}
-					ImGui::SetItemTooltip("Edit asset.");
+					ImGui::SetItemTooltip("Edit asset");
 
 					ImGui::PopStyleVar(2);
 					ImGui::PopStyleColor(3);
@@ -698,25 +698,15 @@ namespace ImGuiStatsVizualizer
 	{
 		FImGuiTickScope Scope{ Context };
 
-		static ImFont* ProggyVectorFont = nullptr;// UImGuiSubsystem::Get()->GetSharedFontAtlas()->AddFontFromFileTTF("C:/Users/amu/Downloads/ProggyVector-Regular.ttf", 13.f, nullptr);
+		// TODO: Find a better/reliable way to check if docknode is already active
+#if WITH_EDITOR //dockspace already created if not using standlone widgets
+		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar;
+		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
+		ImGui::SetNextWindowDockID(MainDockSpaceID, ImGuiCond_Always);
+#endif
 
 		if (ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
-			static bool bUseVectorFont = false;
-			//ImGui::Checkbox("UseVectorFont", &bUseVectorFont);
-
-			if (bUseVectorFont)
-			{
-				ImGui::PushFont(ProggyVectorFont, 0.f);
-			}
-			ON_SCOPE_EXIT
-			{
-				if (bUseVectorFont)
-				{
-					ImGui::PopFont();
-				}
-			};
-
 			RegisterOneFrameResources();
 			
 			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
@@ -760,10 +750,11 @@ namespace ImGuiStatsVizualizer
 	{
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
+		.WidgetIcon			= FSlateIcon(FName("EditorStyle"), FName("Profiler.Tab")),
 		.WidgetName			= "Stats Visualizer",
 		.WidgetDescription	= "Widget for displaying stat groups."
 	};
-	IMGUI_REGISTER_MAIN_WINDOW_WIDGET(RegisterParams);
+	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
 }
 
 #endif //#if STATS
