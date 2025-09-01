@@ -112,8 +112,14 @@ void ResultMinMaxCS()
 			blockXY.y * (HGRAM_TILES_PER_BLOCK * HGRAM_PIXELS_PER_TILE) + tileXY.y * HGRAM_PIXELS_PER_TILE <
 			texDim.y)
 		{
+#if (SHADER_BASETYPE==BASETYPE_SINT)
+			// NOTE: PF_R32G32B32A32_SINT is not available
+			minval = min(minval, asint(MinMaxResultSource[i * 2 + 0]));
+			maxval = max(maxval, asint(MinMaxResultSource[i * 2 + 1]));
+#else
 			minval = min(minval, MinMaxResultSource[i * 2 + 0]);
 			maxval = max(maxval, MinMaxResultSource[i * 2 + 1]);
+#endif
 		}
 	}
 

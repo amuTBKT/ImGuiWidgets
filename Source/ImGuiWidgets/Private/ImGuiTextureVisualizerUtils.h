@@ -98,9 +98,19 @@ namespace ImGuiTextureVisualizer
 	public:
 		virtual void InitRHI(FRHICommandListBase& RHICmdList) override
 		{
-			// Create the texture RHI.  		
+			const int32 SizeInBytes = sizeof(FUintVector4) * 4; // only 2 entries are used (Min/Max value)
+
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 505) //(Version > 5.5)
+			FRHIBufferCreateDesc BufferDesc =
+				FRHIBufferCreateDesc::CreateVertex(TEXT("TexDisplay_PixelValueDestBuffer"), SizeInBytes)
+				.AddUsage(EBufferUsageFlags::Static | EBufferUsageFlags::ShaderResource | EBufferUsageFlags::UnorderedAccess)
+				.SetInitialState(ERHIAccess::UAVCompute)
+				.SetInitActionNone();
+			VertexBufferRHI = RHICmdList.CreateBuffer(BufferDesc);
+#else
 			FRHIResourceCreateInfo CreateInfo(TEXT("TexDisplay_PixelValueDestBuffer"));
-			VertexBufferRHI = RHICmdList.CreateVertexBuffer(sizeof(FUintVector4), BUF_Static | BUF_ShaderResource | BUF_UnorderedAccess, CreateInfo);
+			VertexBufferRHI = RHICmdList.CreateVertexBuffer(SizeInBytes, BUF_Static | BUF_ShaderResource | BUF_UnorderedAccess, CreateInfo);
+#endif
 		}
 	};
 

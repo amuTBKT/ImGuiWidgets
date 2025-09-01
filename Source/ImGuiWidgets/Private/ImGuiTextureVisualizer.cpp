@@ -96,6 +96,8 @@ namespace ImGuiTextureVisualizer
 		
 		FLinearColor BackgroundColor = FLinearColor(0.f, 0.f, 0.f, 0.f);
 
+		bool bRequestMinMaxTextureValues = false;
+
 		FIntPoint CursorPosition = FIntPoint::ZeroValue;
 
 		FIntPoint TextureInspectorCursorPosition = FIntPoint::ZeroValue;
@@ -141,7 +143,7 @@ namespace ImGuiTextureVisualizer
 			});
 	}
 
-	static FVector2D GetMinMaxTextureValue(FRHICommandListImmediate& RHICommandList, const FTexturePreviewOptions& PreviewOptions)
+	static FVector2D GetMinMaxTextureValue(FRHICommandListImmediate& RHICmdList, const FTexturePreviewOptions& InPreviewOptions)
 	{
 		if (!ViewExtension->TextureToDisplay)
 		{
@@ -149,46 +151,33 @@ namespace ImGuiTextureVisualizer
 		}
 		const FPooledRenderTargetDesc& TextureDesc = ViewExtension->TextureDesc;
 
-		const uint64_t TextureExtentMax = TextureDesc.Extent.GetMax();
-		const uint64_t BlockPixSize = FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK;
-		const uint64_t BlockCount = (TextureExtentMax * TextureExtentMax) / (BlockPixSize * BlockPixSize);
+		const uint64 TextureExtentMax = TextureDesc.Extent.GetMax();
+		const uint64 BlockPixSize = FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK;
+		const uint64 BlockCount = uint64(TextureExtentMax * TextureExtentMax) / (BlockPixSize * BlockPixSize);
 
 #if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 505) //(Version > 5.5)
 		FRHIBufferCreateDesc TileMinMaxBufferDesc =
-			FRHIBufferCreateDesc::CreateIndex<FVector4f>(
+			FRHIBufferCreateDesc::Create(
 				TEXT("Histogram_TileMinMax"),
-				BlockCount * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK * sizeof(FVector4f) * 2)
-				.AddUsage(EBufferUsageFlags::Static | EBufferUsageFlags::ShaderResource | EBufferUsageFlags::UnorderedAccess)
+				BlockCount * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK * sizeof(FVector4f) * 2,
+				sizeof(FVector4f), EBufferUsageFlags::Static | EBufferUsageFlags::ShaderResource | EBufferUsageFlags::UnorderedAccess)
 				.SetInitialState(ERHIAccess::UAVCompute)
 				.SetInitActionNone();
 		FBufferRHIRef TileMinMaxBuffer = RHICmdList.CreateBuffer(TileMinMaxBufferDesc);
-
-		FRHIBufferCreateDesc ResultMinMaxBufferDesc =
-			FRHIBufferCreateDesc::CreateIndex<FVector4f>(TEXT("Histogram_ResultMinMax"), sizeof(FVector4f) * 2)
-				.AddUsage(EBufferUsageFlags::Static | EBufferUsageFlags::ShaderResource | EBufferUsageFlags::UnorderedAccess)
-				.SetInitialState(ERHIAccess::UAVCompute)
-				.SetInitActionNone();
-		FBufferRHIRef ResultMinMaxBuffer = RHICmdList.CreateBuffer(ResultMinMaxBufferDesc);
 #else
 		FRHIResourceCreateInfo TileMinMaxBufferCreateInfo(TEXT("Histogram_TileMinMax"));
-		FBufferRHIRef TileMinMaxBuffer = RHICommandList.CreateBuffer(
+		FBufferRHIRef TileMinMaxBuffer = RHICmdList.CreateBuffer(
 			BlockCount * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK * sizeof(FVector4f) * 2,
 			EBufferUsageFlags::Static | EBufferUsageFlags::ShaderResource | EBufferUsageFlags::UnorderedAccess,
 			sizeof(FVector4f), ERHIAccess::UAVCompute, TileMinMaxBufferCreateInfo);
-
-		FRHIResourceCreateInfo ResultMinMaxBufferCreateInfo(TEXT("Histogram_ResultMinMax"));
-		FBufferRHIRef ResultMinMaxBuffer = RHICommandList.CreateBuffer(
-			sizeof(FVector4f) * 2,
-			EBufferUsageFlags::Static | EBufferUsageFlags::ShaderResource | EBufferUsageFlags::UnorderedAccess,
-			sizeof(FVector4f), ERHIAccess::UAVCompute, ResultMinMaxBufferCreateInfo);
 #endif
 
 		ETexDisplay_ResourceType ResType;
 		ETexDisplay_ShaderBaseType BaseType;
-		PixelFormatUtils::DetermineShaderTypesForTexture(TextureDesc, PreviewOptions.bDisplayStencil, ResType, BaseType);
+		PixelFormatUtils::DetermineShaderTypesForTexture(TextureDesc, InPreviewOptions.bDisplayStencil, ResType, BaseType);
 
 		{
-			RenderCaptureInterface::FScopedCapture RenderCapture(false, &RHICommandList, TEXT("HistogramMinMax"));
+			RenderCaptureInterface::FScopedCapture RenderCapture(false, &RHICmdList, TEXT("HistogramMinMax"));
 
 			auto* ShaderMap = GetGlobalShaderMap(GetMaxSupportedFeatureLevel(GMaxRHIShaderPlatform));
 
@@ -199,12 +188,13 @@ namespace ImGuiTextureVisualizer
 				PermutationVector.Set<FTextureDisplay_TileMinMaxCS::FShaderBaseType>(BaseType);
 				TShaderMapRef<FTextureDisplay_TileMinMaxCS> ComputeShader(ShaderMap, PermutationVector);
 
-				FRHITextureSRVCreateInfo SRVInfo(
-					0, TextureDesc.NumMips,
-					0, TextureDesc.ArraySize,
-					(IsStencilFormat(TextureDesc.Format) && PreviewOptions.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
+				auto TextureSRVDesc = FRHIViewDesc::CreateTextureSRV()
+					.SetDimensionFromTexture(ViewExtension->TextureToDisplay->GetRHI())
+					.SetMipRange(0, TextureDesc.NumMips)
+					.SetArrayRange(0, TextureDesc.ArraySize)
+					.SetFormat((IsStencilFormat(TextureDesc.Format) && InPreviewOptions.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
 
-				EPixelFormat BufferFormat = BufferFormat = PF_A32B32G32R32F;
+				EPixelFormat BufferFormat = PF_A32B32G32R32F;
 				switch (BaseType)
 				{
 				case ETexDisplay_ShaderBaseType::UInt:  BufferFormat = PF_R32G32B32A32_UINT; break;
@@ -213,20 +203,22 @@ namespace ImGuiTextureVisualizer
 				default: checkNoEntry(); break;
 				}
 
-				SetComputePipelineState(RHICommandList, ComputeShader.GetComputeShader());
+				SetComputePipelineState(RHICmdList, ComputeShader.GetComputeShader());
 				SetShaderParametersLegacyCS(
-					RHICommandList, ComputeShader,
-					RHICommandList.CreateUnorderedAccessView(TileMinMaxBuffer.GetReference(), UE_PIXELFORMAT_TO_UINT8(BufferFormat)),
-					RHICommandList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), SRVInfo),
+					RHICmdList, ComputeShader,
+					RHICmdList.CreateUnorderedAccessView(TileMinMaxBuffer.GetReference(), FRHIViewDesc::CreateBufferUAV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
+					RHICmdList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), TextureSRVDesc),
 					FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
-					PreviewOptions.CurrentMip,
-					TextureDesc.bIsCubemap ? PreviewOptions.CurrentFace : PreviewOptions.CurrentArraySlice);
+					InPreviewOptions.CurrentMip,
+					TextureDesc.bIsCubemap ? InPreviewOptions.CurrentFace : InPreviewOptions.CurrentArraySlice);
 
 				const int32 ThreadGroupCountX = FMath::DivideAndRoundUp(TextureDesc.Extent.X, FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK);
 				const int32 ThreadGroupCountY = FMath::DivideAndRoundUp(TextureDesc.Extent.Y, FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK);
 
-				RHICommandList.DispatchComputeShader(ThreadGroupCountX, ThreadGroupCountY, 1);
+				RHICmdList.DispatchComputeShader(ThreadGroupCountX, ThreadGroupCountY, 1);
 			}
+
+			RHICmdList.Transition(FRHITransitionInfo(TileMinMaxBuffer.GetReference(), ERHIAccess::UAVCompute, ERHIAccess::SRVCompute));
 
 			// result min max
 			{
@@ -243,49 +235,50 @@ namespace ImGuiTextureVisualizer
 				default: checkNoEntry(); break;
 				}
 
-				SetComputePipelineState(RHICommandList, ComputeShader.GetComputeShader());
+				SetComputePipelineState(RHICmdList, ComputeShader.GetComputeShader());
 				SetShaderParametersLegacyCS(
-					RHICommandList, ComputeShader,
-					RHICommandList.CreateUnorderedAccessView(ResultMinMaxBuffer.GetReference(), UE_PIXELFORMAT_TO_UINT8(BufferFormat)),
-					RHICommandList.CreateShaderResourceView(TileMinMaxBuffer.GetReference(), sizeof(FVector4f), UE_PIXELFORMAT_TO_UINT8(BufferFormat)),
+					RHICmdList, ComputeShader,
+					RHICmdList.CreateUnorderedAccessView(GPixelValueDestBuffer->VertexBufferRHI, FRHIViewDesc::CreateBufferUAV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
+					RHICmdList.CreateShaderResourceView(TileMinMaxBuffer.GetReference(), FRHIViewDesc::CreateBufferSRV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
 					FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth));
 
-				RHICommandList.DispatchComputeShader(1, 1, 1);
+				RHICmdList.DispatchComputeShader(1, 1, 1);
 			}
 		}
 
-		// copy
+		// default to [0, 1] range if readback fails
 		FVector4 MinValue = FVector4::Zero();
 		FVector4 MaxValue = FVector4::One();
 		{
 			FRHIGPUBufferReadback Readback(TEXT("TexDisplay::MinMaxReadback"));
-			uint32_t NumBytes = sizeof(FVector4f) * 2;
-			Readback.EnqueueCopy(RHICommandList, ResultMinMaxBuffer.GetReference(), NumBytes);
-			RHICommandList.BlockUntilGPUIdle();
-			RHICommandList.FlushResources();
+			uint32 NumBytes = sizeof(FVector4f) * 2;
+			Readback.EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, NumBytes);
+			RHICmdList.BlockUntilGPUIdle();
+			RHICmdList.FlushResources();
+			RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
 
-			if (const void* SrcRawBuffer = Readback.Lock(NumBytes))
+			if (const uint8* SrcRawBuffer = (const uint8*)Readback.Lock(NumBytes))
 			{
 				if (BaseType == ETexDisplay_ShaderBaseType::UInt)
 				{
-					const FUintVector4 val0 = ((FUintVector4*)SrcRawBuffer)[0];
-					const FUintVector4 val1 = ((FUintVector4*)SrcRawBuffer)[1];
+					FUintVector4 val0; FMemory::Memcpy(&val0, SrcRawBuffer, sizeof(val0));
+					FUintVector4 val1; FMemory::Memcpy(&val1, SrcRawBuffer + sizeof(val0), sizeof(val1));
 
 					MinValue = FVector4(val0.X, val0.Y, val0.Z, val0.W);
 					MaxValue = FVector4(val1.X, val1.Y, val1.Z, val1.W);
 				}
 				else if (BaseType == ETexDisplay_ShaderBaseType::SInt)
 				{
-					const FIntVector4 val0 = ((FIntVector4*)SrcRawBuffer)[0];
-					const FIntVector4 val1 = ((FIntVector4*)SrcRawBuffer)[1];
+					FIntVector4 val0; FMemory::Memcpy(&val0, SrcRawBuffer, sizeof(val0));
+					FIntVector4 val1; FMemory::Memcpy(&val1, SrcRawBuffer + sizeof(val0), sizeof(val1));
 
 					MinValue = FVector4(val0.X, val0.Y, val0.Z, val0.W);
 					MaxValue = FVector4(val1.X, val1.Y, val1.Z, val1.W);
 				}
 				else if (BaseType == ETexDisplay_ShaderBaseType::Float)
 				{
-					const FVector4f val0 = ((FVector4f*)SrcRawBuffer)[0];
-					const FVector4f val1 = ((FVector4f*)SrcRawBuffer)[1];
+					FVector4f val0; FMemory::Memcpy(&val0, SrcRawBuffer, sizeof(val0));
+					FVector4f val1; FMemory::Memcpy(&val1, SrcRawBuffer + sizeof(val0), sizeof(val1));
 
 					MinValue = FVector4(val0.X, val0.Y, val0.Z, val0.W);
 					MaxValue = FVector4(val1.X, val1.Y, val1.Z, val1.W);
@@ -306,25 +299,25 @@ namespace ImGuiTextureVisualizer
 			const EPixelFormatChannelFlags ValidTextureChannels = PixelFormatUtils::GetValidChannelsForFormat(TextureDesc.Format);
 
 			bool bFoundAnyValidChannels = false;
-			if (PreviewOptions.bDisplayRedChannel && EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
+			if (InPreviewOptions.bDisplayRedChannel && EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 			{
 				bFoundAnyValidChannels = true;
 				Result.X = FMath::Min(Result.X, MinValue.X);
 				Result.Y = FMath::Max(Result.Y, MaxValue.X);
 			}
-			if (PreviewOptions.bDisplayGreenChannel && EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
+			if (InPreviewOptions.bDisplayGreenChannel && EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 			{
 				bFoundAnyValidChannels = true;
 				Result.X = FMath::Min(Result.X, MinValue.Y);
 				Result.Y = FMath::Max(Result.Y, MaxValue.Y);
 			}
-			if (PreviewOptions.bDisplayBlueChannel && EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
+			if (InPreviewOptions.bDisplayBlueChannel && EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 			{
 				bFoundAnyValidChannels = true;
 				Result.X = FMath::Min(Result.X, MinValue.Z);
 				Result.Y = FMath::Max(Result.Y, MaxValue.Z);
 			}
-			if (PreviewOptions.bDisplayAlphaChannel && EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
+			if (InPreviewOptions.bDisplayAlphaChannel && EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 			{
 				bFoundAnyValidChannels = true;
 				Result.X = FMath::Min(Result.X, MinValue.W);
@@ -338,9 +331,93 @@ namespace ImGuiTextureVisualizer
 		}
 
 		TileMinMaxBuffer.SafeRelease();
-		ResultMinMaxBuffer.SafeRelease();
 
 		return Result;
+	}
+
+	static void ReadCurrentPixelValue(FRHICommandListImmediate& RHICmdList, const FTexturePreviewOptions& InPreviewOptions)
+	{
+		if ((InPreviewOptions.TextureInspectorRect.Z - InPreviewOptions.TextureInspectorRect.X) > 0)
+		{
+			if (!ViewExtension->TextureToDisplay)
+			{
+				return;
+			}
+			const FPooledRenderTargetDesc& TextureDesc = ViewExtension->TextureDesc;
+
+			ETexDisplay_ResourceType ResType;
+			ETexDisplay_ShaderBaseType BaseType;
+			PixelFormatUtils::DetermineShaderTypesForTexture(TextureDesc, InPreviewOptions.bDisplayStencil, ResType, BaseType);
+
+			auto* ShaderMap = GetGlobalShaderMap(GetMaxSupportedFeatureLevel(GMaxRHIShaderPlatform));
+
+			FTextureDisplay_CopyPixelValueCS::FPermutationDomain PermutationVector;
+			PermutationVector.Set<FTextureDisplay_CopyPixelValueCS::FResourceType>(ResType);
+			PermutationVector.Set<FTextureDisplay_CopyPixelValueCS::FShaderBaseType>(BaseType);
+			TShaderMapRef<FTextureDisplay_CopyPixelValueCS> ComputeShader(ShaderMap, PermutationVector);
+
+			EPixelFormat BufferFormat = PF_A32B32G32R32F;
+			switch (BaseType)
+			{
+			case ETexDisplay_ShaderBaseType::UInt:  BufferFormat = PF_R32G32B32A32_UINT; break;
+			case ETexDisplay_ShaderBaseType::SInt:  BufferFormat = PF_R32G32B32A32_UINT; break; // NOTE: PF_R32G32B32A32_SINT is not available
+			case ETexDisplay_ShaderBaseType::Float: BufferFormat = PF_A32B32G32R32F; break;
+			default: checkNoEntry(); break;
+			}
+
+			auto TextureSRVDesc = FRHIViewDesc::CreateTextureSRV()
+				.SetDimensionFromTexture(ViewExtension->TextureToDisplay->GetRHI())
+				.SetMipRange(0, TextureDesc.NumMips)
+				.SetArrayRange(0, TextureDesc.ArraySize)
+				.SetFormat((IsStencilFormat(TextureDesc.Format) && InPreviewOptions.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
+
+			const int32 HoveredTexCoordX = InPreviewOptions.TextureInspectorCursorPosition.X >> InPreviewOptions.CurrentMip;
+			const int32 HoveredTexCoordY = InPreviewOptions.TextureInspectorCursorPosition.Y >> InPreviewOptions.CurrentMip;
+
+			SetComputePipelineState(RHICmdList, ComputeShader.GetComputeShader());
+			SetShaderParametersLegacyCS(
+				RHICmdList, ComputeShader,
+				RHICmdList.CreateUnorderedAccessView(GPixelValueDestBuffer->VertexBufferRHI, FRHIViewDesc::CreateBufferUAV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
+				RHICmdList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), TextureSRVDesc),
+				FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
+				InPreviewOptions.CurrentMip,
+				TextureDesc.bIsCubemap ? InPreviewOptions.CurrentFace : InPreviewOptions.CurrentArraySlice,
+				FIntPoint(HoveredTexCoordX, HoveredTexCoordY));
+
+			RHICmdList.DispatchComputeShader(1, 1, 1);
+
+			FTextureMetadata& TextureInfo = GetTextureMetadata(/*bOnRenderThread=*/true);
+			uint8* Dst = TextureInfo.SelectedPixelValue;
+			{
+				FRHIGPUBufferReadback Readback(TEXT("TexDisplay::CurrentPixelReadback"));
+				uint32 NumBytes = sizeof(FUintVector4);
+				Readback.EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, NumBytes);
+				RHICmdList.BlockUntilGPUIdle();
+				RHICmdList.FlushResources();
+				RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
+
+				if (const uint8* SrcRawBuffer = (const uint8*)Readback.Lock(NumBytes))
+				{
+					if (BaseType == ETexDisplay_ShaderBaseType::UInt)
+					{
+						FUintVector4 value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
+						FMemory::Memcpy(Dst, &value, sizeof(FUintVector4));
+					}
+					else if (BaseType == ETexDisplay_ShaderBaseType::SInt)
+					{
+						FIntVector4 value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
+						FMemory::Memcpy(Dst, &value, sizeof(FIntVector4));
+					}
+					else if (BaseType == ETexDisplay_ShaderBaseType::Float)
+					{
+						FVector4f value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
+						FMemory::Memcpy(Dst, &value, sizeof(FVector4f));
+					}
+
+					Readback.Unlock();
+				}
+			}
+		}
 	}
 
 	static void TexturePreviewCallback(void* immediate_command_list, void* user_data, size_t user_data_size)
@@ -355,7 +432,7 @@ namespace ImGuiTextureVisualizer
 			return;
 		}
 
-		FRHICommandListImmediate& RHICommandList = *(FRHICommandListImmediate*)immediate_command_list;
+		FRHICommandListImmediate& RHICmdList = *(FRHICommandListImmediate*)immediate_command_list;
 		const FTexturePreviewUserData& PreviewParams = *(const FTexturePreviewUserData*)user_data;
 		const FPooledRenderTargetDesc& TextureDesc = ViewExtension->TextureDesc;
 
@@ -388,7 +465,7 @@ namespace ImGuiTextureVisualizer
 		TShaderMapRef<FTextureDisplayPS> PixelShader(ShaderMap, PermutationVector);
 
 		FGraphicsPipelineStateInitializer GraphicsPSOInit;
-		RHICommandList.ApplyCachedRenderTargets(GraphicsPSOInit);
+		RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
 		GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
 		GraphicsPSOInit.RasterizerState = TStaticRasterizerState<FM_Solid, CM_None>::GetRHI();
 		GraphicsPSOInit.BlendState = TStaticBlendState<CW_RGB>::GetRHI();
@@ -396,16 +473,17 @@ namespace ImGuiTextureVisualizer
 		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
 		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
 		GraphicsPSOInit.PrimitiveType = PT_TriangleList;
-		SetGraphicsPipelineState(RHICommandList, GraphicsPSOInit, 0);
+		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 
-		FRHITextureSRVCreateInfo SRVInfo(
-			0, TextureDesc.NumMips,
-			0, TextureDesc.ArraySize,
-			(IsStencilFormat(TextureDesc.Format) && PreviewParams.Options.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
-		
+		auto TextureSRVDesc = FRHIViewDesc::CreateTextureSRV()
+			.SetDimensionFromTexture(ViewExtension->TextureToDisplay->GetRHI())
+			.SetMipRange(0, TextureDesc.NumMips)
+			.SetArrayRange(0, TextureDesc.ArraySize)
+			.SetFormat((IsStencilFormat(TextureDesc.Format) && PreviewParams.Options.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
+
 		SetShaderParametersLegacyPS(
-			RHICommandList, PixelShader,
-			RHICommandList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), SRVInfo),
+			RHICmdList, PixelShader,
+			RHICmdList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), TextureSRVDesc),
 			TStaticSamplerState<SF_Point>::GetRHI(),
 			FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
 			TextureVisShowFlags,
@@ -417,11 +495,11 @@ namespace ImGuiTextureVisualizer
 			FIntPoint(TexturePreviewOptions.TextureInspectorCursorPosition.X, TexturePreviewOptions.TextureInspectorCursorPosition.Y),
 			PreviewParams.Options.TextureInspectorRect);
 
-		RHICommandList.SetViewport(0.f, 0.f, 0.f, PreviewParams.ViewportSize.x, PreviewParams.ViewportSize.y, 1.f);
-		RHICommandList.SetScissorRect(true, PreviewParams.ClipRectMin.x, PreviewParams.ClipRectMin.y, PreviewParams.ClipRectMax.x, PreviewParams.ClipRectMax.y);
+		RHICmdList.SetViewport(0.f, 0.f, 0.f, PreviewParams.ViewportSize.x, PreviewParams.ViewportSize.y, 1.f);
+		RHICmdList.SetScissorRect(true, PreviewParams.ClipRectMin.x, PreviewParams.ClipRectMin.y, PreviewParams.ClipRectMax.x, PreviewParams.ClipRectMax.y);
 
 		UE::Renderer::PostProcess::DrawRectangle(
-			RHICommandList,
+			RHICmdList,
 			VertexShader,
 			PreviewParams.ClipRectMin.x,
 			PreviewParams.ClipRectMin.y,
@@ -442,69 +520,6 @@ namespace ImGuiTextureVisualizer
 		TextureInfo.NumMips = TextureDesc.NumMips;
 		TextureInfo.bIsArray = TextureDesc.bIsArray;
 		TextureInfo.bIsCubemap = TextureDesc.bIsCubemap;
-
-		// copy
-		if ((TexturePreviewOptions.TextureInspectorRect.Z - TexturePreviewOptions.TextureInspectorRect.X) > 0)
-		{
-			FTextureDisplay_CopyPixelValueCS::FPermutationDomain PermutationVector1;
-			PermutationVector1.Set<FTextureDisplay_CopyPixelValueCS::FResourceType>(ResType);
-			PermutationVector1.Set<FTextureDisplay_CopyPixelValueCS::FShaderBaseType>(BaseType);
-			TShaderMapRef<FTextureDisplay_CopyPixelValueCS> ComputeShader(ShaderMap, PermutationVector1);
-
-			EPixelFormat BufferFormat = PF_A32B32G32R32F;
-			switch (BaseType)
-			{
-			case ETexDisplay_ShaderBaseType::UInt:  BufferFormat = PF_R32G32B32A32_UINT; break;
-			case ETexDisplay_ShaderBaseType::SInt:  BufferFormat = PF_R32G32B32A32_UINT; break; // NOTE: PF_R32G32B32A32_SINT is not available
-			case ETexDisplay_ShaderBaseType::Float: BufferFormat = PF_A32B32G32R32F; break;
-			default: checkNoEntry(); break;
-			}
-
-			const int32 HoveredTexCoordX = PreviewParams.Options.TextureInspectorCursorPosition.X >> PreviewParams.Options.CurrentMip;
-			const int32 HoveredTexCoordY = PreviewParams.Options.TextureInspectorCursorPosition.Y >> PreviewParams.Options.CurrentMip;
-
-			SetComputePipelineState(RHICommandList, ComputeShader.GetComputeShader());
-			SetShaderParametersLegacyCS(
-				RHICommandList, ComputeShader,
-				RHICommandList.CreateUnorderedAccessView(GPixelValueDestBuffer->VertexBufferRHI, UE_PIXELFORMAT_TO_UINT8(BufferFormat)),
-				RHICommandList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), SRVInfo),
-				FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
-				PreviewParams.Options.CurrentMip,
-				TextureDesc.bIsCubemap ? PreviewParams.Options.CurrentFace : PreviewParams.Options.CurrentArraySlice,
-				FIntPoint(HoveredTexCoordX, HoveredTexCoordY));
-
-			RHICommandList.DispatchComputeShader(1, 1, 1);
-
-			uint8* Dst = TextureInfo.SelectedPixelValue;
-			{
-				FRHIGPUBufferReadback Readback(TEXT("TexDisplay::MinMaxReadback"));
-				uint32_t NumBytes = sizeof(FUintVector4);
-				Readback.EnqueueCopy(RHICommandList, GPixelValueDestBuffer->VertexBufferRHI, NumBytes);
-				RHICommandList.BlockUntilGPUIdle();
-				RHICommandList.FlushResources();
-
-				if (const void* SrcRawBuffer = Readback.Lock(NumBytes))
-				{
-					if (BaseType == ETexDisplay_ShaderBaseType::UInt)
-					{
-						const FUintVector4 value = ((FUintVector4*)SrcRawBuffer)[0];
-						FMemory::Memcpy(Dst, &value, sizeof(FUintVector4));
-					}
-					else if (BaseType == ETexDisplay_ShaderBaseType::SInt)
-					{
-						const FIntVector4 value = ((FIntVector4*)SrcRawBuffer)[0];
-						FMemory::Memcpy(Dst, &value, sizeof(FIntVector4));
-					}
-					else if (BaseType == ETexDisplay_ShaderBaseType::Float)
-					{
-						const FVector4f value = ((FVector4f*)SrcRawBuffer)[0];
-						FMemory::Memcpy(Dst, &value, sizeof(FVector4f));
-					}
-
-					Readback.Unlock();
-				}
-			}
-		}
 	}
 
 	static bool DrawTextureList(ImGuiContext* Context, FAnsiString& InOutSelectedTextureName)
@@ -866,16 +881,7 @@ namespace ImGuiTextureVisualizer
 
 				if (FImGui::TransparentImageButton("AutoFitRange", ZoomToTextureIcon))
 				{
-					FVector2D Range;
-					ENQUEUE_RENDER_COMMAND(AutoFit)(
-						[&Range, PreviewParams = TexturePreviewOptions](FRHICommandListImmediate& RHICommandList)
-						{
-							Range = GetMinMaxTextureValue(RHICommandList, PreviewParams);
-						});
-					FlushRenderingCommands();
-
-					InOutTexturePreviewOptions.RangeValueMin = InOutTexturePreviewOptions.RangeMin = Range.X;
-					InOutTexturePreviewOptions.RangeValueMax = InOutTexturePreviewOptions.RangeMax = Range.Y;
+					InOutTexturePreviewOptions.bRequestMinMaxTextureValues = true;
 				}
 				ImGui::SetItemTooltip("Set range based on texture Min/Max value");
 
@@ -937,22 +943,22 @@ namespace ImGuiTextureVisualizer
 		ImVec2 ConstrainedCanvasSize = ConstrainCanvasToAspectRatio(InTextureInfo.SizeX, InTextureInfo.SizeY, InCanvasSize);
 		if (InTextureInfo.IsValid())
 		{
-			if (TexturePreviewOptions.RequestedZoomLevel == FTexturePreviewOptions::ERequestedZoomLevel::OneToOne)
+			if (InOutTexturePreviewOptions.RequestedZoomLevel == FTexturePreviewOptions::ERequestedZoomLevel::OneToOne)
 			{
-				TexturePreviewOptions.CanvasZoomPercentage = 100.f;
-				TexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
+				InOutTexturePreviewOptions.CanvasZoomPercentage = 100.f;
+				InOutTexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
 			}
-			else if (TexturePreviewOptions.RequestedZoomLevel == FTexturePreviewOptions::ERequestedZoomLevel::Fit)
+			else if (InOutTexturePreviewOptions.RequestedZoomLevel == FTexturePreviewOptions::ERequestedZoomLevel::Fit)
 			{
-				TexturePreviewOptions.CanvasZoomPercentage = FMath::Min(256.f, ConstrainedCanvasSize.x / (float)InTextureInfo.SizeX) * 100.f;
-				TexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
+				InOutTexturePreviewOptions.CanvasZoomPercentage = FMath::Min(256.f, ConstrainedCanvasSize.x / (float)InTextureInfo.SizeX) * 100.f;
+				InOutTexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
 			}
 
-			TexturePreviewOptions.RequestedZoomLevel = FTexturePreviewOptions::ERequestedZoomLevel::None;
+			InOutTexturePreviewOptions.RequestedZoomLevel = FTexturePreviewOptions::ERequestedZoomLevel::None;
 		}
-		ConstrainedCanvasSize = ImVec2(InTextureInfo.SizeX, InTextureInfo.SizeY) * (TexturePreviewOptions.CanvasZoomPercentage / 100.f);
+		ConstrainedCanvasSize = ImVec2(InTextureInfo.SizeX, InTextureInfo.SizeY) * (InOutTexturePreviewOptions.CanvasZoomPercentage / 100.f);
 
-		TexturePreviewOptions.TextureInspectorRect = FIntVector4::ZeroValue;
+		InOutTexturePreviewOptions.TextureInspectorRect = FIntVector4::ZeroValue;
 		
 		ImGui::InvisibleButton("TextureCanvas", InCanvasSize, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
 
@@ -960,51 +966,51 @@ namespace ImGuiTextureVisualizer
 		const bool bIsCanvasClicked = ImGui::IsItemActive();
 		if (bIsCanvasHovered && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
 		{
-			TexturePreviewOptions.CanvasZoomPercentage += 8.f * (ImGui::GetIO().MouseWheel > 0 ? 1 : -1);
-			TexturePreviewOptions.CanvasZoomPercentage = FMath::Clamp(TexturePreviewOptions.CanvasZoomPercentage, 5.f, 25600.f);
+			InOutTexturePreviewOptions.CanvasZoomPercentage += 8.f * (ImGui::GetIO().MouseWheel > 0 ? 1 : -1);
+			InOutTexturePreviewOptions.CanvasZoomPercentage = FMath::Clamp(InOutTexturePreviewOptions.CanvasZoomPercentage, 5.f, 25600.f);
 		}
 		if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.f))
 		{
-			TexturePreviewOptions.CanvasScrollOffset.X += ImGui::GetIO().MouseDelta.x;
-			TexturePreviewOptions.CanvasScrollOffset.Y += ImGui::GetIO().MouseDelta.y;
+			InOutTexturePreviewOptions.CanvasScrollOffset.X += ImGui::GetIO().MouseDelta.x;
+			InOutTexturePreviewOptions.CanvasScrollOffset.Y += ImGui::GetIO().MouseDelta.y;
 		}
 
 		if (ConstrainedCanvasSize.x < InCanvasSize.x || ConstrainedCanvasSize.y < InCanvasSize.y)
 		{
-			TexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
+			InOutTexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
 		}
 		else
 		{
 			const ImRect TranslatedCanvas = ImRect(
-				ImVec2(TexturePreviewOptions.CanvasScrollOffset.X, TexturePreviewOptions.CanvasScrollOffset.Y),
-				ConstrainedCanvasSize + ImVec2(TexturePreviewOptions.CanvasScrollOffset.X, TexturePreviewOptions.CanvasScrollOffset.Y));
+				ImVec2(InOutTexturePreviewOptions.CanvasScrollOffset.X, InOutTexturePreviewOptions.CanvasScrollOffset.Y),
+				ConstrainedCanvasSize + ImVec2(InOutTexturePreviewOptions.CanvasScrollOffset.X, InOutTexturePreviewOptions.CanvasScrollOffset.Y));
 
 			if (TranslatedCanvas.Min.x > 0)
 			{
-				TexturePreviewOptions.CanvasScrollOffset.X = 0.f;
+				InOutTexturePreviewOptions.CanvasScrollOffset.X = 0.f;
 			}
 			else if (TranslatedCanvas.Max.x < InCanvasSize.x)
 			{
-				TexturePreviewOptions.CanvasScrollOffset.X = InCanvasSize.x - ConstrainedCanvasSize.x;
+				InOutTexturePreviewOptions.CanvasScrollOffset.X = InCanvasSize.x - ConstrainedCanvasSize.x;
 			}
 
 			if (TranslatedCanvas.Min.y > 0)
 			{
-				TexturePreviewOptions.CanvasScrollOffset.Y = 0.f;
+				InOutTexturePreviewOptions.CanvasScrollOffset.Y = 0.f;
 			}
 			else if (TranslatedCanvas.Max.y < InCanvasSize.y)
 			{
-				TexturePreviewOptions.CanvasScrollOffset.Y = InCanvasSize.y - ConstrainedCanvasSize.y;
+				InOutTexturePreviewOptions.CanvasScrollOffset.Y = InCanvasSize.y - ConstrainedCanvasSize.y;
 			}
 		}
 
-		TexturePreviewOptions.UVScaleAndOffset =
+		InOutTexturePreviewOptions.UVScaleAndOffset =
 		FVector4f
 		{
 			ImGui::GetItemRectSize().x / ConstrainedCanvasSize.x,
 			ImGui::GetItemRectSize().y / ConstrainedCanvasSize.y,
-			-TexturePreviewOptions.CanvasScrollOffset.X / ConstrainedCanvasSize.x,
-			-TexturePreviewOptions.CanvasScrollOffset.Y / ConstrainedCanvasSize.y
+			-InOutTexturePreviewOptions.CanvasScrollOffset.X / ConstrainedCanvasSize.x,
+			-InOutTexturePreviewOptions.CanvasScrollOffset.Y / ConstrainedCanvasSize.y
 		};
 
 		//if (bIsCanvasHovered)
@@ -1014,8 +1020,8 @@ namespace ImGuiTextureVisualizer
 			RelativeMousePos.y = FMath::Clamp(RelativeMousePos.y, 0.f, ImGui::GetItemRectSize().y);
 
 			FVector2f Scale = FVector2f(InTextureInfo.SizeX, InTextureInfo.SizeY) / FVector2f(ConstrainedCanvasSize.x, ConstrainedCanvasSize.y);
-			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - TexturePreviewOptions.CanvasScrollOffset) * Scale;
-			TexturePreviewOptions.CursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
+			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - InOutTexturePreviewOptions.CanvasScrollOffset) * Scale;
+			InOutTexturePreviewOptions.CursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
 		}
 
 		if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.f))
@@ -1025,8 +1031,8 @@ namespace ImGuiTextureVisualizer
 			RelativeMousePos.y = FMath::Clamp(RelativeMousePos.y, 0.f, ImGui::GetItemRectSize().y);
 			
 			FVector2f Scale = FVector2f(InTextureInfo.SizeX, InTextureInfo.SizeY) / FVector2f(ConstrainedCanvasSize.x, ConstrainedCanvasSize.y);
-			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - TexturePreviewOptions.CanvasScrollOffset) * Scale;
-			TexturePreviewOptions.TextureInspectorCursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
+			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - InOutTexturePreviewOptions.CanvasScrollOffset) * Scale;
+			InOutTexturePreviewOptions.TextureInspectorCursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
 
 			const float TextureInspectorSize = 144.f;
 			const float TextureInspectorInfoWidgetSize = 256.f;
@@ -1049,15 +1055,15 @@ namespace ImGuiTextureVisualizer
 				TextureInspectorInfoWidgetOffsetX = -TextureInspectorInfoWidgetSize;
 			}
 
-			TexturePreviewOptions.TextureInspectorRect.X = AbsoluteMousePos.x + TextureInspectorOffset.x;
-			TexturePreviewOptions.TextureInspectorRect.Y = AbsoluteMousePos.y + TextureInspectorOffset.y;
-			TexturePreviewOptions.TextureInspectorRect.Z = AbsoluteMousePos.x + TextureInspectorOffset.x + TextureInspectorSize;
-			TexturePreviewOptions.TextureInspectorRect.W = AbsoluteMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
+			InOutTexturePreviewOptions.TextureInspectorRect.X = AbsoluteMousePos.x + TextureInspectorOffset.x;
+			InOutTexturePreviewOptions.TextureInspectorRect.Y = AbsoluteMousePos.y + TextureInspectorOffset.y;
+			InOutTexturePreviewOptions.TextureInspectorRect.Z = AbsoluteMousePos.x + TextureInspectorOffset.x + TextureInspectorSize;
+			InOutTexturePreviewOptions.TextureInspectorRect.W = AbsoluteMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
 
-			const int32 HoveredTexCoordX = TexturePreviewOptions.TextureInspectorCursorPosition.X >> TexturePreviewOptions.CurrentMip;
-			const int32 HoveredTexCoordY = TexturePreviewOptions.TextureInspectorCursorPosition.Y >> TexturePreviewOptions.CurrentMip;
+			const int32 HoveredTexCoordX = InOutTexturePreviewOptions.TextureInspectorCursorPosition.X >> InOutTexturePreviewOptions.CurrentMip;
+			const int32 HoveredTexCoordY = InOutTexturePreviewOptions.TextureInspectorCursorPosition.Y >> InOutTexturePreviewOptions.CurrentMip;
 			
-			ImGui::SetNextWindowPos(ImVec2(TexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, TexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
+			ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
 			ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
 			if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
 			{
@@ -1147,16 +1153,38 @@ namespace ImGuiTextureVisualizer
 			}
 
 			TextureMetadataReadIndex_GT = (TextureMetadataReadIndex_GT + 1) % 2;
-			ENQUEUE_RENDER_COMMAND(Flip)(
-				[bRequestNewTexture, TextureMetadataReadIndex=((TextureMetadataReadIndex_GT + 1) % 2)](FRHICommandListImmediate& RHICommandList)
+			ENQUEUE_RENDER_COMMAND(ImGuiTexDisplay_Flip)(
+				[bRequestNewTexture, PreviewOptions=TexturePreviewOptions, TextureMetadataReadIndex=((TextureMetadataReadIndex_GT + 1) % 2)](FRHICommandListImmediate& RHICmdList)
 				{
+					SCOPED_DRAW_EVENT(RHICmdList, ImGuiTexDisplay_Flip);
+
 					TextureMetadataReadIndex_RT = TextureMetadataReadIndex;
 					
 					if (bRequestNewTexture)
 					{
 						ViewExtension->SetTextureToDisplay(ANSI_TO_TCHAR(*VisTextureName));
 					}
+
+					ReadCurrentPixelValue(RHICmdList, PreviewOptions);
 				});
+
+			if (TexturePreviewOptions.bRequestMinMaxTextureValues)
+			{
+				TexturePreviewOptions.bRequestMinMaxTextureValues = false;
+
+				FVector2D Range;
+				ENQUEUE_RENDER_COMMAND(ImGuiTexDisplay_GetMinMaxValues)(
+					[&Range, PreviewOptions=TexturePreviewOptions](FRHICommandListImmediate& RHICmdList)
+					{
+						SCOPED_DRAW_EVENT(RHICmdList, ImGuiTexDisplay_GetMinMaxValues);
+
+						Range = GetMinMaxTextureValue(RHICmdList, PreviewOptions);
+					});
+				FlushRenderingCommands();
+
+				TexturePreviewOptions.RangeValueMin = TexturePreviewOptions.RangeMin = Range.X;
+				TexturePreviewOptions.RangeValueMax = TexturePreviewOptions.RangeMax = Range.Y;
+			}
 		}
 		ImGui::End();
 	}
