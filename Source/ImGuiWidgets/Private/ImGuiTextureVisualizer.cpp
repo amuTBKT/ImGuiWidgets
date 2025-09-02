@@ -16,6 +16,44 @@
 
 UE_DISABLE_OPTIMIZATION
 
+// override setup
+namespace ImGuiTextureVisualizer
+{
+	static FAnsiString TextureOverrideName;
+	static TWeakObjectPtr<const UTexture> TextureOverride = nullptr;
+	static const FTextureResource* TextureResourceOverride = nullptr;
+
+	IMGUIWIDGETS_API void ClearTextureOverride()
+	{
+		TextureOverrideName.Reset();
+		TextureOverride.Reset();
+		TextureResourceOverride = nullptr;
+	}
+
+	IMGUIWIDGETS_API void SetTextureOverride(const UTexture* Texture)
+	{
+		ClearTextureOverride();
+
+		if (Texture)
+		{
+			TextureOverride = Texture;
+			TextureOverrideName = TCHAR_TO_ANSI(*Texture->GetName());
+		}
+	}
+
+	IMGUIWIDGETS_API void SetTextureOverride(const FString& DisplayName, const FTextureResource* TextureResource)
+	{
+		ClearTextureOverride();
+
+		if (TextureResourceOverride)
+		{
+			TextureResourceOverride = TextureResource;
+			TextureOverrideName = TCHAR_TO_ANSI(*DisplayName);
+		}
+	}
+}
+
+// widget logic
 namespace ImGuiTextureVisualizer
 {
 	FVertexBuffer* GPixelValueDestBuffer = new TGlobalResource<FPixelValueDestBuffer, FRenderResource::EInitPhase::Default>;
@@ -103,6 +141,9 @@ namespace ImGuiTextureVisualizer
 		FIntPoint TextureInspectorCursorPosition = FIntPoint::ZeroValue;
 		FIntVector4 TextureInspectorRect = FIntVector4::ZeroValue;
 
+		// if valid, prefer this over ViewExtension
+		const FTextureResource* TextureResourceOverride = nullptr;
+
 		void Reset()
 		{
 			CurrentArraySlice = 0;
@@ -118,20 +159,19 @@ namespace ImGuiTextureVisualizer
 
 			// fit to new texture on reset
 			RequestedZoomLevel = ERequestedZoomLevel::Fit;
+
+			TextureResourceOverride = nullptr;
 		}
 	};
 	static FTexturePreviewOptions TexturePreviewOptions;
 	
-	struct FTexturePreviewUserData
-	{
-		ImVec2 ViewportSize;
-		ImVec2 ClipRectMin;
-		ImVec2 ClipRectMax;
-		FTexturePreviewOptions Options;
-	};
-
 	static TArray<FAnsiString> AvailableTextures;
 	static TSharedPtr<FTextureCollectorSceneViewExtension> ViewExtension = nullptr;
+
+	static bool IsTextureOverrideValid()
+	{
+		return TextureOverride.IsValid() || TextureResourceOverride;
+	}
 
 	static void Initialize()
 	{
@@ -143,17 +183,32 @@ namespace ImGuiTextureVisualizer
 			});
 	}
 
+	FRHITexture* GetTextureToDisplay(const FTexturePreviewOptions& InPreviewOptions)
+	{
+		FRHITexture* TextureToDisplay = nullptr;
+		if (InPreviewOptions.TextureResourceOverride && InPreviewOptions.TextureResourceOverride->GetTextureReference())
+		{
+			TextureToDisplay = InPreviewOptions.TextureResourceOverride->TextureRHI;
+		}
+		else
+		{
+			TextureToDisplay = ViewExtension->TextureToDisplay ? ViewExtension->TextureToDisplay->GetRHI() : nullptr;
+		}
+		return TextureToDisplay;
+	}
+
 	static FVector2D GetMinMaxTextureValue(FRHICommandListImmediate& RHICmdList, const FTexturePreviewOptions& InPreviewOptions)
 	{
-		if (!ViewExtension->TextureToDisplay)
+		FRHITexture* TextureToDisplay = GetTextureToDisplay(InPreviewOptions);
+		if (!TextureToDisplay)
 		{
 			return FVector2D(0.f, 1.f);
 		}
-		const FPooledRenderTargetDesc& TextureDesc = ViewExtension->TextureDesc;
+		const FPooledRenderTargetDesc& TextureDesc = Translate(TextureToDisplay->GetDesc());
 
 		const uint64 TextureExtentMax = TextureDesc.Extent.GetMax();
 		const uint64 BlockPixSize = FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK;
-		const uint64 BlockCount = uint64(TextureExtentMax * TextureExtentMax) / (BlockPixSize * BlockPixSize);
+		const uint64 BlockCount = FMath::Max(1ull, uint64(TextureExtentMax * TextureExtentMax) / (BlockPixSize * BlockPixSize));
 
 #if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 505) //(Version > 5.5)
 		FRHIBufferCreateDesc TileMinMaxBufferDesc =
@@ -188,10 +243,16 @@ namespace ImGuiTextureVisualizer
 				PermutationVector.Set<FTextureDisplay_TileMinMaxCS::FShaderBaseType>(BaseType);
 				TShaderMapRef<FTextureDisplay_TileMinMaxCS> ComputeShader(ShaderMap, PermutationVector);
 
+				ETextureDimension TextureDimension = TextureToDisplay->GetDesc().Dimension;
+				if (TextureDimension == ETextureDimension::TextureCube || TextureDimension == ETextureDimension::TextureCubeArray)
+				{
+					TextureDimension = ETextureDimension::Texture2DArray;
+				}
+
 				auto TextureSRVDesc = FRHIViewDesc::CreateTextureSRV()
-					.SetDimensionFromTexture(ViewExtension->TextureToDisplay->GetRHI())
+					.SetDimension(TextureDimension)
 					.SetMipRange(0, TextureDesc.NumMips)
-					.SetArrayRange(0, TextureDesc.ArraySize)
+					.SetArrayRange(0, TextureDesc.IsCubemap() ? TextureDesc.ArraySize * 6 : TextureDesc.ArraySize)
 					.SetFormat((IsStencilFormat(TextureDesc.Format) && InPreviewOptions.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
 
 				EPixelFormat BufferFormat = PF_A32B32G32R32F;
@@ -207,7 +268,7 @@ namespace ImGuiTextureVisualizer
 				SetShaderParametersLegacyCS(
 					RHICmdList, ComputeShader,
 					RHICmdList.CreateUnorderedAccessView(TileMinMaxBuffer.GetReference(), FRHIViewDesc::CreateBufferUAV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
-					RHICmdList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), TextureSRVDesc),
+					RHICmdList.CreateShaderResourceView(TextureToDisplay, TextureSRVDesc),
 					FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
 					InPreviewOptions.CurrentMip,
 					TextureDesc.bIsCubemap ? InPreviewOptions.CurrentFace : InPreviewOptions.CurrentArraySlice);
@@ -339,11 +400,12 @@ namespace ImGuiTextureVisualizer
 	{
 		if ((InPreviewOptions.TextureInspectorRect.Z - InPreviewOptions.TextureInspectorRect.X) > 0)
 		{
-			if (!ViewExtension->TextureToDisplay)
+			FRHITexture* TextureToDisplay = GetTextureToDisplay(InPreviewOptions);			
+			if (!TextureToDisplay)
 			{
 				return;
 			}
-			const FPooledRenderTargetDesc& TextureDesc = ViewExtension->TextureDesc;
+			const FPooledRenderTargetDesc& TextureDesc = Translate(TextureToDisplay->GetDesc());
 
 			ETexDisplay_ResourceType ResType;
 			ETexDisplay_ShaderBaseType BaseType;
@@ -365,10 +427,16 @@ namespace ImGuiTextureVisualizer
 			default: checkNoEntry(); break;
 			}
 
+			ETextureDimension TextureDimension = TextureToDisplay->GetDesc().Dimension;
+			if (TextureDimension == ETextureDimension::TextureCube || TextureDimension == ETextureDimension::TextureCubeArray)
+			{
+				TextureDimension = ETextureDimension::Texture2DArray;
+			}
+
 			auto TextureSRVDesc = FRHIViewDesc::CreateTextureSRV()
-				.SetDimensionFromTexture(ViewExtension->TextureToDisplay->GetRHI())
+				.SetDimension(TextureDimension)
 				.SetMipRange(0, TextureDesc.NumMips)
-				.SetArrayRange(0, TextureDesc.ArraySize)
+				.SetArrayRange(0, TextureDesc.IsCubemap() ? TextureDesc.ArraySize * 6 : TextureDesc.ArraySize)
 				.SetFormat((IsStencilFormat(TextureDesc.Format) && InPreviewOptions.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
 
 			const int32 HoveredTexCoordX = InPreviewOptions.TextureInspectorCursorPosition.X >> InPreviewOptions.CurrentMip;
@@ -378,7 +446,7 @@ namespace ImGuiTextureVisualizer
 			SetShaderParametersLegacyCS(
 				RHICmdList, ComputeShader,
 				RHICmdList.CreateUnorderedAccessView(GPixelValueDestBuffer->VertexBufferRHI, FRHIViewDesc::CreateBufferUAV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
-				RHICmdList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), TextureSRVDesc),
+				RHICmdList.CreateShaderResourceView(TextureToDisplay, TextureSRVDesc),
 				FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
 				InPreviewOptions.CurrentMip,
 				TextureDesc.bIsCubemap ? InPreviewOptions.CurrentFace : InPreviewOptions.CurrentArraySlice,
@@ -420,6 +488,13 @@ namespace ImGuiTextureVisualizer
 		}
 	}
 
+	struct FTexturePreviewUserData
+	{
+		ImVec2 ViewportSize;
+		ImVec2 ClipRectMin;
+		ImVec2 ClipRectMax;
+		FTexturePreviewOptions Options;
+	};
 	static void TexturePreviewCallback(void* immediate_command_list, void* user_data, size_t user_data_size)
 	{
 		if (!ensure(user_data && (sizeof(FTexturePreviewUserData) == user_data_size)))
@@ -427,14 +502,15 @@ namespace ImGuiTextureVisualizer
 			return;
 		}
 
-		if (!ViewExtension->TextureToDisplay)
+		FRHICommandListImmediate& RHICmdList = *(FRHICommandListImmediate*)immediate_command_list;
+		const FTexturePreviewUserData& PreviewParams = *(const FTexturePreviewUserData*)user_data;
+
+		FRHITexture* TextureToDisplay = GetTextureToDisplay(PreviewParams.Options);
+		if (!TextureToDisplay)
 		{
 			return;
 		}
-
-		FRHICommandListImmediate& RHICmdList = *(FRHICommandListImmediate*)immediate_command_list;
-		const FTexturePreviewUserData& PreviewParams = *(const FTexturePreviewUserData*)user_data;
-		const FPooledRenderTargetDesc& TextureDesc = ViewExtension->TextureDesc;
+		const FPooledRenderTargetDesc& TextureDesc = Translate(TextureToDisplay->GetDesc());
 
 		uint32 TextureVisShowFlags = 0u;
 		if (IsStencilFormat(TextureDesc.Format))
@@ -475,15 +551,21 @@ namespace ImGuiTextureVisualizer
 		GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 
+		ETextureDimension TextureDimension = TextureToDisplay->GetDesc().Dimension;
+		if (TextureDimension == ETextureDimension::TextureCube || TextureDimension == ETextureDimension::TextureCubeArray)
+		{
+			TextureDimension = ETextureDimension::Texture2DArray;
+		}
+
 		auto TextureSRVDesc = FRHIViewDesc::CreateTextureSRV()
-			.SetDimensionFromTexture(ViewExtension->TextureToDisplay->GetRHI())
+			.SetDimension(TextureDimension)
 			.SetMipRange(0, TextureDesc.NumMips)
-			.SetArrayRange(0, TextureDesc.ArraySize)
+			.SetArrayRange(0, TextureDesc.IsCubemap() ? TextureDesc.ArraySize * 6 : TextureDesc.ArraySize)
 			.SetFormat((IsStencilFormat(TextureDesc.Format) && PreviewParams.Options.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
 
 		SetShaderParametersLegacyPS(
 			RHICmdList, PixelShader,
-			RHICmdList.CreateShaderResourceView(ViewExtension->TextureToDisplay->GetRHI(), TextureSRVDesc),
+			RHICmdList.CreateShaderResourceView(TextureToDisplay, TextureSRVDesc),
 			TStaticSamplerState<SF_Point>::GetRHI(),
 			FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
 			TextureVisShowFlags,
@@ -529,6 +611,11 @@ namespace ImGuiTextureVisualizer
 		
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 		const FAnsiString PreviouslySelectedTextureName = InOutSelectedTextureName;
+		
+		const bool bIsUsingTextureOverride = IsTextureOverrideValid();
+
+		ImGui::BeginDisabled(bIsUsingTextureOverride);
+
 		ImGui::SetNextItemWidth(400.f * GlobalScale);
 		const bool bShowTextureList = ImGui::BeginCombo("##TextureList", InOutSelectedTextureName.IsEmpty() ? "Select a Texture..." : *InOutSelectedTextureName);
 		const ImVec2 ComboBoxSize = ImGui::GetItemRectSize();
@@ -587,6 +674,8 @@ namespace ImGuiTextureVisualizer
 			ImGui::EndCombo();
 		}
 		
+		ImGui::EndDisabled();
+
 		// reset icon
 		if (!InOutSelectedTextureName.IsEmpty())
 		{
@@ -602,8 +691,12 @@ namespace ImGuiTextureVisualizer
 			if (FImGui::TransparentImageButton("ResetTexture", ResetToDefaultIcon))
 			{
 				InOutSelectedTextureName.Reset();
+				if (bIsUsingTextureOverride)
+				{
+					ClearTextureOverride();
+				}
 			}
-			ImGui::SetItemTooltip("Reset");
+			ImGui::SetItemTooltip(bIsUsingTextureOverride ? "Clear Texture Override" : "Reset");
 			
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(3);
@@ -1092,6 +1185,10 @@ namespace ImGuiTextureVisualizer
 		if (ImGui::Begin("TextureVisualizer", nullptr, ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoScrollbar))
 		{
 			static FAnsiString VisTextureName;
+			if (IsTextureOverrideValid())
+			{
+				VisTextureName = TextureOverrideName;
+			}			
 			const bool bRequestNewTexture = DrawTextureList(Context, VisTextureName);
 			if (bRequestNewTexture)
 			{
@@ -1115,6 +1212,16 @@ namespace ImGuiTextureVisualizer
 			
 			const ImVec2 TextureCanvasSize = ImGui::GetContentRegionAvail() - ImVec2(0.f, TextureDetailsWidgetHeight);
 			DrawTextureCanvas(Context, TextureCanvasSize, TextureInfo, TexturePreviewOptions);
+
+			TexturePreviewOptions.TextureResourceOverride = nullptr;
+			if (TextureOverride.IsValid())
+			{
+				TexturePreviewOptions.TextureResourceOverride = TextureOverride->GetResource();
+			}
+			else if (TextureResourceOverride)
+			{
+				TexturePreviewOptions.TextureResourceOverride = TextureResourceOverride;
+			}
 
 			FTexturePreviewUserData Params;
 			Params.ViewportSize = ImGui::GetIO().DisplaySize;

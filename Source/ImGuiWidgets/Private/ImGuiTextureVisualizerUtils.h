@@ -69,26 +69,22 @@ namespace ImGuiTextureVisualizer
 
 			if (!Results.IsEmpty() && (Results[0]->HasBeenProduced() || Results[0]->IsExternal()))
 			{
-				TextureDesc = Translate(Results[0]->Desc);
 				GraphBuilder.QueueTextureExtraction(Results[0], &TextureToDisplay);
 			}
 			else
 			{
-				TextureDesc.Reset();
 				TextureToDisplay.SafeRelease();
 			}
 		}
 
 		void SetTextureToDisplay(FString TextureName)
 		{
-			TextureDesc.Reset();
 			TextureToDisplay.SafeRelease();
 			DisplayedTextureName = MoveTemp(TextureName);
 		}
 
 		FString DisplayedTextureName;
 		TSet<FString> AvailableTextures;
-		FPooledRenderTargetDesc TextureDesc;
 		TRefCountPtr<IPooledRenderTarget> TextureToDisplay;
 	};
 
