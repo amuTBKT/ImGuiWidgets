@@ -1,3 +1,5 @@
+#include "ImGuiTextureVisualizer.h"
+
 #include "ImGuiSubsystem.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
@@ -19,37 +21,60 @@ UE_DISABLE_OPTIMIZATION
 // override setup
 namespace ImGuiTextureVisualizer
 {
-	static FAnsiString TextureOverrideName;
-	static TWeakObjectPtr<const UTexture> TextureOverride = nullptr;
 	static const FTextureResource* TextureResourceOverride = nullptr;
+	static TWeakObjectPtr<const UTexture> TextureOverride = nullptr;
+	static FTextureRHIRef TextureRHIOverride = nullptr;
+	static FAnsiString TextureOverrideName;
 
-	IMGUIWIDGETS_API void ClearTextureOverride()
+	void SetTextureOverride_GameThread(const UTexture* Texture)
 	{
-		TextureOverrideName.Reset();
-		TextureOverride.Reset();
-		TextureResourceOverride = nullptr;
-	}
-
-	IMGUIWIDGETS_API void SetTextureOverride(const UTexture* Texture)
-	{
-		ClearTextureOverride();
+		ClearTextureOverride_GameThread();
 
 		if (Texture)
 		{
 			TextureOverride = Texture;
-			TextureOverrideName = TCHAR_TO_ANSI(*Texture->GetName());
+
+			ENQUEUE_RENDER_COMMAND(SetTextureOverrideName)(
+				[TextureName=FAnsiString(TCHAR_TO_ANSI(*Texture->GetName()))](FRHICommandListImmediate& RHICmdList)
+				{
+					TextureOverrideName = TextureName;
+				});
 		}
 	}
 
-	IMGUIWIDGETS_API void SetTextureOverride(const FString& DisplayName, const FTextureResource* TextureResource)
+	void SetTextureOverride_GameThread(const FString& DisplayName, const FTextureResource* TextureResource)
 	{
-		ClearTextureOverride();
+		ClearTextureOverride_GameThread();
 
 		if (TextureResourceOverride)
 		{
 			TextureResourceOverride = TextureResource;
-			TextureOverrideName = TCHAR_TO_ANSI(*DisplayName);
+			
+			ENQUEUE_RENDER_COMMAND(SetTextureOverrideName)(
+				[TextureName = FAnsiString(TCHAR_TO_ANSI(*DisplayName))](FRHICommandListImmediate& RHICmdList)
+				{
+					TextureOverrideName = TextureName;
+				});
 		}
+	}
+
+	void SetTextureOverride_RenderThread(const FString& DisplayName, FRHITexture* TextureResource)
+	{
+		TextureRHIOverride = TextureResource;
+		TextureOverrideName = TCHAR_TO_ANSI(*DisplayName);
+	}
+
+	void ClearTextureOverride_GameThread()
+	{
+		TextureOverride.Reset();
+		TextureResourceOverride = nullptr;
+		
+		ENQUEUE_RENDER_COMMAND(SetTextureOverrideName)(
+			[](FRHICommandListImmediate& RHICmdList)
+			{
+				TextureRHIOverride = nullptr;
+				TextureOverrideName.Reset();
+			});
 	}
 }
 
@@ -58,7 +83,8 @@ namespace ImGuiTextureVisualizer
 {
 	FVertexBuffer* GPixelValueDestBuffer = new TGlobalResource<FPixelValueDestBuffer, FRenderResource::EInitPhase::Default>;
 
-	struct FTextureMetadata
+	// Texture info populated by the Render thread
+	struct FTextureInfo
 	{
 		int32		 SizeX		= 1;
 		int32		 SizeY		= 1;
@@ -69,7 +95,12 @@ namespace ImGuiTextureVisualizer
 		uint8		 bIsArray	: 1 = 0;
 		uint8		 bIsCubemap : 1 = 0;
 
+		// read back value for single pixel
 		uint8		 SelectedPixelValue[sizeof(FUintVector4)];
+
+		// since we can override texture from Render thread,
+		// kind of need to keep it in sync b/w Render and Game thread
+		FAnsiString TextureOverrideName;
 
 		void Reset()
 		{
@@ -80,7 +111,10 @@ namespace ImGuiTextureVisualizer
 			bIsCubemap = false;
 
 			FMemory::Memset(SelectedPixelValue, 0, sizeof(FUintVector4));
+			
+			TextureOverrideName.Reset();
 		}
+
 		bool IsValid() const
 		{
 			return Format != PF_Unknown;
@@ -88,19 +122,20 @@ namespace ImGuiTextureVisualizer
 
 		int32 GetSizeX(int32 MipIndex) const
 		{
-			return SizeX >> MipIndex;
+			return FMath::Max(1, SizeX >> MipIndex);
 		}
+
 		int32 GetSizeY(int32 MipIndex) const
 		{
-			return SizeY >> MipIndex;
+			return FMath::Max(1, SizeY >> MipIndex);
 		}
 	};
-	static FTextureMetadata DoubleBufferedTextureMetadata[2];
-	static uint8 TextureMetadataReadIndex_RT = 0;
-	static uint8 TextureMetadataReadIndex_GT = 0;
-	FTextureMetadata& GetTextureMetadata(bool bOnRenderThread)
+	static FTextureInfo DoubleBufferedTextureInfo[2];
+	static uint8 TextureInfoReadIndex_RT = 0;
+	static uint8 TextureInfoReadIndex_GT = 0;
+	FTextureInfo& GetTextureInfo(bool bOnRenderThread)
 	{
-		return DoubleBufferedTextureMetadata[bOnRenderThread ? TextureMetadataReadIndex_RT : TextureMetadataReadIndex_GT];
+		return DoubleBufferedTextureInfo[bOnRenderThread ? TextureInfoReadIndex_RT : TextureInfoReadIndex_GT];
 	}
 
 	struct FTexturePreviewOptions
@@ -141,7 +176,7 @@ namespace ImGuiTextureVisualizer
 		FIntPoint TextureInspectorCursorPosition = FIntPoint::ZeroValue;
 		FIntVector4 TextureInspectorRect = FIntVector4::ZeroValue;
 
-		// if valid, prefer this over ViewExtension
+		// if valid, prefer this over the textures collected from GraphBuilder
 		const FTextureResource* TextureResourceOverride = nullptr;
 
 		void Reset()
@@ -170,7 +205,7 @@ namespace ImGuiTextureVisualizer
 
 	static bool IsTextureOverrideValid()
 	{
-		return TextureOverride.IsValid() || TextureResourceOverride;
+		return !GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName.IsEmpty();
 	}
 
 	static void Initialize()
@@ -185,6 +220,11 @@ namespace ImGuiTextureVisualizer
 
 	FRHITexture* GetTextureToDisplay(const FTexturePreviewOptions& InPreviewOptions)
 	{
+		if (TextureRHIOverride)
+		{
+			return TextureRHIOverride.GetReference();
+		}
+
 		FRHITexture* TextureToDisplay = nullptr;
 		if (InPreviewOptions.TextureResourceOverride && InPreviewOptions.TextureResourceOverride->GetTextureReference())
 		{
@@ -204,7 +244,7 @@ namespace ImGuiTextureVisualizer
 		{
 			return FVector2D(0.f, 1.f);
 		}
-		const FPooledRenderTargetDesc& TextureDesc = Translate(TextureToDisplay->GetDesc());
+		const FPooledRenderTargetDesc TextureDesc = Translate(TextureToDisplay->GetDesc());
 
 		const uint64 TextureExtentMax = TextureDesc.Extent.GetMax();
 		const uint64 BlockPixSize = FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK;
@@ -405,7 +445,7 @@ namespace ImGuiTextureVisualizer
 			{
 				return;
 			}
-			const FPooledRenderTargetDesc& TextureDesc = Translate(TextureToDisplay->GetDesc());
+			const FPooledRenderTargetDesc TextureDesc = Translate(TextureToDisplay->GetDesc());
 
 			ETexDisplay_ResourceType ResType;
 			ETexDisplay_ShaderBaseType BaseType;
@@ -454,7 +494,7 @@ namespace ImGuiTextureVisualizer
 
 			RHICmdList.DispatchComputeShader(1, 1, 1);
 
-			FTextureMetadata& TextureInfo = GetTextureMetadata(/*bOnRenderThread=*/true);
+			FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/true);
 			uint8* Dst = TextureInfo.SelectedPixelValue;
 			{
 				FRHIGPUBufferReadback Readback(TEXT("TexDisplay::CurrentPixelReadback"));
@@ -510,7 +550,7 @@ namespace ImGuiTextureVisualizer
 		{
 			return;
 		}
-		const FPooledRenderTargetDesc& TextureDesc = Translate(TextureToDisplay->GetDesc());
+		const FPooledRenderTargetDesc TextureDesc = Translate(TextureToDisplay->GetDesc());
 
 		uint32 TextureVisShowFlags = 0u;
 		if (IsStencilFormat(TextureDesc.Format))
@@ -593,7 +633,7 @@ namespace ImGuiTextureVisualizer
 			FIntPoint(TextureDesc.Extent.X, TextureDesc.Extent.Y),
 			EDRF_Default);
 
-		FTextureMetadata& TextureInfo = GetTextureMetadata(/*bOnRenderThread=*/true);
+		FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/true);
 		TextureInfo.SizeX = TextureDesc.Extent.X;
 		TextureInfo.SizeY = TextureDesc.Extent.Y;
 		TextureInfo.SizeZ = TextureDesc.Is3DTexture() ? TextureDesc.Depth : 0;
@@ -602,6 +642,7 @@ namespace ImGuiTextureVisualizer
 		TextureInfo.NumMips = TextureDesc.NumMips;
 		TextureInfo.bIsArray = TextureDesc.bIsArray;
 		TextureInfo.bIsCubemap = TextureDesc.bIsCubemap;
+		TextureInfo.TextureOverrideName = TextureOverrideName;
 	}
 
 	static bool DrawTextureList(ImGuiContext* Context, FAnsiString& InOutSelectedTextureName)
@@ -693,7 +734,7 @@ namespace ImGuiTextureVisualizer
 				InOutSelectedTextureName.Reset();
 				if (bIsUsingTextureOverride)
 				{
-					ClearTextureOverride();
+					ClearTextureOverride_GameThread();
 				}
 			}
 			ImGui::SetItemTooltip(bIsUsingTextureOverride ? "Clear Texture Override" : "Reset");
@@ -705,7 +746,7 @@ namespace ImGuiTextureVisualizer
 		return !InOutSelectedTextureName.Equals(PreviouslySelectedTextureName);
 	}
 
-	static void DrawTextureControls(ImGuiContext* Context, const FTextureMetadata& InTextureInfo, FTexturePreviewOptions& InOutTexturePreviewOptions)
+	static void DrawTextureControls(ImGuiContext* Context, const FTextureInfo& InTextureInfo, FTexturePreviewOptions& InOutTexturePreviewOptions)
 	{
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 		const float ControlPadding = 10.f * GlobalScale;
@@ -805,6 +846,8 @@ namespace ImGuiTextureVisualizer
 
 		// texture mip controls
 		{
+			InOutTexturePreviewOptions.CurrentMip = FMath::Clamp(InOutTexturePreviewOptions.CurrentMip, 0, InTextureInfo.NumMips - 1);
+
 			ImGui::Text("Mip"); ImGui::SameLine(); ImGui::SetNextItemWidth(128.f * GlobalScale);
 			ImGui::BeginDisabled(InTextureInfo.NumMips <= 1);
 			if (ImGui::BeginCombo("##Mip", *FAnsiString::Printf("%i - %ix%i", InOutTexturePreviewOptions.CurrentMip, InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip), InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip)), ImGuiComboFlags_None))
@@ -839,6 +882,8 @@ namespace ImGuiTextureVisualizer
 		{
 			if (InTextureInfo.bIsCubemap)
 			{
+				InOutTexturePreviewOptions.CurrentFace = FMath::Clamp(InOutTexturePreviewOptions.CurrentFace, 0, InTextureInfo.ArraySize * 6 - 1);
+
 				static const char* FaceNames[6] = { "X+", "X-", "Y+", "Y-", "Z+", "Z-" };
 
 				ImGui::Text("Face"); ImGui::SameLine(); ImGui::SetNextItemWidth(128.f * GlobalScale);
@@ -866,6 +911,8 @@ namespace ImGuiTextureVisualizer
 			}
 			else
 			{
+				InOutTexturePreviewOptions.CurrentArraySlice = FMath::Clamp(InOutTexturePreviewOptions.CurrentArraySlice, 0, FMath::Max(InTextureInfo.ArraySize, InTextureInfo.SizeZ) - 1);
+
 				ImGui::Text("Slice"); ImGui::SameLine(); ImGui::SetNextItemWidth(128.f * GlobalScale);
 				ImGui::BeginDisabled(FMath::Max(InTextureInfo.ArraySize, InTextureInfo.SizeZ) <= 1);
 				if (ImGui::BeginCombo("##Slice", *FAnsiString::Printf("Slice %i", InOutTexturePreviewOptions.CurrentArraySlice), ImGuiComboFlags_None))
@@ -1030,7 +1077,7 @@ namespace ImGuiTextureVisualizer
 	static void DrawTextureCanvas(
 		ImGuiContext* Context,
 		ImVec2 InCanvasSize,
-		const FTextureMetadata& InTextureInfo,
+		const FTextureInfo& InTextureInfo,
 		FTexturePreviewOptions& InOutTexturePreviewOptions)
 	{
 		ImVec2 ConstrainedCanvasSize = ConstrainCanvasToAspectRatio(InTextureInfo.SizeX, InTextureInfo.SizeY, InCanvasSize);
@@ -1068,32 +1115,42 @@ namespace ImGuiTextureVisualizer
 			InOutTexturePreviewOptions.CanvasScrollOffset.Y += ImGui::GetIO().MouseDelta.y;
 		}
 
-		if (ConstrainedCanvasSize.x < InCanvasSize.x || ConstrainedCanvasSize.y < InCanvasSize.y)
+		if (ConstrainedCanvasSize.x <= InCanvasSize.x)
 		{
-			InOutTexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
+			InOutTexturePreviewOptions.CanvasScrollOffset.X = 0.f;
 		}
-		else
+		if (ConstrainedCanvasSize.y <= InCanvasSize.y)
+		{
+			InOutTexturePreviewOptions.CanvasScrollOffset.Y = 0.f;
+		}
+		// clamp scrolling to widget borders
 		{
 			const ImRect TranslatedCanvas = ImRect(
 				ImVec2(InOutTexturePreviewOptions.CanvasScrollOffset.X, InOutTexturePreviewOptions.CanvasScrollOffset.Y),
 				ConstrainedCanvasSize + ImVec2(InOutTexturePreviewOptions.CanvasScrollOffset.X, InOutTexturePreviewOptions.CanvasScrollOffset.Y));
 
-			if (TranslatedCanvas.Min.x > 0)
+			if (ConstrainedCanvasSize.x > InCanvasSize.x)
 			{
-				InOutTexturePreviewOptions.CanvasScrollOffset.X = 0.f;
-			}
-			else if (TranslatedCanvas.Max.x < InCanvasSize.x)
-			{
-				InOutTexturePreviewOptions.CanvasScrollOffset.X = InCanvasSize.x - ConstrainedCanvasSize.x;
+				if (TranslatedCanvas.Min.x > 0)
+				{
+					InOutTexturePreviewOptions.CanvasScrollOffset.X = 0.f;
+				}
+				else if (TranslatedCanvas.Max.x < InCanvasSize.x)
+				{
+					InOutTexturePreviewOptions.CanvasScrollOffset.X = InCanvasSize.x - ConstrainedCanvasSize.x;
+				}
 			}
 
-			if (TranslatedCanvas.Min.y > 0)
+			if (ConstrainedCanvasSize.y > InCanvasSize.y)
 			{
-				InOutTexturePreviewOptions.CanvasScrollOffset.Y = 0.f;
-			}
-			else if (TranslatedCanvas.Max.y < InCanvasSize.y)
-			{
-				InOutTexturePreviewOptions.CanvasScrollOffset.Y = InCanvasSize.y - ConstrainedCanvasSize.y;
+				if (TranslatedCanvas.Min.y > 0)
+				{
+					InOutTexturePreviewOptions.CanvasScrollOffset.Y = 0.f;
+				}
+				else if (TranslatedCanvas.Max.y < InCanvasSize.y)
+				{
+					InOutTexturePreviewOptions.CanvasScrollOffset.Y = InCanvasSize.y - ConstrainedCanvasSize.y;
+				}
 			}
 		}
 
@@ -1125,6 +1182,9 @@ namespace ImGuiTextureVisualizer
 			
 			FVector2f Scale = FVector2f(InTextureInfo.SizeX, InTextureInfo.SizeY) / FVector2f(ConstrainedCanvasSize.x, ConstrainedCanvasSize.y);
 			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - InOutTexturePreviewOptions.CanvasScrollOffset) * Scale;
+			CursorPos.X = FMath::Clamp(CursorPos.X, 0, InTextureInfo.GetSizeX(0) - 1);
+			CursorPos.Y = FMath::Clamp(CursorPos.Y, 0, InTextureInfo.GetSizeY(0) - 1);
+
 			InOutTexturePreviewOptions.TextureInspectorCursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
 
 			const float TextureInspectorSize = 144.f;
@@ -1185,21 +1245,40 @@ namespace ImGuiTextureVisualizer
 		if (ImGui::Begin("TextureVisualizer", nullptr, ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoScrollbar))
 		{
 			static FAnsiString VisTextureName;
+			static bool bWasTextureOverrideValid = false;
+
+			bool bRequestNewTexture = false;
 			if (IsTextureOverrideValid())
 			{
-				VisTextureName = TextureOverrideName;
-			}			
-			const bool bRequestNewTexture = DrawTextureList(Context, VisTextureName);
+				bWasTextureOverrideValid = true;
+				if (!VisTextureName.Equals(GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName))
+				{
+					VisTextureName = GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName;
+					TexturePreviewOptions.Reset();
+
+					// NOTE: not resetting texture info here as the data might be coming from the Render thread
+				}
+			}
+			else if (bWasTextureOverrideValid)
+			{
+				ClearTextureOverride_GameThread();
+
+				bWasTextureOverrideValid = false;
+				VisTextureName.Reset();
+				bRequestNewTexture = true;
+			}
+
+			bRequestNewTexture |= DrawTextureList(Context, VisTextureName);
 			if (bRequestNewTexture)
 			{
 				FlushRenderingCommands();
 
-				GetTextureMetadata(/*bOnRenderThread=*/false).Reset();
-				GetTextureMetadata(/*bOnRenderThread=*/true).Reset();
+				GetTextureInfo(/*bOnRenderThread=*/false).Reset();
+				GetTextureInfo(/*bOnRenderThread=*/true).Reset();
 				TexturePreviewOptions.Reset();
 			}
 
-			const FTextureMetadata& TextureInfo = GetTextureMetadata(/*bOnRenderThread=*/false);
+			const FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/false);
 
 			ImGui::Separator();
 
@@ -1259,13 +1338,13 @@ namespace ImGuiTextureVisualizer
 					(float)HoveredTexCoordY / (float)TextureInfo.GetSizeY(TexturePreviewOptions.CurrentMip));
 			}
 
-			TextureMetadataReadIndex_GT = (TextureMetadataReadIndex_GT + 1) % 2;
+			TextureInfoReadIndex_GT = (TextureInfoReadIndex_GT + 1) % 2;
 			ENQUEUE_RENDER_COMMAND(ImGuiTexDisplay_Flip)(
-				[bRequestNewTexture, PreviewOptions=TexturePreviewOptions, TextureMetadataReadIndex=((TextureMetadataReadIndex_GT + 1) % 2)](FRHICommandListImmediate& RHICmdList)
+				[bRequestNewTexture, PreviewOptions=TexturePreviewOptions, TextureInfoReadIndex=((TextureInfoReadIndex_GT + 1) % 2)](FRHICommandListImmediate& RHICmdList)
 				{
 					SCOPED_DRAW_EVENT(RHICmdList, ImGuiTexDisplay_Flip);
 
-					TextureMetadataReadIndex_RT = TextureMetadataReadIndex;
+					TextureInfoReadIndex_RT = TextureInfoReadIndex;
 					
 					if (bRequestNewTexture)
 					{

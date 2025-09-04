@@ -5,16 +5,20 @@
 #include "CoreMinimal.h"
 
 class UTexture;
+class FRHITexture;
 class FTextureResource;
 
 namespace ImGuiTextureVisualizer
 {
 	// display the specified texture, the pointer is stored as WeakObjectPtr.
-	IMGUIWIDGETS_API void SetTextureOverride(const UTexture* Texture);
+	IMGUIWIDGETS_API void SetTextureOverride_GameThread(const UTexture* Texture);
 	
 	// display the specified texture, the pointer lifetime is not tracked.
-	IMGUIWIDGETS_API void SetTextureOverride(const FString& DisplayName, const FTextureResource* TextureResource);
+	IMGUIWIDGETS_API void SetTextureOverride_GameThread(const FString& DisplayName, const FTextureResource* TextureResource);
+
+	// display the specified texture
+	IMGUIWIDGETS_API void SetTextureOverride_RenderThread(const FString& DisplayName, FRHITexture* TextureResource);
 
 	// reset override
-	IMGUIWIDGETS_API void ClearTextureOverride();
+	IMGUIWIDGETS_API void ClearTextureOverride_GameThread();
 }
