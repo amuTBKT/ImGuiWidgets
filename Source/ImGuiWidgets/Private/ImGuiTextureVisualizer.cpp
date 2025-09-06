@@ -147,8 +147,7 @@ namespace ImGuiTextureVisualizer
 			Fit
 		};
 
-		int32 CurrentArraySlice		= 0; // if volume texture or array
-		int32 CurrentFace			= 0; // if cubemap
+		int32 CurrentArraySlice		= 0;
 		double RangeMin				= 0.;
 		double RangeValueMin		= 0.;
 		double RangeMax				= 1.;
@@ -182,7 +181,6 @@ namespace ImGuiTextureVisualizer
 		void Reset()
 		{
 			CurrentArraySlice = 0;
-			CurrentFace = 0;
 			CurrentMip = 0;
 			bDisplayRedChannel = true;
 			bDisplayGreenChannel = true;
@@ -195,6 +193,12 @@ namespace ImGuiTextureVisualizer
 			// fit to new texture on reset
 			RequestedZoomLevel = ERequestedZoomLevel::Fit;
 
+			// reset range
+			RangeMin = 0.;
+			RangeValueMin = 0.;
+			RangeMax = 1.;
+			RangeValueMax = 1.;
+
 			TextureResourceOverride = nullptr;
 		}
 	};
@@ -203,9 +207,33 @@ namespace ImGuiTextureVisualizer
 	static TArray<FAnsiString> AvailableTextures;
 	static TSharedPtr<FTextureCollectorSceneViewExtension> ViewExtension = nullptr;
 
-	static bool IsTextureOverrideValid()
+	static TArray<TSharedPtr<FRHIGPUBufferReadback, ESPMode::NotThreadSafe>> QueuedReadbackBuffers;
+	static TArray<TSharedPtr<FRHIGPUBufferReadback, ESPMode::NotThreadSafe>> AvailableReadbackBuffers;
+	TSharedPtr<FRHIGPUBufferReadback, ESPMode::NotThreadSafe> GetReadbackBufferForWriting()
 	{
-		return !GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName.IsEmpty();
+		if (AvailableReadbackBuffers.Num() > 0)
+		{
+			QueuedReadbackBuffers.Add(AvailableReadbackBuffers.Pop());
+		}
+		else
+		{
+			QueuedReadbackBuffers.Add(MakeShared<FRHIGPUBufferReadback, ESPMode::NotThreadSafe>(TEXT("TexDisplay::CurrentPixelReadback")));
+		}
+		return QueuedReadbackBuffers.Last();
+	}
+	TSharedPtr<FRHIGPUBufferReadback, ESPMode::NotThreadSafe> GetReadbackBufferForReading()
+	{
+		TSharedPtr<FRHIGPUBufferReadback, ESPMode::NotThreadSafe> Buffer = nullptr;
+		for (auto Itr = QueuedReadbackBuffers.CreateIterator(); Itr; ++Itr)
+		{
+			if ((*Itr)->IsReady())
+			{
+				Buffer = *Itr;
+				AvailableReadbackBuffers.Add(*Itr);
+				Itr.RemoveCurrent();
+			}
+		}
+		return Buffer;
 	}
 
 	static void Initialize()
@@ -215,6 +243,8 @@ namespace ImGuiTextureVisualizer
 			[]()
 			{
 				ViewExtension.Reset();
+				QueuedReadbackBuffers.Reset();
+				AvailableReadbackBuffers.Reset();
 			});
 	}
 
@@ -246,7 +276,11 @@ namespace ImGuiTextureVisualizer
 		}
 		const FPooledRenderTargetDesc TextureDesc = Translate(TextureToDisplay->GetDesc());
 
-		const uint64 TextureExtentMax = TextureDesc.Extent.GetMax();
+		FIntVector3 HistogramTextureExtents;
+		HistogramTextureExtents.X = TextureDesc.Extent.X >> InPreviewOptions.CurrentMip;
+		HistogramTextureExtents.Y = TextureDesc.Extent.Y >> InPreviewOptions.CurrentMip;
+		HistogramTextureExtents.Z = TextureDesc.Depth;
+		const uint64 TextureExtentMax = HistogramTextureExtents.GetMax();
 		const uint64 BlockPixSize = FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK;
 		const uint64 BlockCount = FMath::Max(1ull, uint64(TextureExtentMax * TextureExtentMax) / (BlockPixSize * BlockPixSize));
 
@@ -309,12 +343,12 @@ namespace ImGuiTextureVisualizer
 					RHICmdList, ComputeShader,
 					RHICmdList.CreateUnorderedAccessView(TileMinMaxBuffer.GetReference(), FRHIViewDesc::CreateBufferUAV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
 					RHICmdList.CreateShaderResourceView(TextureToDisplay, TextureSRVDesc),
-					FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
+					HistogramTextureExtents,
 					InPreviewOptions.CurrentMip,
-					TextureDesc.bIsCubemap ? InPreviewOptions.CurrentFace : InPreviewOptions.CurrentArraySlice);
+					InPreviewOptions.CurrentArraySlice);
 
-				const int32 ThreadGroupCountX = FMath::DivideAndRoundUp(TextureDesc.Extent.X, FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK);
-				const int32 ThreadGroupCountY = FMath::DivideAndRoundUp(TextureDesc.Extent.Y, FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK);
+				const int32 ThreadGroupCountX = FMath::DivideAndRoundUp(HistogramTextureExtents.X, FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK);
+				const int32 ThreadGroupCountY = FMath::DivideAndRoundUp(HistogramTextureExtents.Y, FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK);
 
 				RHICmdList.DispatchComputeShader(ThreadGroupCountX, ThreadGroupCountY, 1);
 			}
@@ -341,7 +375,7 @@ namespace ImGuiTextureVisualizer
 					RHICmdList, ComputeShader,
 					RHICmdList.CreateUnorderedAccessView(GPixelValueDestBuffer->VertexBufferRHI, FRHIViewDesc::CreateBufferUAV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
 					RHICmdList.CreateShaderResourceView(TileMinMaxBuffer.GetReference(), FRHIViewDesc::CreateBufferSRV().SetType(FRHIViewDesc::EBufferType::Typed).SetFormat(BufferFormat)),
-					FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth));
+					HistogramTextureExtents);
 
 				RHICmdList.DispatchComputeShader(1, 1, 1);
 			}
@@ -438,19 +472,47 @@ namespace ImGuiTextureVisualizer
 
 	static void ReadCurrentPixelValue(FRHICommandListImmediate& RHICmdList, const FTexturePreviewOptions& InPreviewOptions)
 	{
-		if ((InPreviewOptions.TextureInspectorRect.Z - InPreviewOptions.TextureInspectorRect.X) > 0)
+		FRHITexture* TextureToDisplay = GetTextureToDisplay(InPreviewOptions);
+		if (!TextureToDisplay)
 		{
-			FRHITexture* TextureToDisplay = GetTextureToDisplay(InPreviewOptions);			
-			if (!TextureToDisplay)
+			return;
+		}
+		const FPooledRenderTargetDesc TextureDesc = Translate(TextureToDisplay->GetDesc());
+
+		ETexDisplay_ResourceType ResType;
+		ETexDisplay_ShaderBaseType BaseType;
+		PixelFormatUtils::DetermineShaderTypesForTexture(TextureDesc, InPreviewOptions.bDisplayStencil, ResType, BaseType);
+
+		if (auto ReadBuffer = GetReadbackBufferForReading())
+		{
+			FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/true);
+			uint8* Dst = TextureInfo.SelectedPixelValue;
+
+			if (const uint8* SrcRawBuffer = (const uint8*)ReadBuffer->Lock(sizeof(FUintVector4)))
 			{
-				return;
+				if (BaseType == ETexDisplay_ShaderBaseType::UInt)
+				{
+					FUintVector4 value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
+					FMemory::Memcpy(Dst, &value, sizeof(FUintVector4));
+				}
+				else if (BaseType == ETexDisplay_ShaderBaseType::SInt)
+				{
+					FIntVector4 value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
+					FMemory::Memcpy(Dst, &value, sizeof(FIntVector4));
+				}
+				else if (BaseType == ETexDisplay_ShaderBaseType::Float)
+				{
+					FVector4f value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
+					FMemory::Memcpy(Dst, &value, sizeof(FVector4f));
+				}
+
+				ReadBuffer->Unlock();
 			}
-			const FPooledRenderTargetDesc TextureDesc = Translate(TextureToDisplay->GetDesc());
+		}
 
-			ETexDisplay_ResourceType ResType;
-			ETexDisplay_ShaderBaseType BaseType;
-			PixelFormatUtils::DetermineShaderTypesForTexture(TextureDesc, InPreviewOptions.bDisplayStencil, ResType, BaseType);
-
+		auto WriteBuffer = ((InPreviewOptions.TextureInspectorRect.Z - InPreviewOptions.TextureInspectorRect.X) > 0) ? GetReadbackBufferForWriting() : nullptr;
+		if (WriteBuffer)
+		{			
 			auto* ShaderMap = GetGlobalShaderMap(GetMaxSupportedFeatureLevel(GMaxRHIShaderPlatform));
 
 			FTextureDisplay_CopyPixelValueCS::FPermutationDomain PermutationVector;
@@ -489,42 +551,12 @@ namespace ImGuiTextureVisualizer
 				RHICmdList.CreateShaderResourceView(TextureToDisplay, TextureSRVDesc),
 				FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
 				InPreviewOptions.CurrentMip,
-				TextureDesc.bIsCubemap ? InPreviewOptions.CurrentFace : InPreviewOptions.CurrentArraySlice,
+				InPreviewOptions.CurrentArraySlice,
 				FIntPoint(HoveredTexCoordX, HoveredTexCoordY));
 
 			RHICmdList.DispatchComputeShader(1, 1, 1);
 
-			FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/true);
-			uint8* Dst = TextureInfo.SelectedPixelValue;
-			{
-				FRHIGPUBufferReadback Readback(TEXT("TexDisplay::CurrentPixelReadback"));
-				uint32 NumBytes = sizeof(FUintVector4);
-				Readback.EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, NumBytes);
-				RHICmdList.BlockUntilGPUIdle();
-				RHICmdList.FlushResources();
-				RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
-
-				if (const uint8* SrcRawBuffer = (const uint8*)Readback.Lock(NumBytes))
-				{
-					if (BaseType == ETexDisplay_ShaderBaseType::UInt)
-					{
-						FUintVector4 value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
-						FMemory::Memcpy(Dst, &value, sizeof(FUintVector4));
-					}
-					else if (BaseType == ETexDisplay_ShaderBaseType::SInt)
-					{
-						FIntVector4 value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
-						FMemory::Memcpy(Dst, &value, sizeof(FIntVector4));
-					}
-					else if (BaseType == ETexDisplay_ShaderBaseType::Float)
-					{
-						FVector4f value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
-						FMemory::Memcpy(Dst, &value, sizeof(FVector4f));
-					}
-
-					Readback.Unlock();
-				}
-			}
+			WriteBuffer->EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, sizeof(FUintVector4));
 		}
 	}
 
@@ -610,7 +642,7 @@ namespace ImGuiTextureVisualizer
 			FIntVector3(TextureDesc.Extent.X, TextureDesc.Extent.Y, TextureDesc.Depth),
 			TextureVisShowFlags,
 			PreviewParams.Options.CurrentMip,
-			TextureDesc.bIsCubemap ? PreviewParams.Options.CurrentFace : PreviewParams.Options.CurrentArraySlice,
+			PreviewParams.Options.CurrentArraySlice,
 			FVector2f(PreviewParams.Options.RangeValueMin, 1.f / (PreviewParams.Options.RangeValueMax - PreviewParams.Options.RangeValueMin)),
 			PreviewParams.Options.UVScaleAndOffset,
 			PreviewParams.Options.BackgroundColor.A > 0.5f ? PreviewParams.Options.BackgroundColor.ToFColor(/*sRGB=*/false).DWColor() : 0u,
@@ -637,12 +669,29 @@ namespace ImGuiTextureVisualizer
 		TextureInfo.SizeX = TextureDesc.Extent.X;
 		TextureInfo.SizeY = TextureDesc.Extent.Y;
 		TextureInfo.SizeZ = TextureDesc.Is3DTexture() ? TextureDesc.Depth : 0;
-		TextureInfo.ArraySize = TextureDesc.IsArray() ? TextureDesc.ArraySize : 1;
 		TextureInfo.Format = TextureDesc.Format;
 		TextureInfo.NumMips = TextureDesc.NumMips;
-		TextureInfo.bIsArray = TextureDesc.bIsArray;
-		TextureInfo.bIsCubemap = TextureDesc.bIsCubemap;
+		TextureInfo.bIsArray = TextureDesc.IsArray();
+		TextureInfo.bIsCubemap = TextureDesc.IsCubemap();
 		TextureInfo.TextureOverrideName = TextureOverrideName;
+		
+		if (TextureDesc.IsCubemap())
+		{
+			TextureInfo.ArraySize = TextureDesc.ArraySize * 6;
+		}
+		else if (TextureDesc.IsArray())
+		{
+			TextureInfo.ArraySize = TextureDesc.ArraySize;
+		}
+		else
+		{
+			TextureInfo.ArraySize = 1;
+		}
+	}
+
+	static bool IsTextureOverrideValid()
+	{
+		return !GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName.IsEmpty();
 	}
 
 	static bool DrawTextureList(ImGuiContext* Context, FAnsiString& InOutSelectedTextureName)
@@ -672,9 +721,13 @@ namespace ImGuiTextureVisualizer
 					AvailableTextures.Reset();
 
 					FlushRenderingCommands();
-					for (const FString& TextureName : ViewExtension->AvailableTextures)
+					for (const FString& Texture : ViewExtension->AvailableTextures)
 					{
-						AvailableTextures.AddUnique(TCHAR_TO_ANSI(*TextureName));
+						FAnsiString TextureName = TCHAR_TO_ANSI(*Texture);
+						if (!TextureName.IsEmpty())
+						{
+							AvailableTextures.AddUnique(MoveTemp(TextureName));
+						}
 					}
 				}
 			}
@@ -880,21 +933,22 @@ namespace ImGuiTextureVisualizer
 
 		// texture slice/face controls
 		{
+			const int32 ArraySize = FMath::Max(InTextureInfo.ArraySize, InTextureInfo.SizeZ);
+			InOutTexturePreviewOptions.CurrentArraySlice = FMath::Clamp(InOutTexturePreviewOptions.CurrentArraySlice, 0, ArraySize - 1);
+
 			if (InTextureInfo.bIsCubemap)
 			{
-				InOutTexturePreviewOptions.CurrentFace = FMath::Clamp(InOutTexturePreviewOptions.CurrentFace, 0, InTextureInfo.ArraySize * 6 - 1);
-
 				static const char* FaceNames[6] = { "X+", "X-", "Y+", "Y-", "Z+", "Z-" };
 
 				ImGui::Text("Face"); ImGui::SameLine(); ImGui::SetNextItemWidth(128.f * GlobalScale);
-				if (ImGui::BeginCombo("##Face", *FAnsiString::Printf("%s", FaceNames[InOutTexturePreviewOptions.CurrentFace % 6]), ImGuiComboFlags_None))
+				if (ImGui::BeginCombo("##Face", *FAnsiString::Printf("%s", FaceNames[InOutTexturePreviewOptions.CurrentArraySlice % 6]), ImGuiComboFlags_None))
 				{
-					for (int32 FaceIndex = 0; FaceIndex < (InTextureInfo.ArraySize * 6); FaceIndex++)
+					for (int32 FaceIndex = 0; FaceIndex < ArraySize; FaceIndex++)
 					{
-						const bool bIsSelected = (InOutTexturePreviewOptions.CurrentFace == FaceIndex);
-						if (ImGui::Selectable(*FAnsiString::Printf("%s", FaceNames[FaceIndex % 6]), bIsSelected))
+						const bool bIsSelected = (InOutTexturePreviewOptions.CurrentArraySlice == FaceIndex);
+						if (ImGui::Selectable(FaceNames[FaceIndex % 6], bIsSelected))
 						{
-							InOutTexturePreviewOptions.CurrentFace = FaceIndex;
+							InOutTexturePreviewOptions.CurrentArraySlice = FaceIndex;
 						}
 						if (bIsSelected)
 						{
@@ -903,21 +957,14 @@ namespace ImGuiTextureVisualizer
 					}
 					ImGui::EndCombo();
 				}
-
-				if (ImGui::IsItemHovered() && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
-				{
-					InOutTexturePreviewOptions.CurrentFace = FMath::Clamp(InOutTexturePreviewOptions.CurrentFace + (ImGui::GetIO().MouseWheel > 0 ? -1 : 1), 0, int32(InTextureInfo.ArraySize * 6) - 1);
-				}
 			}
 			else
 			{
-				InOutTexturePreviewOptions.CurrentArraySlice = FMath::Clamp(InOutTexturePreviewOptions.CurrentArraySlice, 0, FMath::Max(InTextureInfo.ArraySize, InTextureInfo.SizeZ) - 1);
-
 				ImGui::Text("Slice"); ImGui::SameLine(); ImGui::SetNextItemWidth(128.f * GlobalScale);
-				ImGui::BeginDisabled(FMath::Max(InTextureInfo.ArraySize, InTextureInfo.SizeZ) <= 1);
+				ImGui::BeginDisabled(ArraySize <= 1);
 				if (ImGui::BeginCombo("##Slice", *FAnsiString::Printf("Slice %i", InOutTexturePreviewOptions.CurrentArraySlice), ImGuiComboFlags_None))
 				{
-					for (int32 SliceIndex = 0; SliceIndex < FMath::Max(InTextureInfo.ArraySize, InTextureInfo.SizeZ); SliceIndex++)
+					for (int32 SliceIndex = 0; SliceIndex < ArraySize; SliceIndex++)
 					{
 						const bool bIsSelected = (InOutTexturePreviewOptions.CurrentArraySlice == SliceIndex);
 						if (ImGui::Selectable(*FAnsiString::Printf("Slice %i", SliceIndex), bIsSelected))
@@ -932,11 +979,11 @@ namespace ImGuiTextureVisualizer
 					ImGui::EndCombo();
 				}
 				ImGui::EndDisabled();
+			}
 
-				if (ImGui::IsItemHovered() && (FMath::Max(InTextureInfo.ArraySize, InTextureInfo.SizeZ) > 1) && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
-				{
-					InOutTexturePreviewOptions.CurrentArraySlice = FMath::Clamp(InOutTexturePreviewOptions.CurrentArraySlice + (ImGui::GetIO().MouseWheel > 0 ? -1 : 1), 0, FMath::Max(InTextureInfo.ArraySize, InTextureInfo.SizeZ) - 1);
-				}
+			if ((ArraySize > 1) && ImGui::IsItemHovered() && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
+			{
+				InOutTexturePreviewOptions.CurrentArraySlice = FMath::Clamp(InOutTexturePreviewOptions.CurrentArraySlice + (ImGui::GetIO().MouseWheel > 0 ? -1 : 1), 0, ArraySize - 1);
 			}
 		}
 
@@ -1163,7 +1210,6 @@ namespace ImGuiTextureVisualizer
 			-InOutTexturePreviewOptions.CanvasScrollOffset.Y / ConstrainedCanvasSize.y
 		};
 
-		//if (bIsCanvasHovered)
 		{
 			ImVec2 RelativeMousePos = (ImGui::GetIO().MousePos - ImGui::GetItemRectMin());
 			RelativeMousePos.x = FMath::Clamp(RelativeMousePos.x, 0.f, ImGui::GetItemRectSize().x);
@@ -1172,61 +1218,55 @@ namespace ImGuiTextureVisualizer
 			FVector2f Scale = FVector2f(InTextureInfo.SizeX, InTextureInfo.SizeY) / FVector2f(ConstrainedCanvasSize.x, ConstrainedCanvasSize.y);
 			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - InOutTexturePreviewOptions.CanvasScrollOffset) * Scale;
 			InOutTexturePreviewOptions.CursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
-		}
 
-		if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.f))
-		{
-			ImVec2 RelativeMousePos = (ImGui::GetIO().MousePos - ImGui::GetItemRectMin());
-			RelativeMousePos.x = FMath::Clamp(RelativeMousePos.x, 0.f, ImGui::GetItemRectSize().x);
-			RelativeMousePos.y = FMath::Clamp(RelativeMousePos.y, 0.f, ImGui::GetItemRectSize().y);
-			
-			FVector2f Scale = FVector2f(InTextureInfo.SizeX, InTextureInfo.SizeY) / FVector2f(ConstrainedCanvasSize.x, ConstrainedCanvasSize.y);
-			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - InOutTexturePreviewOptions.CanvasScrollOffset) * Scale;
-			CursorPos.X = FMath::Clamp(CursorPos.X, 0, InTextureInfo.GetSizeX(0) - 1);
-			CursorPos.Y = FMath::Clamp(CursorPos.Y, 0, InTextureInfo.GetSizeY(0) - 1);
-
-			InOutTexturePreviewOptions.TextureInspectorCursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
-
-			const float TextureInspectorSize = 144.f;
-			const float TextureInspectorInfoWidgetSize = 256.f;
-			const float AvailableSpaceLeft = RelativeMousePos.x;
-			const float AvailableSpaceRight = ImGui::GetItemRectSize().x - RelativeMousePos.x;
-			const float AvailableSpaceTop = RelativeMousePos.y;
-			const float AvailableSpaceBottom = ImGui::GetItemRectSize().y - RelativeMousePos.y;
-
-			ImVec2 AbsoluteMousePos = RelativeMousePos + ImGui::GetItemRectMin();
-
-			ImVec2 TextureInspectorOffset = ImVec2(32.f, -TextureInspectorSize);
-			float TextureInspectorInfoWidgetOffsetX = TextureInspectorSize;
-			if (AvailableSpaceTop < TextureInspectorSize)
+			if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.f))
 			{
-				TextureInspectorOffset.y = 0;
-			}
-			if (AvailableSpaceRight < (TextureInspectorSize + TextureInspectorInfoWidgetSize))
-			{
-				TextureInspectorOffset.x = -(32.f + TextureInspectorSize);
-				TextureInspectorInfoWidgetOffsetX = -TextureInspectorInfoWidgetSize;
-			}
+				CursorPos.X = FMath::Clamp(CursorPos.X, 0, InTextureInfo.GetSizeX(0) - 1);
+				CursorPos.Y = FMath::Clamp(CursorPos.Y, 0, InTextureInfo.GetSizeY(0) - 1);
 
-			InOutTexturePreviewOptions.TextureInspectorRect.X = AbsoluteMousePos.x + TextureInspectorOffset.x;
-			InOutTexturePreviewOptions.TextureInspectorRect.Y = AbsoluteMousePos.y + TextureInspectorOffset.y;
-			InOutTexturePreviewOptions.TextureInspectorRect.Z = AbsoluteMousePos.x + TextureInspectorOffset.x + TextureInspectorSize;
-			InOutTexturePreviewOptions.TextureInspectorRect.W = AbsoluteMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
+				InOutTexturePreviewOptions.TextureInspectorCursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
 
-			const int32 HoveredTexCoordX = InOutTexturePreviewOptions.TextureInspectorCursorPosition.X >> InOutTexturePreviewOptions.CurrentMip;
-			const int32 HoveredTexCoordY = InOutTexturePreviewOptions.TextureInspectorCursorPosition.Y >> InOutTexturePreviewOptions.CurrentMip;
-			
-			ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
-			ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
-			if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
-			{
-				ImGui::Text("UV: %.4f %.4f",
-					(float)HoveredTexCoordX / (float)InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip),
-					(float)HoveredTexCoordY / (float)InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip));
-				ImGui::Text("Coord: %i %i", HoveredTexCoordX, HoveredTexCoordY);
-				ImGui::Separator();
-				ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString(InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
-				ImGui::EndTooltip();
+				const float TextureInspectorSize = 144.f;
+				const float TextureInspectorInfoWidgetSize = 150.f;
+				const float AvailableSpaceLeft = RelativeMousePos.x;
+				const float AvailableSpaceRight = ImGui::GetItemRectSize().x - RelativeMousePos.x;
+				const float AvailableSpaceTop = RelativeMousePos.y;
+				const float AvailableSpaceBottom = ImGui::GetItemRectSize().y - RelativeMousePos.y;
+
+				ImVec2 AbsoluteMousePos = RelativeMousePos + ImGui::GetItemRectMin();
+
+				ImVec2 TextureInspectorOffset = ImVec2(32.f, -TextureInspectorSize);
+				float TextureInspectorInfoWidgetOffsetX = TextureInspectorSize;
+				if (AvailableSpaceTop < TextureInspectorSize)
+				{
+					TextureInspectorOffset.y = 0;
+				}
+				if (AvailableSpaceRight < (TextureInspectorSize + TextureInspectorInfoWidgetSize))
+				{
+					TextureInspectorOffset.x = -(32.f + TextureInspectorSize);
+					TextureInspectorInfoWidgetOffsetX = -TextureInspectorInfoWidgetSize;
+				}
+
+				InOutTexturePreviewOptions.TextureInspectorRect.X = AbsoluteMousePos.x + TextureInspectorOffset.x;
+				InOutTexturePreviewOptions.TextureInspectorRect.Y = AbsoluteMousePos.y + TextureInspectorOffset.y;
+				InOutTexturePreviewOptions.TextureInspectorRect.Z = AbsoluteMousePos.x + TextureInspectorOffset.x + TextureInspectorSize;
+				InOutTexturePreviewOptions.TextureInspectorRect.W = AbsoluteMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
+
+				const int32 HoveredTexCoordX = InOutTexturePreviewOptions.TextureInspectorCursorPosition.X >> InOutTexturePreviewOptions.CurrentMip;
+				const int32 HoveredTexCoordY = InOutTexturePreviewOptions.TextureInspectorCursorPosition.Y >> InOutTexturePreviewOptions.CurrentMip;
+
+				ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
+				ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
+				if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+				{
+					ImGui::Text("UV: %.4f %.4f",
+						(float)HoveredTexCoordX / (float)InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip),
+						(float)HoveredTexCoordY / (float)InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip));
+					ImGui::Text("Coord: %i %i", HoveredTexCoordX, HoveredTexCoordY);
+					ImGui::Separator();
+					ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString(InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
+					ImGui::EndTooltip();
+				}
 			}
 		}
 	}

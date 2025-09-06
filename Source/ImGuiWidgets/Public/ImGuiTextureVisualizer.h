@@ -13,10 +13,10 @@ namespace ImGuiTextureVisualizer
 	// display the specified texture, the pointer is stored as WeakObjectPtr.
 	IMGUIWIDGETS_API void SetTextureOverride_GameThread(const UTexture* Texture);
 	
-	// display the specified texture, the pointer lifetime is not tracked.
+	// display the specified texture resource, the pointer lifetime is not tracked.
 	IMGUIWIDGETS_API void SetTextureOverride_GameThread(const FString& DisplayName, const FTextureResource* TextureResource);
 
-	// display the specified texture
+	// display the specified texture rhi resource, stored as ref counted pointer
 	IMGUIWIDGETS_API void SetTextureOverride_RenderThread(const FString& DisplayName, FRHITexture* TextureResource);
 
 	// reset override
