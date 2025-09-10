@@ -276,13 +276,15 @@ namespace ImGuiTextureVisualizer
 		}
 		const FPooledRenderTargetDesc TextureDesc = Translate(TextureToDisplay->GetDesc());
 
-		FIntVector3 HistogramTextureExtents;
-		HistogramTextureExtents.X = TextureDesc.Extent.X >> InPreviewOptions.CurrentMip;
-		HistogramTextureExtents.Y = TextureDesc.Extent.Y >> InPreviewOptions.CurrentMip;
-		HistogramTextureExtents.Z = TextureDesc.Depth;
-		const uint64 TextureExtentMax = HistogramTextureExtents.GetMax();
+		const FIntVector3 HistogramTextureExtents =
+		{
+			TextureDesc.Extent.X >> InPreviewOptions.CurrentMip,
+			TextureDesc.Extent.Y >> InPreviewOptions.CurrentMip,
+			TextureDesc.Depth
+		};
+		const uint64 HistogramTextureExtentMax = HistogramTextureExtents.GetMax();
 		const uint64 BlockPixSize = FTextureDisplay_TileMinMaxCS::HGRAM_PIXELS_PER_TILE * FTextureDisplay_TileMinMaxCS::HGRAM_TILES_PER_BLOCK;
-		const uint64 BlockCount = FMath::Max(1ull, uint64(TextureExtentMax * TextureExtentMax) / (BlockPixSize * BlockPixSize));
+		const uint64 BlockCount = FMath::Max(1ull, uint64(HistogramTextureExtentMax * HistogramTextureExtentMax) / (BlockPixSize * BlockPixSize));
 
 #if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 505) //(Version > 5.5)
 		FRHIBufferCreateDesc TileMinMaxBufferDesc =
@@ -803,6 +805,7 @@ namespace ImGuiTextureVisualizer
 	{
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 		const float ControlPadding = 10.f * GlobalScale;
+		const float ScrollInput = FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER ? (ImGui::GetIO().MouseWheel > 0.f ? -1.f : 1.f) : 0.f;
 
 		ImGui::Dummy(ImVec2(0., 2.f));
 
@@ -921,9 +924,9 @@ namespace ImGuiTextureVisualizer
 			}
 			ImGui::EndDisabled();
 
-			if (ImGui::IsItemHovered() && (InTextureInfo.NumMips > 1) && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
+			if (ImGui::IsItemHovered() && (InTextureInfo.NumMips > 1))
 			{
-				InOutTexturePreviewOptions.CurrentMip = FMath::Clamp(InOutTexturePreviewOptions.CurrentMip + (ImGui::GetIO().MouseWheel > 0 ? -1 : 1), 0, (int32)InTextureInfo.NumMips - 1);
+				InOutTexturePreviewOptions.CurrentMip = FMath::Clamp(InOutTexturePreviewOptions.CurrentMip + ScrollInput, 0, (int32)InTextureInfo.NumMips - 1);
 			}
 		}
 
@@ -981,9 +984,9 @@ namespace ImGuiTextureVisualizer
 				ImGui::EndDisabled();
 			}
 
-			if ((ArraySize > 1) && ImGui::IsItemHovered() && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
+			if ((ArraySize > 1) && ImGui::IsItemHovered())
 			{
-				InOutTexturePreviewOptions.CurrentArraySlice = FMath::Clamp(InOutTexturePreviewOptions.CurrentArraySlice + (ImGui::GetIO().MouseWheel > 0 ? -1 : 1), 0, ArraySize - 1);
+				InOutTexturePreviewOptions.CurrentArraySlice = FMath::Clamp(InOutTexturePreviewOptions.CurrentArraySlice + ScrollInput, 0, ArraySize - 1);
 			}
 		}
 
@@ -1151,9 +1154,10 @@ namespace ImGuiTextureVisualizer
 
 		const bool bIsCanvasHovered = ImGui::IsItemHovered();
 		const bool bIsCanvasClicked = ImGui::IsItemActive();
-		if (bIsCanvasHovered && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
+		if (bIsCanvasHovered)
 		{
-			InOutTexturePreviewOptions.CanvasZoomPercentage += 8.f * (ImGui::GetIO().MouseWheel > 0 ? 1 : -1);
+			const float ScrollInput = FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER ? (ImGui::GetIO().MouseWheel > 0.f ? 1.f : -1.f) : 0.f;
+			InOutTexturePreviewOptions.CanvasZoomPercentage += 8.f * ScrollInput;
 			InOutTexturePreviewOptions.CanvasZoomPercentage = FMath::Clamp(InOutTexturePreviewOptions.CanvasZoomPercentage, 5.f, 25600.f);
 		}
 		if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.f))
@@ -1227,7 +1231,7 @@ namespace ImGuiTextureVisualizer
 				InOutTexturePreviewOptions.TextureInspectorCursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
 
 				const float TextureInspectorSize = 144.f;
-				const float TextureInspectorInfoWidgetSize = 150.f;
+				const float TextureInspectorInfoWidgetSize = 200.f;
 				const float AvailableSpaceLeft = RelativeMousePos.x;
 				const float AvailableSpaceRight = ImGui::GetItemRectSize().x - RelativeMousePos.x;
 				const float AvailableSpaceTop = RelativeMousePos.y;
