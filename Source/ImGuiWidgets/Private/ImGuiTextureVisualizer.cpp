@@ -161,8 +161,8 @@ namespace ImGuiTextureVisualizer
 		bool bDisplayStencil		= false;
 		bool bSRGB					= false;
 
-		float CanvasZoomPercentage	 = 100.;
-		FVector2f CanvasScrollOffset = FVector2f(0.f, 0.f);
+		float CanvasScale = 1.f;
+		FVector2f CanvasCenter = FVector2f(0.f, 0.f);
 		FVector4f UVScaleAndOffset	 = FVector4f(1.f, 1.f, 0.f, 0.f);
 		ERequestedZoomLevel RequestedZoomLevel = ERequestedZoomLevel::None;
 		
@@ -826,14 +826,14 @@ namespace ImGuiTextureVisualizer
 			}
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(90.f * GlobalScale);
-			if (ImGui::BeginCombo("##Zoom", *FAnsiString::Printf("%i%%", int32(InOutTexturePreviewOptions.CanvasZoomPercentage)), ImGuiComboFlags_None))
+			if (ImGui::BeginCombo("##Zoom", *FAnsiString::Printf("%i%%", int32(InOutTexturePreviewOptions.CanvasScale * 100.f)), ImGuiComboFlags_None))
 			{
 				static const int32 AvailableZoomLevels[] = { 10, 25, 75, 50, 100, 200, 400, 800 };
 				for (int32 Index = 0; Index < UE_ARRAY_COUNT(AvailableZoomLevels); Index++)
 				{
 					if (ImGui::Selectable(*FAnsiString::Printf("%i%%", AvailableZoomLevels[Index])))
 					{
-						InOutTexturePreviewOptions.CanvasZoomPercentage = AvailableZoomLevels[Index];
+						InOutTexturePreviewOptions.CanvasScale = (float)AvailableZoomLevels[Index] / 100.f;
 					}
 				}
 
@@ -1135,18 +1135,18 @@ namespace ImGuiTextureVisualizer
 		{
 			if (InOutTexturePreviewOptions.RequestedZoomLevel == FTexturePreviewOptions::ERequestedZoomLevel::OneToOne)
 			{
-				InOutTexturePreviewOptions.CanvasZoomPercentage = 100.f;
-				InOutTexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
+				InOutTexturePreviewOptions.CanvasScale = 1.f;
+				InOutTexturePreviewOptions.CanvasCenter = FVector2f(0.f, 0.f);
 			}
 			else if (InOutTexturePreviewOptions.RequestedZoomLevel == FTexturePreviewOptions::ERequestedZoomLevel::Fit)
 			{
-				InOutTexturePreviewOptions.CanvasZoomPercentage = FMath::Min(256.f, ConstrainedCanvasSize.x / (float)InTextureInfo.SizeX) * 100.f;
-				InOutTexturePreviewOptions.CanvasScrollOffset = FVector2f(0.f, 0.f);
+				InOutTexturePreviewOptions.CanvasScale = FMath::Min(256.f, ConstrainedCanvasSize.x / (float)InTextureInfo.SizeX);
+				InOutTexturePreviewOptions.CanvasCenter = FVector2f(0.f, 0.f);
 			}
 
 			InOutTexturePreviewOptions.RequestedZoomLevel = FTexturePreviewOptions::ERequestedZoomLevel::None;
 		}
-		ConstrainedCanvasSize = ImVec2(InTextureInfo.SizeX, InTextureInfo.SizeY) * (InOutTexturePreviewOptions.CanvasZoomPercentage / 100.f);
+		ConstrainedCanvasSize = ImVec2(InTextureInfo.SizeX, InTextureInfo.SizeY) * (InOutTexturePreviewOptions.CanvasScale);
 
 		InOutTexturePreviewOptions.TextureInspectorRect = FIntVector4::ZeroValue;
 		
@@ -1154,41 +1154,57 @@ namespace ImGuiTextureVisualizer
 
 		const bool bIsCanvasHovered = ImGui::IsItemHovered();
 		const bool bIsCanvasClicked = ImGui::IsItemActive();
-		if (bIsCanvasHovered)
+		if (bIsCanvasHovered && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
 		{
-			const float ScrollInput = FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER ? (ImGui::GetIO().MouseWheel > 0.f ? 1.f : -1.f) : 0.f;
-			InOutTexturePreviewOptions.CanvasZoomPercentage += 8.f * ScrollInput;
-			InOutTexturePreviewOptions.CanvasZoomPercentage = FMath::Clamp(InOutTexturePreviewOptions.CanvasZoomPercentage, 5.f, 25600.f);
+			const float Zoom = (ImGui::GetIO().MouseWheel > 0.f ? 1.1f : 0.9f);
+			
+			ImVec2 RelativeMousePos = (ImGui::GetIO().MousePos - ImGui::GetItemRectMin());
+			FVector2f ZoomPivot =
+			{
+				FMath::Clamp(RelativeMousePos.x, 0.f, ImGui::GetItemRectSize().x),
+				FMath::Clamp(RelativeMousePos.y, 0.f, ImGui::GetItemRectSize().y)
+			};
+			ZoomPivot = (ZoomPivot - InOutTexturePreviewOptions.CanvasCenter) / (InOutTexturePreviewOptions.CanvasScale);
+
+			InOutTexturePreviewOptions.CanvasCenter += ZoomPivot * (InOutTexturePreviewOptions.CanvasScale);
+
+			InOutTexturePreviewOptions.CanvasScale *= Zoom;
+			InOutTexturePreviewOptions.CanvasScale = FMath::Clamp(InOutTexturePreviewOptions.CanvasScale, 0.1f, 256.f);
+
+			InOutTexturePreviewOptions.CanvasCenter -= ZoomPivot * (InOutTexturePreviewOptions.CanvasScale);
+			
+			ConstrainedCanvasSize = ImVec2(InTextureInfo.SizeX, InTextureInfo.SizeY) * (InOutTexturePreviewOptions.CanvasScale);
 		}
 		if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.f))
 		{
-			InOutTexturePreviewOptions.CanvasScrollOffset.X += ImGui::GetIO().MouseDelta.x;
-			InOutTexturePreviewOptions.CanvasScrollOffset.Y += ImGui::GetIO().MouseDelta.y;
+			InOutTexturePreviewOptions.CanvasCenter.X += ImGui::GetIO().MouseDelta.x;
+			InOutTexturePreviewOptions.CanvasCenter.Y += ImGui::GetIO().MouseDelta.y;
 		}
 
-		if (ConstrainedCanvasSize.x <= InCanvasSize.x)
-		{
-			InOutTexturePreviewOptions.CanvasScrollOffset.X = 0.f;
-		}
-		if (ConstrainedCanvasSize.y <= InCanvasSize.y)
-		{
-			InOutTexturePreviewOptions.CanvasScrollOffset.Y = 0.f;
-		}
 		// clamp scrolling to widget borders
 		{
+			if (ConstrainedCanvasSize.x <= InCanvasSize.x)
+			{
+				InOutTexturePreviewOptions.CanvasCenter.X = 0.f;
+			}
+			if (ConstrainedCanvasSize.y <= InCanvasSize.y)
+			{
+				InOutTexturePreviewOptions.CanvasCenter.Y = 0.f;
+			}
+
 			const ImRect TranslatedCanvas = ImRect(
-				ImVec2(InOutTexturePreviewOptions.CanvasScrollOffset.X, InOutTexturePreviewOptions.CanvasScrollOffset.Y),
-				ConstrainedCanvasSize + ImVec2(InOutTexturePreviewOptions.CanvasScrollOffset.X, InOutTexturePreviewOptions.CanvasScrollOffset.Y));
+				ImVec2(InOutTexturePreviewOptions.CanvasCenter.X, InOutTexturePreviewOptions.CanvasCenter.Y),
+				ConstrainedCanvasSize + ImVec2(InOutTexturePreviewOptions.CanvasCenter.X, InOutTexturePreviewOptions.CanvasCenter.Y));
 
 			if (ConstrainedCanvasSize.x > InCanvasSize.x)
 			{
 				if (TranslatedCanvas.Min.x > 0)
 				{
-					InOutTexturePreviewOptions.CanvasScrollOffset.X = 0.f;
+					InOutTexturePreviewOptions.CanvasCenter.X = 0.f;
 				}
 				else if (TranslatedCanvas.Max.x < InCanvasSize.x)
 				{
-					InOutTexturePreviewOptions.CanvasScrollOffset.X = InCanvasSize.x - ConstrainedCanvasSize.x;
+					InOutTexturePreviewOptions.CanvasCenter.X = InCanvasSize.x - ConstrainedCanvasSize.x;
 				}
 			}
 
@@ -1196,11 +1212,11 @@ namespace ImGuiTextureVisualizer
 			{
 				if (TranslatedCanvas.Min.y > 0)
 				{
-					InOutTexturePreviewOptions.CanvasScrollOffset.Y = 0.f;
+					InOutTexturePreviewOptions.CanvasCenter.Y = 0.f;
 				}
 				else if (TranslatedCanvas.Max.y < InCanvasSize.y)
 				{
-					InOutTexturePreviewOptions.CanvasScrollOffset.Y = InCanvasSize.y - ConstrainedCanvasSize.y;
+					InOutTexturePreviewOptions.CanvasCenter.Y = InCanvasSize.y - ConstrainedCanvasSize.y;
 				}
 			}
 		}
@@ -1210,8 +1226,8 @@ namespace ImGuiTextureVisualizer
 		{
 			ImGui::GetItemRectSize().x / ConstrainedCanvasSize.x,
 			ImGui::GetItemRectSize().y / ConstrainedCanvasSize.y,
-			-InOutTexturePreviewOptions.CanvasScrollOffset.X / ConstrainedCanvasSize.x,
-			-InOutTexturePreviewOptions.CanvasScrollOffset.Y / ConstrainedCanvasSize.y
+			-InOutTexturePreviewOptions.CanvasCenter.X / ConstrainedCanvasSize.x,
+			-InOutTexturePreviewOptions.CanvasCenter.Y / ConstrainedCanvasSize.y
 		};
 
 		{
@@ -1220,7 +1236,7 @@ namespace ImGuiTextureVisualizer
 			RelativeMousePos.y = FMath::Clamp(RelativeMousePos.y, 0.f, ImGui::GetItemRectSize().y);
 
 			FVector2f Scale = FVector2f(InTextureInfo.SizeX, InTextureInfo.SizeY) / FVector2f(ConstrainedCanvasSize.x, ConstrainedCanvasSize.y);
-			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - InOutTexturePreviewOptions.CanvasScrollOffset) * Scale;
+			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - InOutTexturePreviewOptions.CanvasCenter) * Scale;
 			InOutTexturePreviewOptions.CursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
 
 			if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.f))
@@ -1375,7 +1391,7 @@ namespace ImGuiTextureVisualizer
 
 				const int32 HoveredTexCoordX = TexturePreviewOptions.CursorPosition.X >> TexturePreviewOptions.CurrentMip;
 				const int32 HoveredTexCoordY = TexturePreviewOptions.CursorPosition.Y >> TexturePreviewOptions.CurrentMip;
-				ImGui::Text("Hover - %i, %i (%f, %f) - Right click to pick a pixel",
+				ImGui::Text("Hover - %i, %i (%f, %f) - Right click to inspect pixel",
 					HoveredTexCoordX,
 					HoveredTexCoordY,
 					(float)HoveredTexCoordX / (float)TextureInfo.GetSizeX(TexturePreviewOptions.CurrentMip),

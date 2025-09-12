@@ -116,18 +116,6 @@ namespace ImGuiTextureVisualizer
 		{
 			switch (PixelFormat)
 			{
-			case PF_R32_UINT:
-			case PF_R16_UINT:
-			case PF_R16G16B16A16_UINT:
-			case PF_R32G32B32A32_UINT:
-			case PF_R16G16_UINT:
-			case PF_R8_UINT:
-			case PF_R8G8B8A8_UINT:
-			case PF_R32G32_UINT:
-			case PF_R8G8_UINT:
-			case PF_R32G32B32_UINT:
-			case PF_R64_UINT:
-				return false;
 			case PF_R32_SINT:
 			case PF_R16_SINT:
 			case PF_R16G16B16A16_SINT:
@@ -143,7 +131,7 @@ namespace ImGuiTextureVisualizer
 		{
 			EPixelFormatChannelFlags ValidTextureChannels = GetPixelFormatValidChannels(PixelFormat);
 			
-			// NOTE: fix for `GetPixelFormatValidChannels` not handling certain formats properly
+			// NOTE: fix for `GetPixelFormatValidChannels` not handling certain formats correctly
 			if (PixelFormat == PF_R32_SINT)
 			{
 				ValidTextureChannels = EPixelFormatChannelFlags::R;
