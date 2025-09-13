@@ -4,6 +4,7 @@
 #include "RenderGraphBuilder.h"
 #include "RenderGraphResources.h"
 
+// copied from Voxel core (https://github.com/VoxelPlugin/VoxelCore/blob/master/Source/VoxelCore/Public/VoxelMinimal/VoxelMacros.h)
 #define DEFINE_PRIVATE_ACCESS(Class, Property) \
 namespace PrivateAccess \
 { \
@@ -77,7 +78,7 @@ namespace ImGuiTextureVisualizer
 			}
 		}
 
-		void SetTextureToDisplay(FString TextureName)
+		void SetTextureNameToDisplay(FString TextureName)
 		{
 			TextureToDisplay.SafeRelease();
 			DisplayedTextureName = MoveTemp(TextureName);

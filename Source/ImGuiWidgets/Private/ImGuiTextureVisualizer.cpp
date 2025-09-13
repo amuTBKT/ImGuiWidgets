@@ -487,26 +487,10 @@ namespace ImGuiTextureVisualizer
 
 		if (auto ReadBuffer = GetReadbackBufferForReading())
 		{
-			FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/true);
-			uint8* Dst = TextureInfo.SelectedPixelValue;
-
 			if (const uint8* SrcRawBuffer = (const uint8*)ReadBuffer->Lock(sizeof(FUintVector4)))
 			{
-				if (BaseType == ETexDisplay_ShaderBaseType::UInt)
-				{
-					FUintVector4 value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
-					FMemory::Memcpy(Dst, &value, sizeof(FUintVector4));
-				}
-				else if (BaseType == ETexDisplay_ShaderBaseType::SInt)
-				{
-					FIntVector4 value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
-					FMemory::Memcpy(Dst, &value, sizeof(FIntVector4));
-				}
-				else if (BaseType == ETexDisplay_ShaderBaseType::Float)
-				{
-					FVector4f value; FMemory::Memcpy(&value, SrcRawBuffer, sizeof(value));
-					FMemory::Memcpy(Dst, &value, sizeof(FVector4f));
-				}
+				FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/true);
+				FMemory::Memcpy(TextureInfo.SelectedPixelValue, SrcRawBuffer, sizeof(FUintVector4));
 
 				ReadBuffer->Unlock();
 			}
@@ -514,7 +498,7 @@ namespace ImGuiTextureVisualizer
 
 		auto WriteBuffer = ((InPreviewOptions.TextureInspectorRect.Z - InPreviewOptions.TextureInspectorRect.X) > 0) ? GetReadbackBufferForWriting() : nullptr;
 		if (WriteBuffer)
-		{			
+		{
 			auto* ShaderMap = GetGlobalShaderMap(GetMaxSupportedFeatureLevel(GMaxRHIShaderPlatform));
 
 			FTextureDisplay_CopyPixelValueCS::FPermutationDomain PermutationVector;
@@ -1157,7 +1141,7 @@ namespace ImGuiTextureVisualizer
 		if (bIsCanvasHovered && (FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER))
 		{
 			const float Zoom = (ImGui::GetIO().MouseWheel > 0.f ? 1.1f : 0.9f);
-			
+
 			ImVec2 RelativeMousePos = (ImGui::GetIO().MousePos - ImGui::GetItemRectMin());
 			FVector2f ZoomPivot =
 			{
@@ -1408,7 +1392,7 @@ namespace ImGuiTextureVisualizer
 					
 					if (bRequestNewTexture)
 					{
-						ViewExtension->SetTextureToDisplay(ANSI_TO_TCHAR(*VisTextureName));
+						ViewExtension->SetTextureNameToDisplay(ANSI_TO_TCHAR(*VisTextureName));
 					}
 
 					ReadCurrentPixelValue(RHICmdList, PreviewOptions);
@@ -1441,7 +1425,7 @@ namespace ImGuiTextureVisualizer
 		.TickFunction = &Tick,
 		.WidgetIcon = FSlateIcon(FName("EditorStyle"), FName("ClassIcon.UserDefinedStruct")),
 		.WidgetName = "Texture Visualizer",
-		.WidgetDescription = "Tool for visualizing rendering resources."
+		.WidgetDescription = "Tool for visualizing textures."
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(Params);
 }

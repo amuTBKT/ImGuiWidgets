@@ -173,10 +173,6 @@ public:
 		return true;
 	}
 
-	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
-	{
-	}
-
 	void SetParameters(
 		FRHIBatchedShaderParameters& BatchedParameters,
 		FRHIUnorderedAccessView* DestBufferUAV,

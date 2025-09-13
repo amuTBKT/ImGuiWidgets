@@ -8,20 +8,18 @@
 
 class FImGuiWidgetShadersModule : public IModuleInterface
 {
-	virtual void StartupModule() override;
-	virtual void ShutdownModule() override;
+	virtual void StartupModule() override
+	{
+#if WITH_EDITOR
+		const FString PluginShaderDir = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("ImGuiWidgets"))->GetBaseDir(), TEXT("Shaders"));
+		AddShaderSourceDirectoryMapping(TEXT("/Plugin/ImGuiWidgets"), PluginShaderDir);
+#endif
+	}
+	
+	virtual void ShutdownModule() override
+	{
+
+	}
 };
 
 IMPLEMENT_MODULE(FImGuiWidgetShadersModule, ImGuiWidgetShaders)
-
-void FImGuiWidgetShadersModule::StartupModule()
-{
-#if WITH_EDITOR
-	const FString PluginShaderDir = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("ImGuiWidgets"))->GetBaseDir(), TEXT("Shaders"));
-	AddShaderSourceDirectoryMapping(TEXT("/Plugin/ImGuiWidgets"), PluginShaderDir);
-#endif
-}
-
-void FImGuiWidgetShadersModule::ShutdownModule()
-{
-}
