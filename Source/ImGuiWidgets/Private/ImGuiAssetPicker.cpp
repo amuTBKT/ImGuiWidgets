@@ -374,14 +374,14 @@ FImGuiAssetPicker FImGuiAssetPicker::MakeWidget(const TNonNullPtr<UClass>& Class
 	return Widget;
 }
 
-void FImGuiAssetPicker::DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage)
+void FImGuiAssetPicker::DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage, bool bDrawSimpleWidget)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
-	FImGui::AddWarningMessageBox(Context, 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("AssetPicker('%s') : %s", Label, ErrorMessage));
+	FImGui::AddWarningMessageBox(Context, bDrawSimpleWidget ? 4.f : 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("AssetPicker('%s') : %s", Label, ErrorMessage));
 }
 
-bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset)
+bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawSimpleWidget)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
@@ -426,11 +426,7 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-	const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale);
-	const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.UseSelectedAsset"), FVector2D(18.) * GlobalScale);
-	const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.BrowseToAsset"), FVector2D(18.) * GlobalScale);
-	const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(18.) * GlobalScale);
-	const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(18.) * GlobalScale);
+	const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale);	
 	const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale);
 	const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale);
 	const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale);
@@ -472,23 +468,19 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		}
 	};
 
-	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftAssetPtr)
+	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftAssetPtr, float IconSize)
 	{
-		ImGui::PushStyleColor(ImGuiCol_Button, 0);
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
-		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.UseSelectedAsset"), FVector2D(IconSize));
 
 		if (WITH_EDITOR == 0)
 		{
 			ImGui::BeginDisabled();
-			FImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF);
+			FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon);
 			ImGui::EndDisabled();
 		}
 		else
 		{
-			if (FImGui::ImageButtonWithTint("UseSelectedAsset", UseSelectedAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+			if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
 			{
 				FSoftObjectPtr AssetPtr = (AssetPickerUtils::GetSelectedAssetOfType(AssetType));
 				if (!AssetPtr.IsNull())
@@ -498,43 +490,31 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 			}
 			ImGui::SetItemTooltip("Use Selected Asset from Content Browser");
 		}
-		
-		ImGui::PopStyleVar(2);
-		ImGui::PopStyleColor(3);
 	};
 
-	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftAssetPtr)
+	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftAssetPtr, float IconSize)
 	{
-		ImGui::PushStyleColor(ImGuiCol_Button, 0);
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
-		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.BrowseToAsset"), FVector2D(IconSize));
 
 		if (InSoftAssetPtr.IsNull() || (WITH_EDITOR == 0))
 		{
 			ImGui::BeginDisabled();
-			FImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF);
+			FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon);
 			ImGui::EndDisabled();
 		}
 		else
 		{
-			if (FImGui::ImageButtonWithTint("BrowseToAsset", BrowseToAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+			if (FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon))
 			{
 				AssetPickerUtils::SyncContentBrowserToAsset(FAssetData(InSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), InSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetType->GetClassPathName()));
 			}
 			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InSoftAssetPtr.GetAssetName()));
 		}
-
-		ImGui::PopStyleVar(2);
-		ImGui::PopStyleColor(3);
 	};
 
-	auto Add_ResetSelectionButton = [&](FSoftObjectPtr& InOutSoftAssetPtr)
+	auto Add_ResetSelectionButton = [&](FSoftObjectPtr& InOutSoftAssetPtr, float IconSize)
 	{
-		ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-		ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(IconSize));
 
 		if (FImGui::TransparentImageButton("ResetToDefault", ResetToDefaultIcon))
 		{
@@ -542,13 +522,11 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		}
 		if (!InOutSoftAssetPtr.IsNull())
 		{
-			ImGui::SetItemTooltip("Reset this property");
+			ImGui::SetItemTooltip("Reset");
 		}
-
-		ImGui::PopStyleColor(3);
 	};
 
-	auto Add_AssetViewer = [&](FSoftObjectPtr& InOutSoftAssetPtr)
+	auto Add_AssetViewer = [&](FSoftObjectPtr& InOutSoftAssetPtr) -> ImVec2
 	{
 		// configuration
 		const float AssetViewerWidth = 400.f * GlobalScale;
@@ -556,6 +534,11 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		const float AssetViewerRowHeight = 36.f * GlobalScale;
 		const float AssetViewerRowHeightWithSpacing = AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
 		const int32 PreviewTextMaxLength = 32;
+
+		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
+		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;
+		const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
+		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeightWithSpacing * (FilteredAssetIndices.Num() + 1));
 
 		// TODO: `ImGui::RenderTextEllipsis` does something similar
 		FString PreviewText = !InOutSoftAssetPtr.IsNull() ? InOutSoftAssetPtr.GetAssetName() : FString(TEXT("None"));
@@ -574,28 +557,32 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 			bIsAssetViewerVisible = false;
 		}
 
-		ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-		if (ImGui::Button(TCHAR_TO_ANSI(*PreviewText), ImVec2(AssetViewerWidth * 0.65f, 0.f)))
+		ImVec2 ComboBoxSize;
+		ImGui::BeginGroup();
 		{
-			ImGui::OpenPopup(AssetViewerPopupName);
+			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
+			if (ImGui::Button(TCHAR_TO_ANSI(*PreviewText), ImVec2(AssetViewerWidth * 0.65f, 0.f)))
+			{
+				ImGui::OpenPopup(AssetViewerPopupName);
+			}
+			ComboBoxSize = ImGui::GetItemRectSize();
+			
+			ImGui::SameLine();
+			
+			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(ComboBoxSize.y * 0.9f));
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - DropDownArrowIcon.Size.x * 2.f);
+			FImGui::Image(DropDownArrowIcon);
+			ImGui::PopStyleVar(1);
 		}
-		const float ComboBoxHeight = ImGui::GetItemRectSize().y;
-		ImGui::SameLine();
-		ImGui::SetCursorPosX(ImGui::GetCursorPosX() - DropDownArrowIcon.Size.x * 2.f);
-		FImGui::Image(DropDownArrowIcon);
-		ImGui::PopStyleVar(1);
+		ImGui::EndGroup();
 
-		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
-		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;
-		const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
-		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeightWithSpacing * (FilteredAssetIndices.Num() + 1));
 		if (AvailableSpaceBelow > AvailableSpaceAbove)
 		{
 			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
 		}
 		else
 		{
-			const float OffsetY = ComboBoxHeight + ImGui::GetStyle().ItemSpacing.y * 2.f * GlobalScale;
+			const float OffsetY = ComboBoxSize.y + ImGui::GetStyle().ItemSpacing.y * 2.f * GlobalScale;
 			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y - OffsetY), ImGuiCond_Always, ImVec2(0.f, 1.f));
 		}
 
@@ -760,9 +747,12 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		{
 			InOutSoftAssetPtr = FSoftObjectPtr(AvailableAssets[NewSelectedIndex].ToSoftObjectPath());
 		}
+
+		return ComboBoxSize;
 	};
 
 	ImGui::BeginGroup();
+	if (!bDrawSimpleWidget)
 	{
 		if (strstr(Label, "##") == nullptr)
 		{
@@ -785,9 +775,20 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 				Add_AssetViewer(SelectedSoftAssetPtr);
 
 				// icons
-				ImGui::BeginDisabled(WITH_EDITOR == 0);
-				Add_UseSelectedAssetButton(SelectedSoftAssetPtr); ImGui::SameLine(); Add_BrowseToAssetButton(SelectedSoftAssetPtr);
-				ImGui::EndDisabled();
+				{
+					ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
+
+					Add_UseSelectedAssetButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
+					ImGui::SameLine();
+					Add_BrowseToAssetButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
+
+					ImGui::PopStyleVar(2);
+					ImGui::PopStyleColor(3);
+				}
 			}
 			ImGui::EndGroup();
 		}
@@ -797,8 +798,58 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		// reset icon
 		if (!SelectedSoftAssetPtr.IsNull())
 		{
-			ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y * 0.5f - ResetToDefaultIcon.Size.y);
-			Add_ResetSelectionButton(SelectedSoftAssetPtr);
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+
+			ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y * 0.5f - (18.f * GlobalScale));
+			Add_ResetSelectionButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
+
+			ImGui::PopStyleColor(3);
+		}
+	}
+	else
+	{
+		if (strstr(Label, "##") == nullptr)
+		{
+			ImGui::BeginGroup();
+			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
+			ImGui::TextUnformatted(Label);
+			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
+			ImGui::EndGroup();
+
+			ImGui::SameLine();
+		}
+
+		const ImVec2 AssetViewerComboBoxSize = Add_AssetViewer(SelectedSoftAssetPtr);
+
+		{
+			const float IconSize = AssetViewerComboBoxSize.y * 0.9f;
+			const float IconPaddingTop = AssetViewerComboBoxSize.y * 0.05f;
+
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
+
+			ImGui::SameLine();
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+			Add_UseSelectedAssetButton(SelectedSoftAssetPtr, IconSize);
+
+			ImGui::SameLine();
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+			Add_BrowseToAssetButton(SelectedSoftAssetPtr, IconSize);
+
+			if (!SelectedSoftAssetPtr.IsNull())
+			{
+				ImGui::SameLine();
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+				Add_ResetSelectionButton(SelectedSoftAssetPtr, IconSize);
+			}
+
+			ImGui::PopStyleVar(2);
+			ImGui::PopStyleColor(3);
 		}
 	}
 	ImGui::EndGroup();

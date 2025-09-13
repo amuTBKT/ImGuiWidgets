@@ -627,8 +627,9 @@ bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		if (strstr(Label, "##") == nullptr)
 		{
 			ImGui::BeginGroup();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + ImGui::GetFontSize() * 0.25f);
+			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
 			ImGui::TextUnformatted(Label);
+			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
 			ImGui::EndGroup();
 
 			ImGui::SameLine();
