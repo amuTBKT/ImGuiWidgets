@@ -141,14 +141,50 @@ namespace ImGuiNiagaraProfiler
 		);
 	}
 
-	static void DisplayEmitterStats(const FEmitterStatData& EmitterStat)
+	static bool ShouldDisplayStat(const FSimStageStatData& SimStageStat)
+	{
+		FNameBuilder SimStageName{ SimStageStat.StageName };
+		return SimStageFilter.PassFilter(SimStageName.ToView());
+	}
+	static bool ShouldDisplayStat(const FEmitterStatData& EmitterStat)
 	{
 		UNiagaraEmitter* Emitter = EmitterStat.Emitter.Get();
 		if (!Emitter)
 		{
-			return;
+			return false;
 		}
 
+		for (const auto& Stat : EmitterStat.SimStageStats)
+		{
+			if (ShouldDisplayStat(Stat))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+	static bool ShouldDisplayStat(const FSystemStatData& SystemStat)
+	{
+		if (!SystemStat.System.IsValid() || SystemStat.EmitterStats.IsEmpty())
+		{
+			return false;
+		}
+
+		for (const auto& EmitterStat : SystemStat.EmitterStats)
+		{
+			if (ShouldDisplayStat(EmitterStat))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	static void DisplayEmitterStats(const FEmitterStatData& EmitterStat)
+	{
+		UNiagaraEmitter* Emitter = EmitterStat.Emitter.Get();		
 		const FString& EmitterName = Emitter->GetUniqueEmitterName();
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -167,25 +203,27 @@ namespace ImGuiNiagaraProfiler
 
 				for (const auto& Stat : EmitterStat.SimStageStats)
 				{
-					FNameBuilder SimStageName{ Stat.StageName };
-					if (SimStageFilter.PassFilter(SimStageName.ToView()))
+					if (!ShouldDisplayStat(Stat))
 					{
-						ImGui::TableNextRow(ImGuiTableRowFlags_None);
+						continue;
+					}
 
-						ImGui::TableSetColumnIndex(0);
-						{
-							ImGui::TextUnformatted(TCHAR_TO_ANSI(*SimStageName));
-						}
+					ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
-						ImGui::TableSetColumnIndex(1);
-						{
-							ImGui::Text("%i", Stat.CallCount);
-						}
+					ImGui::TableSetColumnIndex(0);
+					{
+						FNameBuilder SimStageName{ Stat.StageName };
+						ImGui::TextUnformatted(TCHAR_TO_ANSI(*SimStageName));
+					}
 
-						ImGui::TableSetColumnIndex(2);
-						{
-							ImGui::Text("%f", Stat.TotalTime);
-						}
+					ImGui::TableSetColumnIndex(1);
+					{
+						ImGui::Text("%i", Stat.CallCount);
+					}
+
+					ImGui::TableSetColumnIndex(2);
+					{
+						ImGui::Text("%f", Stat.TotalTime);
 					}
 				}
 
@@ -198,11 +236,6 @@ namespace ImGuiNiagaraProfiler
 
 	static void DisplaySystemStats(const FSystemStatData& SystemStat)
 	{
-		if (!SystemStat.System.IsValid() || SystemStat.EmitterStats.IsEmpty())
-		{
-			return;
-		}
-
 		FNameBuilder SystemName{ SystemStat.System->GetFName() };
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -211,6 +244,11 @@ namespace ImGuiNiagaraProfiler
 			ImGui::SameLine(); ImGui::Text(" - %fms", SystemStat.TotalTime);
 			for (const auto& EmitterStat : SystemStat.EmitterStats)
 			{
+				if (!ShouldDisplayStat(EmitterStat))
+				{
+					continue;
+				}
+
 				DisplayEmitterStats(EmitterStat);
 			}
 		}
@@ -233,6 +271,11 @@ namespace ImGuiNiagaraProfiler
 			{
 				for (const auto& SystemStatItr : WorldStats.SystemStats)
 				{
+					if (!ShouldDisplayStat(SystemStatItr.Value))
+					{
+						continue;
+					}
+
 					FImGuiNamedWidgetScope Scope{ GetTypeHash(SystemStatItr.Key) };
 
 					DisplaySystemStats(SystemStatItr.Value);
