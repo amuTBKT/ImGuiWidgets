@@ -16,8 +16,6 @@
 #include "RenderCaptureInterface.h"
 #include "PostProcess/DrawRectangle.h"
 
-UE_DISABLE_OPTIMIZATION
-
 // override setup
 namespace ImGuiTextureVisualizer
 {
@@ -1429,5 +1427,3 @@ namespace ImGuiTextureVisualizer
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(Params);
 }
-
-UE_ENABLE_OPTIMIZATION
