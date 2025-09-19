@@ -24,21 +24,21 @@ public:
 	}
 	
 	template <typename TAssetType>
-	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TSoftObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawSimpleWidget = false)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TSoftObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
 	{
 		if (!AssetType)
 		{
-			DrawInvalidWidget(Context, Label, "'AssetType' unset!", bDrawSimpleWidget);
+			DrawInvalidWidget(Context, Label, "'AssetType' unset!", bDrawCompactWidget);
 			return false;
 		}
 		if (TAssetType::StaticClass() != AssetType)
 		{
-			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", bDrawSimpleWidget);
+			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", bDrawCompactWidget);
 			return false;
 		}
 
 		FSoftObjectPtr SelectedAsset{ InOutSelectedAssetPtr.ToSoftObjectPath() };
-		if (DrawInternal(Context, Label, SelectedAsset, bDrawSimpleWidget))
+		if (DrawInternal(Context, Label, SelectedAsset, bDrawCompactWidget))
 		{
 			InOutSelectedAssetPtr = TSoftObjectPtr<TAssetType>{ SelectedAsset.ToSoftObjectPath() };
 			return true;
@@ -47,21 +47,21 @@ public:
 	}
 
 	template <typename TAssetType>
-	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TAssetType*& InOutSelectedAssetPtr, bool bDrawSimpleWidget = false)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TAssetType*& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
 	{
 		if (!AssetType)
 		{
-			DrawInvalidWidget(Context, Label, "'AssetType' unset!", bDrawSimpleWidget);
+			DrawInvalidWidget(Context, Label, "'AssetType' unset!", bDrawCompactWidget);
 			return false;
 		}
 		if (TAssetType::StaticClass() != AssetType)
 		{
-			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", bDrawSimpleWidget);
+			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", bDrawCompactWidget);
 			return false;
 		}
 
 		FSoftObjectPtr SelectedAsset{ InOutSelectedAssetPtr };
-		if (DrawInternal(Context, Label, SelectedAsset, bDrawSimpleWidget))
+		if (DrawInternal(Context, Label, SelectedAsset, bDrawCompactWidget))
 		{
 			InOutSelectedAssetPtr = Cast<TAssetType>(SelectedAsset.LoadSynchronous());
 			return true;
@@ -70,10 +70,10 @@ public:
 	}
 
 	template <typename TAssetType>
-	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TWeakObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawSimpleWidget = false)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TWeakObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
 	{
 		TAssetType* SelectedAsset = InOutSelectedAssetPtr.Get();
-		if (Draw(Context, Label, SelectedAsset, bDrawSimpleWidget))
+		if (Draw(Context, Label, SelectedAsset, bDrawCompactWidget))
 		{
 			InOutSelectedAssetPtr = SelectedAsset;
 			return true;
@@ -82,10 +82,10 @@ public:
 	}
 
 	template <typename TAssetType>
-	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawSimpleWidget = false)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
 	{
 		TAssetType* SelectedAsset = InOutSelectedAssetPtr.Get();
-		if (Draw(Context, Label, SelectedAsset, bDrawSimpleWidget))
+		if (Draw(Context, Label, SelectedAsset, bDrawCompactWidget))
 		{
 			InOutSelectedAssetPtr = SelectedAsset;
 			return true;
@@ -94,8 +94,8 @@ public:
 	}
 
 private:
-	IMGUIWIDGETS_API void DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage, bool bDrawSimpleWidget);
-	IMGUIWIDGETS_API bool DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawSimpleWidget);
+	IMGUIWIDGETS_API void DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage, bool bDrawCompactWidget);
+	IMGUIWIDGETS_API bool DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawCompactWidget);
 	void FilterAvailableAssets();
 
 private:

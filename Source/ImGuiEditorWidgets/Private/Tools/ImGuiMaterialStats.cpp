@@ -294,7 +294,7 @@ namespace ImGuiMaterialStats
 			});
 	}
 
-	static void Tick(ImGuiContext* Context)
+	static void Tick(FImGuiTickContext* Context)
 	{
 		FImGuiTickScope Scope{ Context };
 		
@@ -610,7 +610,7 @@ namespace ImGuiMaterialStats
 			Just finding the first node with valid TabBar here, seems to pick the last window (ideally should be using the first?)
 			*/
 			TArray<ImGuiDockNode*> Stack;
-			Stack.Add(ImGui::DockContextFindNodeByID(Context, MainDockSpaceID));
+			Stack.Add(ImGui::DockContextFindNodeByID(Context->ImGuiContext, MainDockSpaceID));
 			ImGuiDockNode* DockNode = nullptr;
 			while (true)
 			{

@@ -1,6 +1,5 @@
 // Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
 
-#include "CoreMinimal.h"
 #include "ImGuiPluginTypes.h"
 #include "Modules/ModuleManager.h"
 #include "Modules/ModuleInterface.h"

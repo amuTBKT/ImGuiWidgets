@@ -2,18 +2,17 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
 #include "ImGuiPluginTypes.h"
 
 namespace FImGui
 {
 	// Required to have valid ImGui context across modules
-	FORCEINLINE void EnsureValidImGuiContext(ImGuiContext* Context)
+	FORCEINLINE void EnsureValidImGuiContext(FImGuiTickContext* Context)
 	{
-		check(Context);
-		if (ImGui::GetCurrentContext() != Context)
+		check(Context->ImGuiContext);
+		if (ImGui::GetCurrentContext() != Context->ImGuiContext)
 		{
-			ImGui::SetCurrentContext(Context);
+			ImGui::SetCurrentContext(Context->ImGuiContext);
 		}
 	}
 
@@ -93,18 +92,18 @@ namespace FImGui
 		ImGui::ImageWithBg(image.Id, image.Size, image.UV0, image.UV1, /*bg_col=*/ImVec4(0, 0, 0, 0), tint_col);
 	}
 
-	IMGUIWIDGETS_API void AddWarningMessageBox(ImGuiContext* Context, float padding, const ImVec4& col, const char* message);
+	IMGUIWIDGETS_API void AddWarningMessageBox(FImGuiTickContext* Context, float padding, const ImVec4& col, const char* message);
 
 	// Hacky/Experimental widget
-	IMGUIWIDGETS_API bool SliderWithTwoHandles(ImGuiContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width);
-	IMGUIWIDGETS_API bool SliderWithTwoHandles(ImGuiContext* context, const char* label, double& p_data_0, double& p_data_1, double& p_data_min, double& p_data_max, float input_width, float slider_width);
+	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width);
+	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, double& p_data_0, double& p_data_1, double& p_data_min, double& p_data_max, float input_width, float slider_width);
 }
 
 class FImGuiTextFilter
 {
 public:
 	IMGUIWIDGETS_API static FImGuiTextFilter MakeWidget(uint32 MaxLength);
-	IMGUIWIDGETS_API bool Draw(ImGuiContext* Context, const char* Label, const char* HintText = nullptr, float WidgetWidth = 0.f, bool bSetFocus = false);
+	IMGUIWIDGETS_API bool Draw(FImGuiTickContext* Context, const char* Label, const char* HintText = nullptr, float WidgetWidth = 0.f, bool bSetFocus = false);
 	IMGUIWIDGETS_API void Reset();
 
 	bool IsActive()									const { return !FilterKeywordTokens.IsEmpty(); }

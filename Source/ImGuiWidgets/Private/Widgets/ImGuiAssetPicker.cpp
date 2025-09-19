@@ -11,6 +11,7 @@
 #include "CollectionManagerModule.h"
 #include "Styling/SlateIconFinder.h"
 #include "IContentBrowserSingleton.h"
+#include "DragAndDrop/AssetDragDropOp.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
 #endif
@@ -374,14 +375,14 @@ FImGuiAssetPicker FImGuiAssetPicker::MakeWidget(const TNonNullPtr<UClass>& Class
 	return Widget;
 }
 
-void FImGuiAssetPicker::DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage, bool bDrawSimpleWidget)
+void FImGuiAssetPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage, bool bDrawCompactWidget)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
-	FImGui::AddWarningMessageBox(Context, bDrawSimpleWidget ? 4.f : 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("AssetPicker('%s') : %s", Label, ErrorMessage));
+	FImGui::AddWarningMessageBox(Context, bDrawCompactWidget ? 4.f : 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("AssetPicker('%s') : %s", Label, ErrorMessage));
 }
 
-bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawSimpleWidget)
+bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawCompactWidget)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 
@@ -423,19 +424,28 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		FilterAvailableAssets();
 	}
 
-	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
+#if WITH_EDITOR
+	TOptional<FAssetData> DraggedAssetData;
+	const bool bIsDragDropOperationValid = Context->DragDropOperation.IsValid() && Context->DragDropOperation->IsOfType<FAssetDragDropOp>();
+	if (bIsDragDropOperationValid)
+	{
+		TSharedPtr<FAssetDragDropOp> DragDropOp = StaticCastSharedPtr<FAssetDragDropOp>(Context->DragDropOperation);
+		if (DragDropOp->GetAssets().Num() == 1 && DragDropOp->GetAssets()[0].GetClass()->IsChildOf(AssetType))
+		{
+			DraggedAssetData = DragDropOp->GetAssets()[0];
+		}
+	}
+#else
+	const bool bIsDragDropOperationValid = false;
+#endif
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-	const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale);	
-	const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale);
-	const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale);
-	const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale);
-	const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DeveloperFolder"), FVector2D(16.) * GlobalScale);
-	const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.AssetCollection"), FVector2D(16.) * GlobalScale);
-	const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale);
+	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
 	auto Add_AssetThumbnail = [&](FSlateShaderResource* AssetThumbnail, float IconSize, const FSoftObjectPtr& InSoftAssetPtr)
 	{
+		const FImGuiImageBindingParams DefaultClassIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetContainer.GetClassIconBrush(), FVector2D(50.) * GlobalScale);	
+
 		if (AssetThumbnail)
 		{
 			const FImGuiImageBindingParams ThumbnailIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetThumbnail);
@@ -716,6 +726,13 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 						return bWasActive != bInOutState;
 					};
 
+				const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DeveloperFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.AssetCollection"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale);
+
 				bFilterAvailableAssets |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectContent, ProjectContentIcon, "Show Project Content?");
 				bFilterAvailableAssets |= AddButton("ToggleEngineContent", AssetPickerUtils::bShowEngineContent, EngineContentIcon, "Show Engine Content?");
 				bFilterAvailableAssets |= AddButton("TogglePluginContent", AssetPickerUtils::bShowPluginContent, PluginContentIcon, "Show Plugin Content?");
@@ -751,108 +768,183 @@ bool FImGuiAssetPicker::DrawInternal(ImGuiContext* Context, const char* Label, F
 		return ComboBoxSize;
 	};
 
-	ImGui::BeginGroup();
-	if (!bDrawSimpleWidget)
+	ImRect AssetDragDropArea;
 	{
-		if (strstr(Label, "##") == nullptr)
+		// TODO: find a better way to disable interactions
+		ImVec2 OriginalMousePos = ImGui::GetIO().MousePos;
+		if (bIsDragDropOperationValid)
 		{
-			ImGui::BeginGroup();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 25.f * GlobalScale - ImGui::GetFontSize() * 0.5f);
-			ImGui::TextUnformatted(Label);
-			ImGui::EndGroup();
-
-			ImGui::SameLine();
+			ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 		}
-
+		
 		ImGui::BeginGroup();
+		if (bDrawCompactWidget)
 		{
-			Add_AssetThumbnail(SelectedAssetTexture, 50.f * GlobalScale, SelectedSoftAssetPtr);
-			ImGui::SameLine();
-
-			ImGui::BeginGroup();
+			if (strstr(Label, "##") == nullptr)
 			{
-				// combo box
-				Add_AssetViewer(SelectedSoftAssetPtr);
+				ImGui::BeginGroup();
+				ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
+				ImGui::TextUnformatted(Label);
+				ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
+				ImGui::EndGroup();
 
-				// icons
-				{
-					ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-					ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
-					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
-
-					Add_UseSelectedAssetButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
-					ImGui::SameLine();
-					Add_BrowseToAssetButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
-
-					ImGui::PopStyleVar(2);
-					ImGui::PopStyleColor(3);
-				}
+				ImGui::SameLine();
 			}
-			ImGui::EndGroup();
-		}
-		ImGui::EndGroup();
-		const ImVec2 GroupSize = ImGui::GetItemRectSize();
 
-		// reset icon
-		if (!SelectedSoftAssetPtr.IsNull())
-		{
-			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-
-			ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y * 0.5f - (18.f * GlobalScale));
-			Add_ResetSelectionButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
-
-			ImGui::PopStyleColor(3);
-		}
-	}
-	else
-	{
-		if (strstr(Label, "##") == nullptr)
-		{
+			float IconSize;
+			float IconPaddingTop;
 			ImGui::BeginGroup();
-			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
-			ImGui::TextUnformatted(Label);
-			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
-			ImGui::EndGroup();
-
-			ImGui::SameLine();
-		}
-
-		const ImVec2 AssetViewerComboBoxSize = Add_AssetViewer(SelectedSoftAssetPtr);
-
-		{
-			const float IconSize = AssetViewerComboBoxSize.y * 0.9f;
-			const float IconPaddingTop = AssetViewerComboBoxSize.y * 0.05f;
-
-			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
-
-			ImGui::SameLine();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_UseSelectedAssetButton(SelectedSoftAssetPtr, IconSize);
-
-			ImGui::SameLine();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_BrowseToAssetButton(SelectedSoftAssetPtr, IconSize);
-
-			if (!SelectedSoftAssetPtr.IsNull())
 			{
+				const ImVec2 AssetViewerComboBoxSize = Add_AssetViewer(SelectedSoftAssetPtr);
+
+				IconSize = AssetViewerComboBoxSize.y * 0.9f;
+				IconPaddingTop = AssetViewerComboBoxSize.y * 0.05f;
+
+				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
+
 				ImGui::SameLine();
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-				Add_ResetSelectionButton(SelectedSoftAssetPtr, IconSize);
+				Add_UseSelectedAssetButton(SelectedSoftAssetPtr, IconSize);
+
+				ImGui::SameLine();
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+				Add_BrowseToAssetButton(SelectedSoftAssetPtr, IconSize);
+
+				ImGui::PopStyleVar(2);
+				ImGui::PopStyleColor(3);
+			}
+			ImGui::EndGroup();
+			AssetDragDropArea = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+
+			// reset icon
+			if (!SelectedSoftAssetPtr.IsNull())
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
+
+				if (!SelectedSoftAssetPtr.IsNull())
+				{
+					ImGui::SameLine();
+					ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+					Add_ResetSelectionButton(SelectedSoftAssetPtr, IconSize);
+				}
+
+				ImGui::PopStyleVar(2);
+				ImGui::PopStyleColor(3);
+			}
+		}
+		else
+		{
+			if (strstr(Label, "##") == nullptr)
+			{
+				ImGui::BeginGroup();
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 25.f * GlobalScale - ImGui::GetFontSize() * 0.5f);
+				ImGui::TextUnformatted(Label);
+				ImGui::EndGroup();
+
+				ImGui::SameLine();
 			}
 
-			ImGui::PopStyleVar(2);
-			ImGui::PopStyleColor(3);
+			ImGui::BeginGroup();
+			{
+				Add_AssetThumbnail(SelectedAssetTexture, 50.f * GlobalScale, SelectedSoftAssetPtr);
+				ImGui::SameLine();
+
+				ImGui::BeginGroup();
+				{
+					// combo box
+					Add_AssetViewer(SelectedSoftAssetPtr);
+
+					// icons
+					{
+						ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+						ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
+						ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
+
+						Add_UseSelectedAssetButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
+						ImGui::SameLine();
+						Add_BrowseToAssetButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
+
+						ImGui::PopStyleVar(2);
+						ImGui::PopStyleColor(3);
+					}
+				}
+				ImGui::EndGroup();
+			}
+			ImGui::EndGroup();
+			const ImVec2 GroupSize = ImGui::GetItemRectSize();
+			AssetDragDropArea = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+
+			// reset icon
+			if (!SelectedSoftAssetPtr.IsNull())
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+
+				ImGui::SameLine(); ImGui::SetCursorPosY(ImGui::GetCursorPosY() + GroupSize.y * 0.5f - (18.f * GlobalScale));
+				Add_ResetSelectionButton(SelectedSoftAssetPtr, 18.f * GlobalScale);
+
+				ImGui::PopStyleColor(3);
+			}
+		}
+		ImGui::EndGroup();
+		
+		// TODO: find a better way to disable interactions
+		ImGui::GetIO().MousePos = OriginalMousePos;
+	}
+
+#if WITH_EDITOR
+	const bool bDrawDragDropArea = bIsDragDropOperationValid && (DraggedAssetData.IsSet() || ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max));
+	if (bDrawDragDropArea)
+	{
+		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Vertical"));
+		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Horizontal"));
+		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DropTarget.Background"));
+
+		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
+		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
+
+		const float BorderSize = GlobalScale;
+		const float TilingU = AssetDragDropArea.GetWidth() / (HorizontalImage.Size.x * GlobalScale);
+		const float TilingV = AssetDragDropArea.GetHeight() / (VerticalImage.Size.y * GlobalScale);
+
+		const ImVec2 TopLeftCorner = AssetDragDropArea.Min;
+		const ImVec2 TopRightCorner = ImVec2(AssetDragDropArea.Max.x, AssetDragDropArea.Min.y);
+		const ImVec2 BottomRightCorner = AssetDragDropArea.Max;
+		const ImVec2 BottomLeftCorner = ImVec2(AssetDragDropArea.Min.x, AssetDragDropArea.Max.y);
+
+		const ImU32 TintColor = DraggedAssetData.IsSet() ? ValidColor : InvalidColor;
+
+		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(BackgroundImage.Id), AssetDragDropArea.Min, AssetDragDropArea.Max, BackgroundImage.UV0 + ImVec2(.001, .001), BackgroundImage.UV1 - ImVec2(.001, .001), TintColor);
+
+		// horizontal border
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(HorizontalImage.Id), TopLeftCorner, TopRightCorner + ImVec2(0.f, BorderSize), HorizontalImage.UV0, HorizontalImage.UV1* ImVec2(TilingU, 1.f), TintColor);
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(HorizontalImage.Id), BottomLeftCorner, BottomRightCorner + ImVec2(0.f, -BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), TintColor);
+
+		// vertical border
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(VerticalImage.Id), TopLeftCorner, BottomLeftCorner + ImVec2(BorderSize, 0.f), VerticalImage.UV0, VerticalImage.UV1* ImVec2(1.f, TilingV), TintColor);
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(VerticalImage.Id), BottomRightCorner + ImVec2(-BorderSize, 0.f), TopRightCorner, VerticalImage.UV0, VerticalImage.UV1* ImVec2(1.f, TilingV), TintColor);
+	}
+
+	if (DraggedAssetData.IsSet() && Context->bApplyDragDropOperation && ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max))
+	{
+		if (Context->ConsumeDragDropOperation())
+		{
+			SelectedSoftAssetPtr = FSoftObjectPtr(DraggedAssetData->ToSoftObjectPath());
 		}
 	}
-	ImGui::EndGroup();
+#endif
 
 	const bool bSelectionChanged = (SelectedSoftAssetPtr != InOutSelectedAsset);
 	if (bSelectionChanged)

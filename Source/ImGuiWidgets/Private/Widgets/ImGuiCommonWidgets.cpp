@@ -6,7 +6,7 @@
 namespace FImGui
 {
 
-	void AddWarningMessageBox(ImGuiContext* Context, float padding, const ImVec4& col, const char* message)
+	void AddWarningMessageBox(FImGuiTickContext* Context, float padding, const ImVec4& col, const char* message)
 	{
 		EnsureValidImGuiContext(Context);
 
@@ -50,7 +50,7 @@ namespace FImGui
 	}
 
 	template <typename TDataType, ImGuiDataType TImGuiDataType>
-	bool TSliderWithTwoHandles(ImGuiContext* context, const char* label, TDataType& p_data_0, TDataType& p_data_1, TDataType& p_data_min, TDataType& p_data_max, float input_width, float slider_width)
+	bool TSliderWithTwoHandles(FImGuiTickContext* context, const char* label, TDataType& p_data_0, TDataType& p_data_1, TDataType& p_data_min, TDataType& p_data_max, float input_width, float slider_width)
 	{
 		const TDataType prev_data_0 = p_data_0;
 		const TDataType prev_data_1 = p_data_1;
@@ -227,12 +227,12 @@ namespace FImGui
 	}
 
 
-	bool SliderWithTwoHandles(ImGuiContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width)
+	bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width)
 	{
 		return TSliderWithTwoHandles<float, ImGuiDataType_Float>(context, label, p_data_0, p_data_1, p_data_min, p_data_max, input_width, slider_width);
 	}
 
-	bool SliderWithTwoHandles(ImGuiContext* context, const char* label, double& p_data_0, double& p_data_1, double& p_data_min, double& p_data_max, float input_width, float slider_width)
+	bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, double& p_data_0, double& p_data_1, double& p_data_min, double& p_data_max, float input_width, float slider_width)
 	{
 		return TSliderWithTwoHandles<double, ImGuiDataType_Double>(context, label, p_data_0, p_data_1, p_data_min, p_data_max, input_width, slider_width);
 	}

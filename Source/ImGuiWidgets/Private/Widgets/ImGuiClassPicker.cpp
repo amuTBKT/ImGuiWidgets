@@ -317,14 +317,14 @@ FImGuiClassPicker FImGuiClassPicker::MakeWidget(const FSoftClassPath& ClassPath,
 	return Widget;
 }
 
-void FImGuiClassPicker::DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage)
+void FImGuiClassPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
 
 	FImGui::AddWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("ClassPicker('%s') : %s", Label, ErrorMessage));
 }
 
-bool FImGuiClassPicker::DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass)
+bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
 

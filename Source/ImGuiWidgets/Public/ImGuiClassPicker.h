@@ -20,7 +20,7 @@ public:
 	IMGUIWIDGETS_API static FImGuiClassPicker MakeWidget(const FSoftClassPath& ClassPath, FFilters OptionalFilters = {});
 	
 	template <typename TClassType>
-	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TSoftClassPtr<TClassType>& InOutSelectedClassPtr)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TSoftClassPtr<TClassType>& InOutSelectedClassPtr)
 	{
 		if (!BaseClassPath.IsValid())
 		{
@@ -37,7 +37,7 @@ public:
 		return false;
 	}
 
-	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, UClass*& InOutSelectedClassPtr)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, UClass*& InOutSelectedClassPtr)
 	{
 		if (!BaseClassPath.IsValid())
 		{
@@ -54,7 +54,7 @@ public:
 		return false;
 	}
 
-	FORCEINLINE bool Draw(ImGuiContext* Context, const char* Label, TWeakObjectPtr<UClass>& InOutSelectedClassPtr)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TWeakObjectPtr<UClass>& InOutSelectedClassPtr)
 	{
 		UClass* SelectedClass = InOutSelectedClassPtr.Get();
 		if (Draw(Context, Label, SelectedClass))
@@ -66,8 +66,8 @@ public:
 	}
 
 private:
-	IMGUIWIDGETS_API void DrawInvalidWidget(ImGuiContext* Context, const char* Label, const char* ErrorMessage);
-	IMGUIWIDGETS_API bool DrawInternal(ImGuiContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass);
+	IMGUIWIDGETS_API void DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage);
+	IMGUIWIDGETS_API bool DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass);
 	void FilterAvailableClasses();
 
 private:

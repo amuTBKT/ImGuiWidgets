@@ -678,7 +678,7 @@ namespace ImGuiTextureVisualizer
 		return !GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName.IsEmpty();
 	}
 
-	static bool DrawTextureList(ImGuiContext* Context, FAnsiString& InOutSelectedTextureName)
+	static bool DrawTextureList(FImGuiTickContext* Context, FAnsiString& InOutSelectedTextureName)
 	{
 		static FImGuiTextFilter SearchFilter = FImGuiTextFilter::MakeWidget(64u);
 		static bool bSetFocusOnSelectedEntry = false; // flag checked on next frame, hence static
@@ -783,7 +783,7 @@ namespace ImGuiTextureVisualizer
 		return !InOutSelectedTextureName.Equals(PreviouslySelectedTextureName);
 	}
 
-	static void DrawTextureControls(ImGuiContext* Context, const FTextureInfo& InTextureInfo, FTexturePreviewOptions& InOutTexturePreviewOptions)
+	static void DrawTextureControls(FImGuiTickContext* Context, const FTextureInfo& InTextureInfo, FTexturePreviewOptions& InOutTexturePreviewOptions)
 	{
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 		const float ControlPadding = 10.f * GlobalScale;
@@ -1107,7 +1107,7 @@ namespace ImGuiTextureVisualizer
 	}
 
 	static void DrawTextureCanvas(
-		ImGuiContext* Context,
+		FImGuiTickContext* Context,
 		ImVec2 InCanvasSize,
 		const FTextureInfo& InTextureInfo,
 		FTexturePreviewOptions& InOutTexturePreviewOptions)
@@ -1273,7 +1273,7 @@ namespace ImGuiTextureVisualizer
 		}
 	}
 
-	static void Tick(ImGuiContext* Context)
+	static void Tick(FImGuiTickContext* Context)
 	{
 		FImGuiTickScope Scope{ Context };
 

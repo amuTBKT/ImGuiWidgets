@@ -614,7 +614,7 @@ namespace ImGuiStatsVizualizer
 		}
 	}
 
-	static void RenderStatsHeader()
+	static void RenderStatsHeader(FImGuiTickContext* Context)
 	{
 		// add new stat
 		{
@@ -674,7 +674,7 @@ namespace ImGuiStatsVizualizer
 
 		ImGui::Separator();
 
-		StatFilter.Draw(ImGui::GetCurrentContext(), "FilterLabel", "Filter Stats", ImGui::GetWindowWidth() * 0.75f);
+		StatFilter.Draw(Context, "FilterLabel", "Filter Stats", ImGui::GetWindowWidth() * 0.75f);
 	}
 
 	static void Initialize()
@@ -694,7 +694,7 @@ namespace ImGuiStatsVizualizer
 		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()) * ImGui::GetStyle().FontScaleMain);
 	}
 
-	static void Tick(ImGuiContext* Context)
+	static void Tick(FImGuiTickContext* Context)
 	{
 		FImGuiTickScope Scope{ Context };
 
@@ -711,7 +711,7 @@ namespace ImGuiStatsVizualizer
 			
 			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 			{
-				RenderStatsHeader();
+				RenderStatsHeader(Context);
 			}
 			ImGui::EndChild();
 

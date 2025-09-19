@@ -287,7 +287,7 @@ namespace ImGuiNiagaraProfiler
 		}
 	}
 
-	static void Tick(ImGuiContext* Context)
+	static void Tick(FImGuiTickContext* Context)
 	{
 		FImGuiTickScope Scope{ Context };
 
