@@ -322,7 +322,7 @@ void FImGuiClassPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
 
-	FImGui::AddWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("ClassPicker('%s') : %s", Label, ErrorMessage));
+	FImGui::DrawWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("ClassPicker('%s') : %s", Label, ErrorMessage));
 }
 
 bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass)
@@ -718,34 +718,10 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	const bool bDrawDragDropArea = bIsDragDropOperationValid && (DraggedClassPath.IsSet() || ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max));
 	if (bDrawDragDropArea)
 	{
-		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Vertical"));
-		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Horizontal"));
-		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DropTarget.Background"));
-
 		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
 		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
 
-		const float BorderSize = GlobalScale;
-		const float TilingU = AssetDragDropArea.GetWidth() / (HorizontalImage.Size.x * GlobalScale);
-		const float TilingV = AssetDragDropArea.GetHeight() / (VerticalImage.Size.y * GlobalScale);
-
-		const ImVec2 TopLeftCorner = AssetDragDropArea.Min;
-		const ImVec2 TopRightCorner = ImVec2(AssetDragDropArea.Max.x, AssetDragDropArea.Min.y);
-		const ImVec2 BottomRightCorner = AssetDragDropArea.Max;
-		const ImVec2 BottomLeftCorner = ImVec2(AssetDragDropArea.Min.x, AssetDragDropArea.Max.y);
-
-		const ImU32 TintColor = DraggedClassPath.IsSet() ? ValidColor : InvalidColor;
-
-		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
-		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(BackgroundImage.Id), AssetDragDropArea.Min, AssetDragDropArea.Max, BackgroundImage.UV0 + ImVec2(.001, .001), BackgroundImage.UV1 - ImVec2(.001, .001), TintColor);
-
-		// horizontal border
-		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(HorizontalImage.Id), TopLeftCorner, TopRightCorner + ImVec2(0.f, BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), TintColor);
-		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(HorizontalImage.Id), BottomLeftCorner, BottomRightCorner + ImVec2(0.f, -BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), TintColor);
-
-		// vertical border
-		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(VerticalImage.Id), TopLeftCorner, BottomLeftCorner + ImVec2(BorderSize, 0.f), VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), TintColor);
-		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(VerticalImage.Id), BottomRightCorner + ImVec2(-BorderSize, 0.f), TopRightCorner, VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), TintColor);
+		FImGui::DrawDragDropArea(Context, AssetDragDropArea, 1.f, DraggedClassPath.IsSet() ? ValidColor : InvalidColor);
 	}
 
 	if (DraggedClassPath.IsSet() && Context->bApplyDragDropOperation && ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max))

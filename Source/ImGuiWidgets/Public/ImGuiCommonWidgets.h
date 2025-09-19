@@ -92,7 +92,9 @@ namespace FImGui
 		ImGui::ImageWithBg(image.Id, image.Size, image.UV0, image.UV1, /*bg_col=*/ImVec4(0, 0, 0, 0), tint_col);
 	}
 
-	IMGUIWIDGETS_API void AddWarningMessageBox(FImGuiTickContext* Context, float padding, const ImVec4& col, const char* message);
+	IMGUIWIDGETS_API void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message);
+	
+	IMGUIWIDGETS_API void DrawDragDropArea(FImGuiTickContext* context, ImRect drag_drop_rect, float border_size, ImU32 tint_col);
 
 	// Hacky/Experimental widget
 	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width);

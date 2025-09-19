@@ -21,7 +21,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 	const int32 MaxLength = FilterStringBuffer_ANSI.Max();
 	if (MaxLength == 0)
 	{
-		FImGui::AddWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("TextFilter('%s') not initialized!", Label));
+		FImGui::DrawWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("TextFilter('%s') not initialized!", Label));
 		return false;
 	}
 

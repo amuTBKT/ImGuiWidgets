@@ -6,9 +6,9 @@
 namespace FImGui
 {
 
-	void AddWarningMessageBox(FImGuiTickContext* Context, float padding, const ImVec4& col, const char* message)
+	void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message)
 	{
-		EnsureValidImGuiContext(Context);
+		EnsureValidImGuiContext(context);
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Warning"), FVector2D(ImGui::GetFontSize()));
@@ -47,6 +47,41 @@ namespace FImGui
 		DrawList->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(ImVec4(col.x, col.y, col.z, 0.15f)), 0.f, ImDrawFlags_None);
 
 		DrawList->ChannelsMerge();
+	}
+
+	void DrawDragDropArea(FImGuiTickContext* context, ImRect drag_drop_rect, float border_size, ImU32 tint_col)
+	{
+		EnsureValidImGuiContext(context);
+
+		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
+		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
+
+		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Vertical"));
+		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Horizontal"));
+		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DropTarget.Background"));
+
+		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
+		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
+
+		const float BorderSize = border_size * GlobalScale;
+		const float TilingU = drag_drop_rect.GetWidth() / (HorizontalImage.Size.x * GlobalScale);
+		const float TilingV = drag_drop_rect.GetHeight() / (VerticalImage.Size.y * GlobalScale);
+
+		const ImVec2 TopLeftCorner = drag_drop_rect.Min;
+		const ImVec2 TopRightCorner = ImVec2(drag_drop_rect.Max.x, drag_drop_rect.Min.y);
+		const ImVec2 BottomRightCorner = drag_drop_rect.Max;
+		const ImVec2 BottomLeftCorner = ImVec2(drag_drop_rect.Min.x, drag_drop_rect.Max.y);
+
+		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
+		ImGui::GetWindowDrawList()->AddImage(BackgroundImage.Id, drag_drop_rect.Min, drag_drop_rect.Max, BackgroundImage.UV0 + ImVec2(.001, .001), BackgroundImage.UV1 - ImVec2(.001, .001), tint_col);
+
+		// horizontal border
+		ImGui::GetWindowDrawList()->AddImage(HorizontalImage.Id, TopLeftCorner, TopRightCorner + ImVec2(0.f, BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), tint_col);
+		ImGui::GetWindowDrawList()->AddImage(HorizontalImage.Id, BottomLeftCorner, BottomRightCorner + ImVec2(0.f, -BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), tint_col);
+
+		// vertical border
+		ImGui::GetWindowDrawList()->AddImage(VerticalImage.Id, TopLeftCorner, BottomLeftCorner + ImVec2(BorderSize, 0.f), VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), tint_col);
+		ImGui::GetWindowDrawList()->AddImage(VerticalImage.Id, BottomRightCorner + ImVec2(-BorderSize, 0.f), TopRightCorner, VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), tint_col);
 	}
 
 	template <typename TDataType, ImGuiDataType TImGuiDataType>
