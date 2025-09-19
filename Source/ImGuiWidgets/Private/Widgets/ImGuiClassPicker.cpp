@@ -6,6 +6,7 @@
 #include "Editor.h"
 #include "ContentBrowserModule.h"
 #include "IContentBrowserSingleton.h"
+#include "DragAndDrop/AssetDragDropOp.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #endif
@@ -358,6 +359,21 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		FilterAvailableClasses();
 	}
 
+#if WITH_EDITOR
+	TOptional<FSoftObjectPtr> DraggedClassPath;
+	const bool bIsDragDropOperationValid = Context->DragDropOperation.IsValid() && Context->DragDropOperation->IsOfType<FAssetDragDropOp>();
+	if (bIsDragDropOperationValid)
+	{
+		TSharedPtr<FAssetDragDropOp> DragDropOp = StaticCastSharedPtr<FAssetDragDropOp>(Context->DragDropOperation);
+		if (DragDropOp->GetAssets().Num() == 1 && ClassPickerUtils::IsClassChildOf(ClassPickerUtils::GetClassPathForAsset(DragDropOp->GetAssets()[0]), BaseClassPath))
+		{
+			DraggedClassPath = FSoftObjectPtr{ ClassPickerUtils::GetClassPathForAsset(DragDropOp->GetAssets()[0]) };
+		}
+	}
+#else
+	const bool bIsDragDropOperationValid = false;
+#endif
+
 	const auto* SelectedClassData = AvailableClasses.IsValidIndex(LastSelectedClassIndex) ? &AvailableClasses[LastSelectedClassIndex] : nullptr;
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
@@ -622,53 +638,125 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImGui::EndDisabled();
 	};
 
-	ImGui::BeginGroup();
-	{		
-		if (strstr(Label, "##") == nullptr)
+	ImRect AssetDragDropArea;
+	{
+		// TODO: find a better way to disable interactions
+		ImVec2 OriginalMousePos = ImGui::GetIO().MousePos;
+		if (bIsDragDropOperationValid)
 		{
-			ImGui::BeginGroup();
-			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
-			ImGui::TextUnformatted(Label);
-			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
-			ImGui::EndGroup();
-
-			ImGui::SameLine();
+			ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 		}
 
-		const ImVec2 ClassViewerComboBoxSize = Add_ClassViewer(SelectedSoftClassPtr);
-		
+		ImGui::BeginGroup();
 		{
-			const float IconSize = ClassViewerComboBoxSize.y * 0.9f;
-			const float IconPaddingTop = ClassViewerComboBoxSize.y * 0.05f;
+			if (strstr(Label, "##") == nullptr)
+			{
+				ImGui::BeginGroup();
+				ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
+				ImGui::TextUnformatted(Label);
+				ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
+				ImGui::EndGroup();
 
-			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
+				ImGui::SameLine();
+			}
 
-			ImGui::SameLine();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_UseSelectedAssetButton(SelectedSoftClassPtr, IconSize);
-			
-			ImGui::SameLine();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_BrowseToAssetButton(SelectedSoftClassPtr, IconSize);
-			
-			ImGui::SameLine();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_CreateBlueprintButton(SelectedSoftClassPtr, IconSize);
-			
-			ImGui::SameLine();
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-			Add_ClearValueButton(SelectedSoftClassPtr, IconSize);
+			float IconSize;
+			float IconPaddingTop;
+			ImGui::BeginGroup();
+			{
+				const ImVec2 ClassViewerComboBoxSize = Add_ClassViewer(SelectedSoftClassPtr);
+				
+				IconSize = ClassViewerComboBoxSize.y * 0.9f;
+				IconPaddingTop = ClassViewerComboBoxSize.y * 0.05f;
 
-			ImGui::PopStyleVar(2);
-			ImGui::PopStyleColor(3);
-		}		
+				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
+
+				ImGui::SameLine();
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+				Add_UseSelectedAssetButton(SelectedSoftClassPtr, IconSize);
+
+				ImGui::SameLine();
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+				Add_BrowseToAssetButton(SelectedSoftClassPtr, IconSize);
+
+				ImGui::PopStyleVar(2);
+				ImGui::PopStyleColor(3);
+			}
+			ImGui::EndGroup();
+			AssetDragDropArea = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+
+			{
+				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
+
+				ImGui::SameLine();
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+				Add_CreateBlueprintButton(SelectedSoftClassPtr, IconSize);
+
+				ImGui::SameLine();
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+				Add_ClearValueButton(SelectedSoftClassPtr, IconSize);
+
+				ImGui::PopStyleVar(2);
+				ImGui::PopStyleColor(3);
+			}
+		}
+		ImGui::EndGroup();
+
+		// TODO: find a better way to disable interactions
+		ImGui::GetIO().MousePos = OriginalMousePos;
 	}
-	ImGui::EndGroup();
 	
+#if WITH_EDITOR
+	const bool bDrawDragDropArea = bIsDragDropOperationValid && (DraggedClassPath.IsSet() || ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max));
+	if (bDrawDragDropArea)
+	{
+		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Vertical"));
+		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Horizontal"));
+		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DropTarget.Background"));
+
+		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
+		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
+
+		const float BorderSize = GlobalScale;
+		const float TilingU = AssetDragDropArea.GetWidth() / (HorizontalImage.Size.x * GlobalScale);
+		const float TilingV = AssetDragDropArea.GetHeight() / (VerticalImage.Size.y * GlobalScale);
+
+		const ImVec2 TopLeftCorner = AssetDragDropArea.Min;
+		const ImVec2 TopRightCorner = ImVec2(AssetDragDropArea.Max.x, AssetDragDropArea.Min.y);
+		const ImVec2 BottomRightCorner = AssetDragDropArea.Max;
+		const ImVec2 BottomLeftCorner = ImVec2(AssetDragDropArea.Min.x, AssetDragDropArea.Max.y);
+
+		const ImU32 TintColor = DraggedClassPath.IsSet() ? ValidColor : InvalidColor;
+
+		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(BackgroundImage.Id), AssetDragDropArea.Min, AssetDragDropArea.Max, BackgroundImage.UV0 + ImVec2(.001, .001), BackgroundImage.UV1 - ImVec2(.001, .001), TintColor);
+
+		// horizontal border
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(HorizontalImage.Id), TopLeftCorner, TopRightCorner + ImVec2(0.f, BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), TintColor);
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(HorizontalImage.Id), BottomLeftCorner, BottomRightCorner + ImVec2(0.f, -BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), TintColor);
+
+		// vertical border
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(VerticalImage.Id), TopLeftCorner, BottomLeftCorner + ImVec2(BorderSize, 0.f), VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), TintColor);
+		ImGui::GetWindowDrawList()->AddImage(ImTextureRef(VerticalImage.Id), BottomRightCorner + ImVec2(-BorderSize, 0.f), TopRightCorner, VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), TintColor);
+	}
+
+	if (DraggedClassPath.IsSet() && Context->bApplyDragDropOperation && ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max))
+	{
+		if (Context->ConsumeDragDropOperation())
+		{
+			SelectedSoftClassPtr = DraggedClassPath.GetValue();
+		}
+	}
+#endif
+
 	const bool bSelectionChanged = (SelectedSoftClassPtr != InOutSelectedClass);
 	if (bSelectionChanged)
 	{
