@@ -56,9 +56,9 @@ namespace FImGui
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
-		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Vertical"));
-		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Horizontal"));
-		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DropTarget.Background"));
+		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DashLine.Vertical"));
+		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DashLine.Horizontal"));
+		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DropDropArea.Background"));
 
 		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
 		ImGui::GetWindowDrawList()->AddImage(BackgroundImage.Id, p_min, p_max, BackgroundImage.UV0 + ImVec2(0.001f, 0.001f), BackgroundImage.UV1 - ImVec2(0.001f, 0.001f), tint_col);

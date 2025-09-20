@@ -426,8 +426,8 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 #if WITH_EDITOR
 	TOptional<FAssetData> DraggedAssetData;
-	const bool bIsDragDropOperationValid = Context->DragDropOperation.IsValid() && Context->DragDropOperation->IsOfType<FAssetDragDropOp>();
-	if (bIsDragDropOperationValid)
+	const bool bIsDragDropOperationValid = Context->DragDropOperation.IsValid();
+	if (bIsDragDropOperationValid && Context->DragDropOperation->IsOfType<FAssetDragDropOp>())
 	{
 		TSharedPtr<FAssetDragDropOp> DragDropOp = StaticCastSharedPtr<FAssetDragDropOp>(Context->DragDropOperation);
 		if (DragDropOp->GetAssets().Num() == 1 && DragDropOp->GetAssets()[0].GetClass()->IsChildOf(AssetType))
