@@ -60,9 +60,6 @@ namespace FImGui
 		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("WideDash.Horizontal"));
 		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DropTarget.Background"));
 
-		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
-		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
-
 		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
 		ImGui::GetWindowDrawList()->AddImage(BackgroundImage.Id, p_min, p_max, BackgroundImage.UV0 + ImVec2(0.001f, 0.001f), BackgroundImage.UV1 - ImVec2(0.001f, 0.001f), tint_col);
 
