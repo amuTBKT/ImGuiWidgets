@@ -535,7 +535,11 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				FilterAvailableClasses();
 			}
 
-			if (NewSelectedIndex != INDEX_NONE)
+			bool bClosePopup = (NewSelectedIndex != INDEX_NONE);
+			// force close the popup when dragging assets over the window
+			const ImGuiHoveredFlags HoverFlags = ImGuiHoveredFlags_RootWindow|ImGuiHoveredFlags_AllowWhenBlockedByPopup|ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
+			bClosePopup |= (bIsDragDropOperationValid && ImGui::IsWindowHovered(HoverFlags));
+			if (bClosePopup)
 			{
 				ImGui::CloseCurrentPopup();
 			}
@@ -640,13 +644,6 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	ImRect AssetDragDropArea;
 	{
-		// TODO: find a better way to disable interactions
-		ImVec2 OriginalMousePos = ImGui::GetIO().MousePos;
-		if (bIsDragDropOperationValid)
-		{
-			ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-		}
-
 		ImGui::BeginGroup();
 		{
 			if (strstr(Label, "##") == nullptr)
@@ -660,14 +657,12 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::SameLine();
 			}
 
-			float IconSize;
-			float IconPaddingTop;
 			ImGui::BeginGroup();
 			{
 				const ImVec2 ClassViewerComboBoxSize = Add_ClassViewer(SelectedSoftClassPtr);
 				
-				IconSize = ClassViewerComboBoxSize.y * 0.9f;
-				IconPaddingTop = ClassViewerComboBoxSize.y * 0.05f;
+				const float IconSize = ClassViewerComboBoxSize.y * 0.9f;
+				const float IconPaddingTop = ClassViewerComboBoxSize.y * 0.05f;
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
@@ -683,19 +678,6 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
 				Add_BrowseToAssetButton(SelectedSoftClassPtr, IconSize);
 
-				ImGui::PopStyleVar(2);
-				ImGui::PopStyleColor(3);
-			}
-			ImGui::EndGroup();
-			AssetDragDropArea = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
-
-			{
-				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
-
 				ImGui::SameLine();
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
 				Add_CreateBlueprintButton(SelectedSoftClassPtr, IconSize);
@@ -707,11 +689,10 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::PopStyleVar(2);
 				ImGui::PopStyleColor(3);
 			}
+			ImGui::EndGroup();
+			AssetDragDropArea = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
 		}
 		ImGui::EndGroup();
-
-		// TODO: find a better way to disable interactions
-		ImGui::GetIO().MousePos = OriginalMousePos;
 	}
 	
 #if WITH_EDITOR
@@ -721,10 +702,10 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
 		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
 
-		FImGui::DrawDragDropArea(Context, AssetDragDropArea, 1.f, DraggedClassPath.IsSet() ? ValidColor : InvalidColor);
+		FImGui::DrawDragDropArea(Context, AssetDragDropArea.Min, AssetDragDropArea.Max, GlobalScale, GlobalScale, DraggedClassPath.IsSet() ? ValidColor : InvalidColor);
 	}
 
-	if (DraggedClassPath.IsSet() && Context->bApplyDragDropOperation && ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max))
+	if (DraggedClassPath.IsSet() && ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max))
 	{
 		if (Context->ConsumeDragDropOperation())
 		{

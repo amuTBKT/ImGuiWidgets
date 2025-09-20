@@ -752,7 +752,11 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				FilterAvailableAssets();
 			}
 
-			if (NewSelectedIndex != INDEX_NONE)
+			bool bClosePopup = (NewSelectedIndex != INDEX_NONE);
+			// force close the popup when dragging assets over the window
+			const ImGuiHoveredFlags HoverFlags = ImGuiHoveredFlags_RootWindow|ImGuiHoveredFlags_AllowWhenBlockedByPopup|ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
+			bClosePopup |= (bIsDragDropOperationValid && ImGui::IsWindowHovered(HoverFlags));
+			if (bClosePopup)
 			{
 				ImGui::CloseCurrentPopup();
 			}
@@ -770,13 +774,6 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	ImRect AssetDragDropArea;
 	{
-		// TODO: find a better way to disable interactions
-		ImVec2 OriginalMousePos = ImGui::GetIO().MousePos;
-		if (bIsDragDropOperationValid)
-		{
-			ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-		}
-		
 		ImGui::BeginGroup();
 		if (bDrawCompactWidget)
 		{
@@ -898,9 +895,6 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			}
 		}
 		ImGui::EndGroup();
-		
-		// TODO: find a better way to disable interactions
-		ImGui::GetIO().MousePos = OriginalMousePos;
 	}
 
 #if WITH_EDITOR
@@ -910,10 +904,10 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
 		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
 
-		FImGui::DrawDragDropArea(Context, AssetDragDropArea, 1.f, DraggedAssetData.IsSet() ? ValidColor : InvalidColor);
+		FImGui::DrawDragDropArea(Context, AssetDragDropArea.Min, AssetDragDropArea.Max, GlobalScale, GlobalScale, DraggedAssetData.IsSet() ? ValidColor : InvalidColor);
 	}
 
-	if (DraggedAssetData.IsSet() && Context->bApplyDragDropOperation && ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max))
+	if (DraggedAssetData.IsSet() && ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max))
 	{
 		if (Context->ConsumeDragDropOperation())
 		{

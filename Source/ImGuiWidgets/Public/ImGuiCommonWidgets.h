@@ -94,7 +94,7 @@ namespace FImGui
 
 	IMGUIWIDGETS_API void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message);
 	
-	IMGUIWIDGETS_API void DrawDragDropArea(FImGuiTickContext* context, ImRect drag_drop_rect, float border_size, ImU32 tint_col);
+	IMGUIWIDGETS_API void DrawDragDropArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size = 1.f, float border_uv_scale = 1.f, ImU32 tint_col = 0xFFFFFFFF);
 
 	// Hacky/Experimental widget
 	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width);

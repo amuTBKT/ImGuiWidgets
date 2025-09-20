@@ -49,7 +49,7 @@ namespace FImGui
 		DrawList->ChannelsMerge();
 	}
 
-	void DrawDragDropArea(FImGuiTickContext* context, ImRect drag_drop_rect, float border_size, ImU32 tint_col)
+	void DrawDragDropArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size, float border_uv_scale, ImU32 tint_col)
 	{
 		EnsureValidImGuiContext(context);
 
@@ -63,25 +63,28 @@ namespace FImGui
 		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
 		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
 
-		const float BorderSize = border_size * GlobalScale;
-		const float TilingU = drag_drop_rect.GetWidth() / (HorizontalImage.Size.x * GlobalScale);
-		const float TilingV = drag_drop_rect.GetHeight() / (VerticalImage.Size.y * GlobalScale);
-
-		const ImVec2 TopLeftCorner = drag_drop_rect.Min;
-		const ImVec2 TopRightCorner = ImVec2(drag_drop_rect.Max.x, drag_drop_rect.Min.y);
-		const ImVec2 BottomRightCorner = drag_drop_rect.Max;
-		const ImVec2 BottomLeftCorner = ImVec2(drag_drop_rect.Min.x, drag_drop_rect.Max.y);
-
 		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
-		ImGui::GetWindowDrawList()->AddImage(BackgroundImage.Id, drag_drop_rect.Min, drag_drop_rect.Max, BackgroundImage.UV0 + ImVec2(.001, .001), BackgroundImage.UV1 - ImVec2(.001, .001), tint_col);
+		ImGui::GetWindowDrawList()->AddImage(BackgroundImage.Id, p_min, p_max, BackgroundImage.UV0 + ImVec2(0.001f, 0.001f), BackgroundImage.UV1 - ImVec2(0.001f, 0.001f), tint_col);
 
-		// horizontal border
-		ImGui::GetWindowDrawList()->AddImage(HorizontalImage.Id, TopLeftCorner, TopRightCorner + ImVec2(0.f, BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), tint_col);
-		ImGui::GetWindowDrawList()->AddImage(HorizontalImage.Id, BottomLeftCorner, BottomRightCorner + ImVec2(0.f, -BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), tint_col);
+		if (border_size > 0.f)
+		{
+			const float BorderSize = FMath::CeilToFloat(border_size);
+			const float TilingU = FMath::RoundFromZero((p_max.x - p_min.x) / (HorizontalImage.Size.x * border_uv_scale));
+			const float TilingV = FMath::RoundFromZero((p_max.y - p_min.y) / (VerticalImage.Size.y * border_uv_scale));
 
-		// vertical border
-		ImGui::GetWindowDrawList()->AddImage(VerticalImage.Id, TopLeftCorner, BottomLeftCorner + ImVec2(BorderSize, 0.f), VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), tint_col);
-		ImGui::GetWindowDrawList()->AddImage(VerticalImage.Id, BottomRightCorner + ImVec2(-BorderSize, 0.f), TopRightCorner, VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), tint_col);
+			const ImVec2 TopLeftCorner = p_min;
+			const ImVec2 TopRightCorner = ImVec2(p_max.x, p_min.y);
+			const ImVec2 BottomRightCorner = p_max;
+			const ImVec2 BottomLeftCorner = ImVec2(p_min.x, p_max.y);
+
+			// horizontal border
+			ImGui::GetWindowDrawList()->AddImage(HorizontalImage.Id, TopLeftCorner, TopRightCorner + ImVec2(0.f, BorderSize), HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), tint_col);
+			ImGui::GetWindowDrawList()->AddImage(HorizontalImage.Id, BottomLeftCorner + ImVec2(0.f, -BorderSize), BottomRightCorner, HorizontalImage.UV0, HorizontalImage.UV1 * ImVec2(TilingU, 1.f), tint_col);
+
+			// vertical border
+			ImGui::GetWindowDrawList()->AddImage(VerticalImage.Id, TopLeftCorner, BottomLeftCorner + ImVec2(BorderSize, 0.f), VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), tint_col);
+			ImGui::GetWindowDrawList()->AddImage(VerticalImage.Id, TopRightCorner + ImVec2(-BorderSize, 0.f), BottomRightCorner, VerticalImage.UV0, VerticalImage.UV1 * ImVec2(1.f, TilingV), tint_col);
+		}
 	}
 
 	template <typename TDataType, ImGuiDataType TImGuiDataType>
