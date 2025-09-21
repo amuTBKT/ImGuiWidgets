@@ -4,6 +4,14 @@
 
 #include "ImGuiPluginTypes.h"
 
+class FConfigFile;
+
+namespace FImGuiSettings
+{
+	IMGUIWIDGETS_API FConfigFile* GetConfigFile();
+	IMGUIWIDGETS_API bool SaveConfigFile();
+}
+
 namespace FImGui
 {
 	// Required to have valid ImGui context across modules

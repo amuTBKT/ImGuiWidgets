@@ -23,8 +23,8 @@ namespace ImGuiStatsVizualizer
 {
 	struct FStatGroupData
 	{
-		const FAnsiString DisplayName;
-		const FString StatName;
+		FAnsiString DisplayName;
+		FString StatName;
 		bool bIsActive = false;
 	};
 	static TMap<FName, FStatGroupData> StatGroups;
@@ -614,8 +614,90 @@ namespace ImGuiStatsVizualizer
 		}
 	}
 
+	struct FSerializedData
+	{
+		// serializing array is easier than structures
+		TArray<FString> StatNames;
+		TArray<FString> DisplayNames;
+		TArray<FString> StatGroupNames;
+
+		bool IsStatGroupDataValid() const
+		{
+			return DisplayNames.Num() == StatNames.Num() && DisplayNames.Num() == StatGroupNames.Num();
+		}
+	};
+	static void LoadWidgetSettings()
+	{
+		FConfigFile* WidgetSettings = FImGuiSettings::GetConfigFile();
+		if (!WidgetSettings)
+		{
+			return;
+		}
+
+		FSerializedData SerializedData;
+		WidgetSettings->GetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_StatNames"), SerializedData.StatNames);
+		WidgetSettings->GetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_DisplayNames"), SerializedData.DisplayNames);
+		WidgetSettings->GetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_StatGroupNames"), SerializedData.StatGroupNames);
+
+		if (SerializedData.IsStatGroupDataValid())
+		{
+			for (int32 GroupIndex = 0; GroupIndex < SerializedData.DisplayNames.Num(); ++GroupIndex)
+			{
+				FStatGroupData& GroupData = StatGroups.FindOrAdd(FName(SerializedData.StatGroupNames[GroupIndex]));
+				GroupData.StatName = SerializedData.StatNames[GroupIndex];
+				GroupData.DisplayName = TCHAR_TO_ANSI(*SerializedData.DisplayNames[GroupIndex]);
+				GroupData.bIsActive = false;
+			}
+		}
+	}
+	static void SaveWidgetSettings()
+	{
+		FConfigFile* WidgetSettings = FImGuiSettings::GetConfigFile();
+		if (!WidgetSettings)
+		{
+			return;
+		}
+
+		FSerializedData SerializedData;
+		for (const auto& [GroupName, GroupData] : StatGroups)
+		{
+			SerializedData.StatNames.Add(GroupData.StatName);
+			SerializedData.StatGroupNames.Add(GroupName.ToString());
+			SerializedData.DisplayNames.Add(ANSI_TO_TCHAR(*GroupData.DisplayName));
+		}
+
+		WidgetSettings->SetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_StatNames"), SerializedData.StatNames);
+		WidgetSettings->SetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_DisplayNames"), SerializedData.DisplayNames);
+		WidgetSettings->SetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_StatGroupNames"), SerializedData.StatGroupNames);
+		
+		FImGuiSettings::SaveConfigFile();
+	}
+
 	static void RenderStatsHeader(FImGuiTickContext* Context)
 	{
+		// widget settings
+		{
+			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
+			const FImGuiImageBindingParams SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Save"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
+
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + SaveIcon.Size.y * 0.5);
+			if (FImGui::TransparentImageButton("SaveSettings", SaveIcon))
+			{
+				SaveWidgetSettings();
+			}
+			ImGui::SetItemTooltip("Save Settings");
+
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor(3);
+		}
+
+		ImGui::SameLine();
+
 		// add new stat
 		{
 			ImGui::SetNextItemWidth(128);
@@ -679,19 +761,14 @@ namespace ImGuiStatsVizualizer
 
 	static void Initialize()
 	{
-		StatGroups.Add(FName(TEXT("STATGROUP_GPU")),			 { "GPU",              TEXT("GPU"),				  false });
-		StatGroups.Add(FName(TEXT("STATGROUP_SceneRendering")),  { "Scene Rendering",  TEXT("SceneRendering"),    false });
-		StatGroups.Add(FName(TEXT("STATGROUP_Niagara")),         { "Niagara",          TEXT("Niagara"),           false });
-		StatGroups.Add(FName(TEXT("STATGROUP_NiagaraSystems")),  { "Niagara Systems",  TEXT("NiagaraSystems"),    false });
-		StatGroups.Add(FName(TEXT("STATGROUP_NiagaraEmitters")), { "Niagara Emitters", TEXT("NiagaraEmitters"),   false });
-		StatGroups.Add(FName(TEXT("STATGROUP_ImGui")),           { "ImGui",            TEXT("ImGui"),             false });
+		LoadWidgetSettings();
 	}
 
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()) * ImGui::GetStyle().FontScaleMain);
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()) * ImGui::GetStyle().FontScaleMain);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()));
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()));
 	}
 
 	static void Tick(FImGuiTickContext* Context)

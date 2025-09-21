@@ -3,9 +3,59 @@
 #include "ImGuiCommonWidgets.h"
 #include "ImGuiSubsystem.h"
 
+#include "Misc/App.h"
+#include "Misc/EngineVersion.h"
+#include "Misc/ConfigCacheIni.h"
+
+namespace FImGuiSettings
+{
+	static const FString& GetConfigFilepath()
+	{
+		const TCHAR* UserSettingsDir = FPlatformProcess::UserSettingsDir();
+		const FString EngineVersion = FEngineVersion::Current().ToString(EVersionComponent::Minor);
+		static const FString ConfigFilepath =
+			FPaths::Combine(UserSettingsDir, *FApp::GetEpicProductIdentifier(), EngineVersion, TEXT("Config/ImGui/ImGuiWidgets.ini"));
+		return ConfigFilepath;
+	}
+
+	static FConfigFile* InitializeConfigFile()
+	{
+		const FString& ConfigFilepath = GetConfigFilepath();
+
+		FConfigFile* ConfigFile = GConfig->Find(ConfigFilepath);
+		if (!ConfigFile)
+		{
+			ConfigFile = &GConfig->Add(ConfigFilepath, FConfigFile{});
+		}
+
+		if (ConfigFile)
+		{
+			// needed to enable saving
+			ConfigFile->NoSave = false;
+		}
+
+		return ConfigFile;
+	}
+
+	FConfigFile* GetConfigFile()
+	{
+		static FConfigFile* SettingsConfigFile = InitializeConfigFile();
+		return SettingsConfigFile;
+	}
+
+	bool SaveConfigFile()
+	{
+		if (GetConfigFile())
+		{
+			GConfig->Flush(false, GetConfigFilepath());
+			return true;
+		}
+		return false;
+	}
+}
+
 namespace FImGui
 {
-
 	void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message)
 	{
 		EnsureValidImGuiContext(context);

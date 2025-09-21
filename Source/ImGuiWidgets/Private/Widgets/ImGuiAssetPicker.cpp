@@ -357,6 +357,41 @@ namespace AssetPickerUtils
 
 		return true;
 	}
+
+	// serialization
+	static bool bSettingsLoaded = false;
+	void LoadSettings()
+	{
+		if (bSettingsLoaded)
+		{
+			return;
+		}
+		bSettingsLoaded = true;
+
+		FConfigFile* WidgetSettings = FImGuiSettings::GetConfigFile();
+		if (WidgetSettings)
+		{
+			int64 PackedFilterSettings;
+			if (WidgetSettings->GetInt64(TEXT("AssetPicker"), TEXT("PackedAssetPathFilter"), PackedFilterSettings))
+			{
+				bShowProjectContent		= (PackedFilterSettings & (1u << 0)) > 0;
+				bShowEngineContent		= (PackedFilterSettings & (1u << 1)) > 0;
+				bShowPluginContent		= (PackedFilterSettings & (1u << 2)) > 0;
+				bShowDeveloperContent	= (PackedFilterSettings & (1u << 3)) > 0;
+				bSearchAssetCollections = (PackedFilterSettings & (1u << 4)) > 0;
+				bShowLocalizedContent	= (PackedFilterSettings & (1u << 5)) > 0;
+			}
+		}
+	}
+	void SaveSettings()
+	{
+		FConfigFile* WidgetSettings = FImGuiSettings::GetConfigFile();
+		if (WidgetSettings)
+		{
+			WidgetSettings->SetInt64(TEXT("AssetPicker"), TEXT("PackedAssetPathFilter"), (int64)GetPackedAssetPathFilter());
+			FImGuiSettings::SaveConfigFile();
+		}
+	}
 }
 
 FImGuiAssetPicker::FFilter FImGuiAssetPicker::MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass)
@@ -390,6 +425,8 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	{
 		return false;
 	}
+
+	AssetPickerUtils::LoadSettings();
 
 	FImGui::EnsureValidImGuiContext(Context);
 
@@ -733,17 +770,25 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.AssetCollection"), FVector2D(16.) * GlobalScale);
 				const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale);
 
-				bFilterAvailableAssets |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectContent, ProjectContentIcon, "Show Project Content?");
-				bFilterAvailableAssets |= AddButton("ToggleEngineContent", AssetPickerUtils::bShowEngineContent, EngineContentIcon, "Show Engine Content?");
-				bFilterAvailableAssets |= AddButton("TogglePluginContent", AssetPickerUtils::bShowPluginContent, PluginContentIcon, "Show Plugin Content?");
+				bool bFilterSettingsChanged = false;
+				bFilterSettingsChanged |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectContent, ProjectContentIcon, "Show Project Content?");
+				bFilterSettingsChanged |= AddButton("ToggleEngineContent", AssetPickerUtils::bShowEngineContent, EngineContentIcon, "Show Engine Content?");
+				bFilterSettingsChanged |= AddButton("TogglePluginContent", AssetPickerUtils::bShowPluginContent, PluginContentIcon, "Show Plugin Content?");
 				ImGui::Spacing();
 				ImGui::Separator();
 				ImGui::Spacing();
-				bFilterAvailableAssets |= AddButton("ToggleDeveloperContent", AssetPickerUtils::bShowDeveloperContent, DeveloperContentIcon, "Show Developer Folder Content?");
+				bFilterSettingsChanged |= AddButton("ToggleDeveloperContent", AssetPickerUtils::bShowDeveloperContent, DeveloperContentIcon, "Show Developer Folder Content?");
 #if WITH_EDITOR
-				bFilterAvailableAssets |= AddButton("SearchCollectionNames", AssetPickerUtils::bSearchAssetCollections, AssetCollectionsIcon, "Search Collection Names?");
+				bFilterSettingsChanged |= AddButton("SearchCollectionNames", AssetPickerUtils::bSearchAssetCollections, AssetCollectionsIcon, "Search Collection Names?");
 #endif
-				bFilterAvailableAssets |= AddButton("ToggleLocaizedContent", AssetPickerUtils::bShowLocalizedContent, LocalizedContentIcon, "Show Localized Content?");
+				bFilterSettingsChanged |= AddButton("ToggleLocaizedContent", AssetPickerUtils::bShowLocalizedContent, LocalizedContentIcon, "Show Localized Content?");
+
+				bFilterAvailableAssets |= bFilterSettingsChanged;
+
+				if (bFilterSettingsChanged)
+				{
+					AssetPickerUtils::SaveSettings();
+				}
 			}
 			ImGui::EndGroup();
 
