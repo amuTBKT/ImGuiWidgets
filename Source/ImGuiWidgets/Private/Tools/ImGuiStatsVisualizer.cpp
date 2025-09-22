@@ -678,14 +678,13 @@ namespace ImGuiStatsVizualizer
 		// widget settings
 		{
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-			const FImGuiImageBindingParams SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Save"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
+			const FImGuiImageBindingParams SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.Save"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
 
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() + SaveIcon.Size.y * 0.5);
 			if (FImGui::TransparentImageButton("SaveSettings", SaveIcon))
 			{
 				SaveWidgetSettings();

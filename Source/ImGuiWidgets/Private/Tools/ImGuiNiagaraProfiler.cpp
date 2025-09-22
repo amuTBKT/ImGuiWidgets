@@ -6,6 +6,7 @@
 
 #include "Engine/World.h"
 #include "NiagaraSystem.h"
+#include "ImGuiSubsystem.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
 #include "Textures/SlateIcon.h"
@@ -104,6 +105,8 @@ namespace ImGuiNiagaraProfiler
 	static TUniquePtr<FNiagaraGpuProfilerListener> NiagaraGPUProfilerListener;
 	static FImGuiTextFilter SimStageFilter = FImGuiTextFilter::MakeWidget(32u);
 	static bool bIsCapturing = false;
+
+	static TOptional<bool> bExpandAll;
 
 	static void Initialize()
 	{
@@ -238,7 +241,15 @@ namespace ImGuiNiagaraProfiler
 	{
 		FNameBuilder SystemName{ SystemStat.System->GetFName() };
 
-		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		if (bExpandAll.IsSet())
+		{
+			ImGui::SetNextItemOpen(bExpandAll.GetValue(), ImGuiCond_Always);
+		}
+		else
+		{
+			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+		}
+
 		if (ImGui::CollapsingHeader(TCHAR_TO_ANSI(*SystemName)))
 		{
 			ImGui::SameLine(); ImGui::Text(" - %fms", SystemStat.TotalTime);
@@ -308,6 +319,37 @@ namespace ImGuiNiagaraProfiler
 
 				ImGui::BeginDisabled(!bIsCapturing);
 				SimStageFilter.Draw(Context, "SimStageFilter", "Filter Simulation Stages", ImGui::GetWindowWidth() * 0.75f);
+				ImGui::SameLine();
+
+				// collapse/expand buttons
+				{
+					UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
+					const FImGuiImageBindingParams CollapseAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.CollapseAll"), FVector2D(16.) * ImGui::GetStyle().FontScaleMain);
+					const FImGuiImageBindingParams ExpandAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ExpandAll"), FVector2D(16.) * ImGui::GetStyle().FontScaleMain);
+
+					ImGui::PushStyleColor(ImGuiCol_Button, 0);
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
+					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+
+					if (FImGui::ImageButtonWithTint("CollapseAll", CollapseAllIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+					{
+						bExpandAll = false;
+					}
+					ImGui::SetItemTooltip("Collapse All");
+
+					ImGui::SameLine();
+
+					if (FImGui::ImageButtonWithTint("ExpandAll", ExpandAllIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+					{
+						bExpandAll = true;
+					}
+					ImGui::SetItemTooltip("Expand All");
+
+					ImGui::PopStyleVar(2);
+					ImGui::PopStyleColor(3);
+				}
 				ImGui::EndDisabled();
 			}
 			ImGui::EndChild();
@@ -326,6 +368,8 @@ namespace ImGuiNiagaraProfiler
 					ImGui::EndTabBar();
 				}
 			}
+
+			bExpandAll.Reset();
 		}
 		ImGui::End();
 	}
