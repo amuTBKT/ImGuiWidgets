@@ -247,7 +247,7 @@ namespace ImGuiNiagaraProfiler
 		}
 		else
 		{
-			ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+			ImGui::SetNextItemOpen(false, ImGuiCond_Once);
 		}
 
 		if (ImGui::CollapsingHeader(TCHAR_TO_ANSI(*SystemName)))
