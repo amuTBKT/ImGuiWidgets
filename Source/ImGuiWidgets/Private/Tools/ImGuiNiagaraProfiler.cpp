@@ -4,6 +4,10 @@
 
 #if WITH_IMGUI && WITH_NIAGARA_GPU_PROFILER
 
+#if WITH_EDITOR
+#include "Editor.h"
+#endif
+
 #include "Engine/World.h"
 #include "NiagaraSystem.h"
 #include "ImGuiSubsystem.h"
@@ -275,6 +279,14 @@ namespace ImGuiNiagaraProfiler
 		{
 			return;
 		}
+
+#if WITH_EDITOR
+		// disable duplicates from editor world
+		if (World->WorldType == EWorldType::Editor && (GEditor && GEditor->PlayWorld != nullptr))
+		{
+			return;
+		}
+#endif
 
 		if (ImGui::BeginTabItem(TCHAR_TO_ANSI(*World->GetName())))
 		{
