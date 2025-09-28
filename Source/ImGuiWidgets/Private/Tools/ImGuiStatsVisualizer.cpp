@@ -23,11 +23,17 @@ namespace ImGuiStatsVizualizer
 {
 	struct FStatGroupData
 	{
-		FAnsiString DisplayName;
-		FString StatName;
+		FAnsiString DisplayName; // used for ImGui widgets
+		FString NameForCommand;	 // used for `stat` command
+		FName Name;				 // "STATGROUP_XXXX"
 		bool bIsActive = false;
+
+		bool operator==(const FName& InName) const
+		{
+			return Name == InName;
+		}
 	};
-	static TMap<FName, FStatGroupData> StatGroups;
+	static TArray<FStatGroupData> StatGroups;
 
 	static FImGuiTextFilter StatFilter = FImGuiTextFilter::MakeWidget(64u);
 	static FImGuiImageBindingParams EditAssetIcon;
@@ -506,7 +512,7 @@ namespace ImGuiStatsVizualizer
 			const FName& StatGroupFName = ViewData.GroupNames[GroupIndex];
 			const FName& GroupName = ViewData.GroupNames[GroupIndex];
 		
-			FStatGroupData* StatGroupData = StatGroups.Find(StatGroupFName);
+			FStatGroupData* StatGroupData = StatGroups.FindByKey(StatGroupFName);
 			if (!StatGroupData)
 			{
 				const FString& GroupDesc = ViewData.GroupDescriptions[GroupIndex];
@@ -514,7 +520,7 @@ namespace ImGuiStatsVizualizer
 				FString StatName = GroupName.ToString();
 				StatName.RemoveFromStart(TEXT("STATGROUP_"), ESearchCase::CaseSensitive);
 
-				StatGroupData = &StatGroups.Add(StatGroupFName, { FAnsiString(GroupDesc), StatName, true });
+				StatGroupData = &StatGroups.Emplace_GetRef(FAnsiString(GroupDesc), StatName, StatGroupFName, true);
 			};
 			StatGroupData->bIsActive = true;
 
@@ -643,10 +649,17 @@ namespace ImGuiStatsVizualizer
 		{
 			for (int32 GroupIndex = 0; GroupIndex < SerializedData.DisplayNames.Num(); ++GroupIndex)
 			{
-				FStatGroupData& GroupData = StatGroups.FindOrAdd(FName(SerializedData.StatGroupNames[GroupIndex]));
-				GroupData.StatName = SerializedData.StatNames[GroupIndex];
-				GroupData.DisplayName = TCHAR_TO_ANSI(*SerializedData.DisplayNames[GroupIndex]);
-				GroupData.bIsActive = false;
+				const FName GroupName = FName(SerializedData.StatGroupNames[GroupIndex]);
+
+				FStatGroupData* GroupData = StatGroups.FindByKey(GroupName);
+				if (!GroupData)
+				{
+					GroupData = &StatGroups.AddDefaulted_GetRef();
+				}
+				GroupData->NameForCommand = SerializedData.StatNames[GroupIndex];
+				GroupData->DisplayName = TCHAR_TO_ANSI(*SerializedData.DisplayNames[GroupIndex]);
+				GroupData->Name = FName(SerializedData.StatGroupNames[GroupIndex]);
+				GroupData->bIsActive = false;
 			}
 		}
 	}
@@ -659,10 +672,10 @@ namespace ImGuiStatsVizualizer
 		}
 
 		FSerializedData SerializedData;
-		for (const auto& [GroupName, GroupData] : StatGroups)
+		for (const auto& GroupData : StatGroups)
 		{
-			SerializedData.StatNames.Add(GroupData.StatName);
-			SerializedData.StatGroupNames.Add(GroupName.ToString());
+			SerializedData.StatNames.Add(GroupData.NameForCommand);
+			SerializedData.StatGroupNames.Add(GroupData.Name.ToString());
 			SerializedData.DisplayNames.Add(ANSI_TO_TCHAR(*GroupData.DisplayName));
 		}
 
@@ -675,7 +688,36 @@ namespace ImGuiStatsVizualizer
 
 	static void RenderStatsHeader(FImGuiTickContext* Context)
 	{
-		// widget settings
+		TOptional<TTuple<int32, int32>> PendingButtonMove;
+		TOptional<int32> PendingButtonRemove;
+
+		bool bDeleteIconHovered = false;
+		if (Context->ImGuiContext->DragDropActive)
+		{
+			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
+			const FImGuiImageBindingParams DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("GenericCommands.Delete"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
+			
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, 0xFF0000FF);
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+			
+			FImGui::TransparentImageButton("DeleteIcon", DeleteIcon);
+			bDeleteIconHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly);
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("DND_STATGROUP_BUTTON"))
+				{
+					PendingButtonRemove = *(const int32*)Payload->Data;
+				}
+				ImGui::EndDragDropTarget();
+			}
+
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor(4);
+		}
+		else
 		{
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 			const FImGuiImageBindingParams SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.Save"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
@@ -720,9 +762,11 @@ namespace ImGuiStatsVizualizer
 			}
 		}
 
-		for (auto& Itr : StatGroups)
+		for (int32 GroupIndex = 0; GroupIndex < StatGroups.Num(); ++GroupIndex)
 		{
-			const bool bApplyStyle = Itr.Value.bIsActive;
+			FStatGroupData& GroupData = StatGroups[GroupIndex];
+
+			const bool bApplyStyle = GroupData.bIsActive;
 			if (bApplyStyle)
 			{
 				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f));
@@ -730,7 +774,7 @@ namespace ImGuiStatsVizualizer
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
 			}
 
-			const char* GroupName = *Itr.Value.DisplayName;
+			const char* GroupName = *GroupData.DisplayName;
 
 			ImGui::SameLine();
 			if ((ImGui::GetCursorPosX() + ImGui::CalcTextSize(GroupName).x + ImGui::GetStyle().FramePadding.x * 2.f) >= ImGui::GetWindowWidth())
@@ -740,7 +784,7 @@ namespace ImGuiStatsVizualizer
 
 			if (ImGui::Button(GroupName))
 			{
-				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *Itr.Value.StatName);
+				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *GroupData.NameForCommand);
 				GEngine->Exec(nullptr, *StatCommand);
 			}
 
@@ -750,7 +794,50 @@ namespace ImGuiStatsVizualizer
 			}
 
 			// disable at the end, we'll re-enable when stat group is encountered when displaying..
-			Itr.Value.bIsActive = false;
+			GroupData.bIsActive = false;
+
+			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+			{
+				ImGui::SetDragDropPayload("DND_STATGROUP_BUTTON", &GroupIndex, sizeof(int32));
+
+				if (bDeleteIconHovered)
+				{
+					ImGui::Text("Remove '%s'", GroupName);
+				}
+				else
+				{
+					ImGui::Text("Move '%s'", GroupName);
+				}
+
+				ImGui::EndDragDropSource();
+			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("DND_STATGROUP_BUTTON"))
+				{
+					int32 SourceButtonIndex = *(const int32*)Payload->Data;
+					if (SourceButtonIndex != GroupIndex)
+					{
+						PendingButtonMove = TTuple<int32, int32>{ SourceButtonIndex, GroupIndex };
+					}
+				}
+				ImGui::EndDragDropTarget();
+			}
+		}
+
+		if (PendingButtonMove.IsSet())
+		{
+			const int32 SourceIndex = PendingButtonMove.GetValue().Key;
+			const int32 DestIndex = PendingButtonMove.GetValue().Value;
+			FStatGroupData Source = StatGroups[SourceIndex];
+			
+			StatGroups.RemoveAt(SourceIndex);
+			StatGroups.Insert(Source, DestIndex);
+		}
+		else if (PendingButtonRemove.IsSet())
+		{
+			StatGroups.RemoveAt(PendingButtonRemove.GetValue());
 		}
 
 		ImGui::Separator();
@@ -775,7 +862,7 @@ namespace ImGuiStatsVizualizer
 		FImGuiTickScope Scope{ Context };
 
 		// TODO: Find a better/reliable way to check if docknode is already active
-#if WITH_EDITOR //dockspace already created if not using standlone widgets
+#if WITH_EDITOR //dockspace already created if not using standalone widgets
 		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar;
 		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
 		ImGui::SetNextWindowDockID(MainDockSpaceID, ImGuiCond_Always);
@@ -814,10 +901,8 @@ namespace ImGuiStatsVizualizer
 				{
 					ImGui::TextUnformatted("Not recording stats...");
 				}
-
 			}
 			ImGui::EndChild();
-
 		}
 		ImGui::End();
 	}

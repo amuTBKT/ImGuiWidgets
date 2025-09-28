@@ -315,7 +315,7 @@ namespace ImGuiNiagaraProfiler
 		FImGuiTickScope Scope{ Context };
 
 		// TODO: Find a better/reliable way to check if docknode is already active
-#if WITH_EDITOR //dockspace already created if not using standlone widgets
+#if WITH_EDITOR //dockspace already created if not using standalone widgets
 		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar;
 		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
 		ImGui::SetNextWindowDockID(MainDockSpaceID, ImGuiCond_Always);
