@@ -686,11 +686,8 @@ namespace ImGuiStatsVizualizer
 		FImGuiSettings::SaveConfigFile();
 	}
 
-	static void RenderStatsHeader(FImGuiTickContext* Context)
+	static void RenderStatsHeader(FImGuiTickContext* Context, int32& GroupIndexToRemove)
 	{
-		TOptional<TTuple<int32, int32>> PendingButtonMove;
-		TOptional<int32> PendingButtonRemove;
-
 		bool bDeleteIconHovered = false;
 		if (Context->ImGuiContext->DragDropActive)
 		{
@@ -709,7 +706,7 @@ namespace ImGuiStatsVizualizer
 			{
 				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("DND_STATGROUP_BUTTON"))
 				{
-					PendingButtonRemove = *(const int32*)Payload->Data;
+					GroupIndexToRemove = *(const int32*)Payload->Data;
 				}
 				ImGui::EndDragDropTarget();
 			}
@@ -762,6 +759,7 @@ namespace ImGuiStatsVizualizer
 			}
 		}
 
+		TOptional<TTuple<int32, int32>> PendingButtonMove;
 		for (int32 GroupIndex = 0; GroupIndex < StatGroups.Num(); ++GroupIndex)
 		{
 			FStatGroupData& GroupData = StatGroups[GroupIndex];
@@ -835,10 +833,6 @@ namespace ImGuiStatsVizualizer
 			StatGroups.RemoveAt(SourceIndex);
 			StatGroups.Insert(Source, DestIndex);
 		}
-		else if (PendingButtonRemove.IsSet())
-		{
-			StatGroups.RemoveAt(PendingButtonRemove.GetValue());
-		}
 
 		ImGui::Separator();
 
@@ -872,9 +866,10 @@ namespace ImGuiStatsVizualizer
 		{
 			RegisterOneFrameResources();
 			
+			int32 GroupIndexToRemove = INDEX_NONE;
 			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 			{
-				RenderStatsHeader(Context);
+				RenderStatsHeader(Context, GroupIndexToRemove);
 			}
 			ImGui::EndChild();
 
@@ -903,6 +898,17 @@ namespace ImGuiStatsVizualizer
 				}
 			}
 			ImGui::EndChild();
+
+			// need to defer removal as showing current stats can readd the group
+			if (StatGroups.IsValidIndex(GroupIndexToRemove))
+			{
+				if (StatGroups[GroupIndexToRemove].bIsActive)
+				{
+					const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *StatGroups[GroupIndexToRemove].NameForCommand);
+					GEngine->Exec(nullptr, *StatCommand);
+				}
+				StatGroups.RemoveAt(GroupIndexToRemove);
+			}
 		}
 		ImGui::End();
 	}
