@@ -759,10 +759,13 @@ namespace ImGuiStatsVizualizer
 			}
 		}
 
-		TOptional<TTuple<int32, int32>> PendingButtonMove;
+		TOptional<TTuple<int32, int32>> PendingButtonMoveOp;
 		for (int32 GroupIndex = 0; GroupIndex < StatGroups.Num(); ++GroupIndex)
 		{
 			FStatGroupData& GroupData = StatGroups[GroupIndex];
+			const char* GroupName = *GroupData.DisplayName;
+
+			FImGuiNamedWidgetScope StatGroupScope{ GroupName };
 
 			const bool bApplyStyle = GroupData.bIsActive;
 			if (bApplyStyle)
@@ -771,8 +774,6 @@ namespace ImGuiStatsVizualizer
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.7f, 0.7f));
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
 			}
-
-			const char* GroupName = *GroupData.DisplayName;
 
 			ImGui::SameLine();
 			if ((ImGui::GetCursorPosX() + ImGui::CalcTextSize(GroupName).x + ImGui::GetStyle().FramePadding.x * 2.f) >= ImGui::GetWindowWidth())
@@ -784,6 +785,30 @@ namespace ImGuiStatsVizualizer
 			{
 				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *GroupData.NameForCommand);
 				GEngine->Exec(nullptr, *StatCommand);
+			}
+			if (ImGui::BeginPopupContextItem("Customization"))
+			{
+				static char NameBuffer[256] = { '0' };
+				if (ImGui::IsWindowAppearing())
+				{
+					FMemory::Memcpy(NameBuffer, *GroupData.DisplayName, FMath::Min((size_t)GroupData.DisplayName.Len() + 1, sizeof(NameBuffer) - 1));
+				}
+
+				ImGui::Text("Display Name:");
+				if (ImGui::InputText("##Name", NameBuffer, sizeof(NameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+				{
+					if (FCStringAnsi::Strlen(NameBuffer) > 2)
+					{
+						GroupData.DisplayName = NameBuffer;
+					}
+				}
+
+				if (ImGui::Button("Remove Group"))
+				{
+					GroupIndexToRemove = GroupIndex;
+				}
+
+				ImGui::EndPopup();
 			}
 
 			if (bApplyStyle)
@@ -817,17 +842,17 @@ namespace ImGuiStatsVizualizer
 					int32 SourceButtonIndex = *(const int32*)Payload->Data;
 					if (SourceButtonIndex != GroupIndex)
 					{
-						PendingButtonMove = TTuple<int32, int32>{ SourceButtonIndex, GroupIndex };
+						PendingButtonMoveOp = TTuple<int32, int32>{ SourceButtonIndex, GroupIndex };
 					}
 				}
 				ImGui::EndDragDropTarget();
 			}
 		}
 
-		if (PendingButtonMove.IsSet())
+		if (PendingButtonMoveOp.IsSet())
 		{
-			const int32 SourceIndex = PendingButtonMove.GetValue().Key;
-			const int32 DestIndex = PendingButtonMove.GetValue().Value;
+			const int32 SourceIndex = PendingButtonMoveOp.GetValue().Key;
+			const int32 DestIndex = PendingButtonMoveOp.GetValue().Value;
 			FStatGroupData Source = StatGroups[SourceIndex];
 			
 			StatGroups.RemoveAt(SourceIndex);
