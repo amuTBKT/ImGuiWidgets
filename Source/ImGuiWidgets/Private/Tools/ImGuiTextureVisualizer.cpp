@@ -94,7 +94,7 @@ namespace ImGuiTextureVisualizer
 		uint8		 bIsCubemap : 1 = 0;
 
 		// read back value for single pixel
-		uint8		 SelectedPixelValue[sizeof(FUintVector4)];
+		FUintVector4 SelectedPixelValue = FUintVector4::ZeroValue;
 
 		// since we can override texture from Render thread,
 		// kind of need to keep it in sync b/w Render and Game thread
@@ -108,7 +108,7 @@ namespace ImGuiTextureVisualizer
 			bIsArray = false;
 			bIsCubemap = false;
 
-			FMemory::Memset(SelectedPixelValue, 0, sizeof(FUintVector4));
+			SelectedPixelValue = FUintVector4::ZeroValue;
 			
 			TextureOverrideName.Reset();
 		}
@@ -176,6 +176,8 @@ namespace ImGuiTextureVisualizer
 		// if valid, prefer this over the textures collected from GraphBuilder
 		const FTextureResource* TextureResourceOverride = nullptr;
 
+		TOptional<FUintVector4> LastSelectedPixelValue;
+
 		void Reset()
 		{
 			CurrentArraySlice = 0;
@@ -198,6 +200,8 @@ namespace ImGuiTextureVisualizer
 			RangeValueMax = 1.;
 
 			TextureResourceOverride = nullptr;
+
+			LastSelectedPixelValue.Reset();
 		}
 	};
 	static FTexturePreviewOptions TexturePreviewOptions;
@@ -488,7 +492,7 @@ namespace ImGuiTextureVisualizer
 			if (const uint8* SrcRawBuffer = (const uint8*)ReadBuffer->Lock(sizeof(FUintVector4)))
 			{
 				FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/true);
-				FMemory::Memcpy(TextureInfo.SelectedPixelValue, SrcRawBuffer, sizeof(FUintVector4));
+				FMemory::Memcpy(&TextureInfo.SelectedPixelValue, SrcRawBuffer, sizeof(FUintVector4));
 
 				ReadBuffer->Unlock();
 			}
@@ -1223,6 +1227,8 @@ namespace ImGuiTextureVisualizer
 
 			if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.f))
 			{
+				InOutTexturePreviewOptions.LastSelectedPixelValue = InTextureInfo.SelectedPixelValue;
+
 				CursorPos.X = FMath::Clamp(CursorPos.X, 0, InTextureInfo.GetSizeX(0) - 1);
 				CursorPos.Y = FMath::Clamp(CursorPos.Y, 0, InTextureInfo.GetSizeY(0) - 1);
 
@@ -1266,7 +1272,7 @@ namespace ImGuiTextureVisualizer
 						(float)HoveredTexCoordY / (float)InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip));
 					ImGui::Text("Coord: %i %i", HoveredTexCoordX, HoveredTexCoordY);
 					ImGui::Separator();
-					ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString(InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
+					ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString((uint8*)&InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
 					ImGui::EndTooltip();
 				}
 			}
@@ -1329,8 +1335,8 @@ namespace ImGuiTextureVisualizer
 
 			ImGui::Separator();
 
-			const int32 TextureDetailsWidgetHeight = 40.f * ImGui::GetStyle().FontScaleMain;
-			
+			const int32 TextureDetailsWidgetHeight = 50.f * ImGui::GetStyle().FontScaleMain;
+
 			const ImVec2 TextureCanvasSize = ImGui::GetContentRegionAvail() - ImVec2(0.f, TextureDetailsWidgetHeight);
 			DrawTextureCanvas(Context, TextureCanvasSize, TextureInfo, TexturePreviewOptions);
 
@@ -1360,24 +1366,44 @@ namespace ImGuiTextureVisualizer
 			}
 			else
 			{
+				const int32 HoveredTexCoordX = TexturePreviewOptions.CursorPosition.X >> TexturePreviewOptions.CurrentMip;
+				const int32 HoveredTexCoordY = TexturePreviewOptions.CursorPosition.Y >> TexturePreviewOptions.CurrentMip;
+
 				if (TextureInfo.SizeZ > 0)
 				{
 					FAnsiString FormatName = TCHAR_TO_ANSI(GPixelFormats[TextureInfo.Format].Name);
-					ImGui::Text("%s - %ix%ix%i %i mips - %s", *VisTextureName, TextureInfo.SizeX, TextureInfo.SizeY, TextureInfo.SizeZ, TextureInfo.NumMips, *FormatName);
+					ImGui::Text("%s - %ix%ix%i %i mips - %s , Hovered Pixel - %i, %i (%f, %f)",
+						*VisTextureName, TextureInfo.SizeX, TextureInfo.SizeY, TextureInfo.SizeZ, TextureInfo.NumMips, *FormatName,
+						HoveredTexCoordX,
+						HoveredTexCoordY,
+						(float)HoveredTexCoordX / (float)TextureInfo.GetSizeX(TexturePreviewOptions.CurrentMip),
+						(float)HoveredTexCoordY / (float)TextureInfo.GetSizeY(TexturePreviewOptions.CurrentMip));
 				}
 				else
 				{
 					FAnsiString FormatName = TCHAR_TO_ANSI(GPixelFormats[TextureInfo.Format].Name);
-					ImGui::Text("%s - %ix%i %i mips - %s", *VisTextureName, TextureInfo.SizeX, TextureInfo.SizeY, TextureInfo.NumMips, *FormatName);
+					ImGui::Text("%s - %ix%i %i mips - %s , Hovered Pixel - %i, %i (%f, %f)",
+						*VisTextureName, TextureInfo.SizeX, TextureInfo.SizeY, TextureInfo.NumMips, *FormatName,
+						HoveredTexCoordX,
+						HoveredTexCoordY,
+						(float)HoveredTexCoordX / (float)TextureInfo.GetSizeX(TexturePreviewOptions.CurrentMip),
+						(float)HoveredTexCoordY / (float)TextureInfo.GetSizeY(TexturePreviewOptions.CurrentMip));
 				}
 
-				const int32 HoveredTexCoordX = TexturePreviewOptions.CursorPosition.X >> TexturePreviewOptions.CurrentMip;
-				const int32 HoveredTexCoordY = TexturePreviewOptions.CursorPosition.Y >> TexturePreviewOptions.CurrentMip;
-				ImGui::Text("Hover - %i, %i (%f, %f) - Right click to inspect pixel",
-					HoveredTexCoordX,
-					HoveredTexCoordY,
-					(float)HoveredTexCoordX / (float)TextureInfo.GetSizeX(TexturePreviewOptions.CurrentMip),
-					(float)HoveredTexCoordY / (float)TextureInfo.GetSizeY(TexturePreviewOptions.CurrentMip));
+				if (TexturePreviewOptions.LastSelectedPixelValue.IsSet())
+				{
+					ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
+					ImGui::TextUnformatted("Last Selected Pixel");
+					ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
+
+					ImGui::SameLine();
+					FAnsiString PixelValueAsString = PixelFormatUtils::GetPixelValueAsStringInline((uint8*)&TexturePreviewOptions.LastSelectedPixelValue.GetValue(), TextureInfo.Format, TexturePreviewOptions.bDisplayStencil);
+					ImGui::InputText("##PixelValue", (ANSICHAR*)*PixelValueAsString, PixelValueAsString.Len() + 1, ImGuiInputTextFlags_ReadOnly);
+				}
+				else
+				{
+					ImGui::TextUnformatted("Right click to inspect pixel");
+				}
 			}
 
 			TextureInfoReadIndex_GT = (TextureInfoReadIndex_GT + 1) % 2;

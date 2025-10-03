@@ -269,6 +269,88 @@ namespace ImGuiTextureVisualizer
 
 			return ValueAsString;
 		}
+
+		FAnsiString GetPixelValueAsStringInline(const uint8* RawValue, EPixelFormat Format, bool bReadAsStencil)
+		{
+			FAnsiString ValueAsString;
+
+			const EPixelFormatChannelFlags ValidTextureChannels = GetValidChannelsForFormat(Format);
+			if (IsStencilFormat(Format))
+			{
+				if (bReadAsStencil)
+				{
+					FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
+					ValueAsString += FAnsiString::Printf("(Stencil)%i", Value.X, Value.X);
+				}
+				else
+				{
+					FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
+					ValueAsString += FAnsiString::Printf("(Depth)%f", Value.X);
+				}
+			}
+			else if (IsSignedIntegerFormat(Format))
+			{
+				FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
+				{
+					ValueAsString += FAnsiString::Printf("(R)%i ", Value.X, Value.X);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
+				{
+					ValueAsString += FAnsiString::Printf("(G)%i ", Value.Y, Value.Y);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
+				{
+					ValueAsString += FAnsiString::Printf("(B)%i ", Value.Z, Value.Z);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
+				{
+					ValueAsString += FAnsiString::Printf("(A)%i ", Value.W, Value.W);
+				}
+			}
+			else if (IsInteger(Format))
+			{
+				FUintVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FUintVector4));
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
+				{
+					ValueAsString += FAnsiString::Printf("(R)%i ", Value.X, Value.X);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
+				{
+					ValueAsString += FAnsiString::Printf("(G)%i ", Value.Y, Value.Y);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
+				{
+					ValueAsString += FAnsiString::Printf("(B)%i ", Value.Z, Value.Z);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
+				{
+					ValueAsString += FAnsiString::Printf("(A)%i ", Value.W, Value.W);
+				}
+			}
+			else
+			{
+				FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
+				{
+					ValueAsString += FAnsiString::Printf("(R)%.5f ", Value.X);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
+				{
+					ValueAsString += FAnsiString::Printf("(G)%.5f ", Value.Y);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
+				{
+					ValueAsString += FAnsiString::Printf("(B)%.5f ", Value.Z);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
+				{
+					ValueAsString += FAnsiString::Printf("(A)%.5f ", Value.W);
+				}
+			}
+
+			return ValueAsString;
+		}
 	}
 
 	ImVec2 ConstrainCanvasToAspectRatio(int32 SizeX, int32 SizeY, ImVec2 CanvasSize)
