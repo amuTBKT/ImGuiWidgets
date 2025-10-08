@@ -579,13 +579,15 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		const float AssetViewerWidth = 400.f * GlobalScale;
 		const char* AssetViewerPopupName = "AssetViewerPopup";
 		const float AssetViewerRowHeight = 36.f * GlobalScale;
+		const float AssetViewerMaxRowCount = 10;
 		const float AssetViewerRowHeightWithSpacing = AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
 		const int32 PreviewTextMaxLength = 32;
 
 		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
-		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;
-		const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
-		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), AssetViewerRowHeightWithSpacing * (FilteredAssetIndices.Num() + 1));
+		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y;
+		const float MonitorDisplaySize = ImGui::GetPlatformIO().Monitors.empty() ? ImGui::GetWindowHeight() : ImGui::GetPlatformIO().Monitors[0].WorkSize.y;
+		const float AvailableSpaceBelow = (MonitorDisplaySize - ImGui::GetCursorScreenPos().y);
+		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove) * 0.65f, AssetViewerRowHeightWithSpacing * (FMath::Min(AssetViewerMaxRowCount, FilteredAssetIndices.Num() + 1)));
 
 		// TODO: `ImGui::RenderTextEllipsis` does something similar
 		FString PreviewText = !InOutSoftAssetPtr.IsNull() ? InOutSoftAssetPtr.GetAssetName() : FString(TEXT("None"));
@@ -612,8 +614,12 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			{
 				ImGui::OpenPopup(AssetViewerPopupName);
 			}
+			if (!SelectedSoftAssetPtr.IsNull())
+			{
+				ImGui::SetItemTooltip("%s", TCHAR_TO_ANSI_PATH(*SelectedSoftAssetPtr.GetLongPackageName()));
+			}
 			ComboBoxSize = ImGui::GetItemRectSize();
-			
+
 			ImGui::SameLine();
 			
 			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(ComboBoxSize.y * 0.9f));
@@ -623,7 +629,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		ImGui::EndGroup();
 
-		if (AvailableSpaceBelow > AvailableSpaceAbove)
+		if ((AvailableSpaceBelow > PopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
 		{
 			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
 		}

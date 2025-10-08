@@ -1275,6 +1275,10 @@ namespace ImGuiTextureVisualizer
 					ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString((uint8*)&InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
 					ImGui::EndTooltip();
 				}
+
+				// NOTE: adjust for viewport offset
+				ImVec2 WindowPos = ImGui::GetWindowPos();
+				InOutTexturePreviewOptions.TextureInspectorRect -= FIntVector4(WindowPos.x, WindowPos.y, WindowPos.x, WindowPos.y);
 			}
 		}
 	}
@@ -1338,7 +1342,10 @@ namespace ImGuiTextureVisualizer
 			const int32 TextureDetailsWidgetHeight = 50.f * ImGui::GetStyle().FontScaleMain;
 
 			const ImVec2 TextureCanvasSize = ImGui::GetContentRegionAvail() - ImVec2(0.f, TextureDetailsWidgetHeight);
-			DrawTextureCanvas(Context, TextureCanvasSize, TextureInfo, TexturePreviewOptions);
+			if (!VisTextureName.IsEmpty())
+			{
+				DrawTextureCanvas(Context, TextureCanvasSize, TextureInfo, TexturePreviewOptions);
+			}
 
 			TexturePreviewOptions.TextureResourceOverride = nullptr;
 			if (TextureOverride.IsValid())
@@ -1352,8 +1359,8 @@ namespace ImGuiTextureVisualizer
 
 			FTexturePreviewUserData Params;
 			Params.ViewportSize = ImGui::GetIO().DisplaySize;
-			Params.ClipRectMin = ImGui::GetItemRectMin();
-			Params.ClipRectMax = ImGui::GetItemRectMax();
+			Params.ClipRectMin = ImGui::GetItemRectMin() - ImGui::GetWindowPos();
+			Params.ClipRectMax = ImGui::GetItemRectMax() - ImGui::GetWindowPos();
 			Params.Options = TexturePreviewOptions;
 			ImGui::GetWindowDrawList()->AddCallback(TexturePreviewCallback, &Params, sizeof(Params));
 

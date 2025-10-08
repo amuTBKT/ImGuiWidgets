@@ -385,13 +385,15 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		const float ClassViewerWidth = 256.f * GlobalScale;
 		const char* ClassViewerPopupName = "ClassViewerPopup";
 		const float ClassViewerRowHeight = 18.f * GlobalScale;
+		const float ClassViewerMaxRowCount = 10;
 		const float ClassViewerRowHeightWithSpacing = ClassViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
 		const int32 PreviewTextMaxLength = 20;
 
 		const float ClassViewerPopupPosX = ImGui::GetCursorScreenPos().x;
-		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y * 0.65f;
-		const float AvailableSpaceBelow = (ImGui::GetWindowHeight() - ImGui::GetCursorScreenPos().y) * 0.75f;
-		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove), ClassViewerRowHeightWithSpacing * (FilteredClassIndices.Num() + 1));
+		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y;
+		const float MonitorDisplaySize = ImGui::GetPlatformIO().Monitors.empty() ? ImGui::GetWindowHeight() : ImGui::GetPlatformIO().Monitors[0].WorkSize.y;
+		const float AvailableSpaceBelow = (MonitorDisplaySize - ImGui::GetCursorScreenPos().y);
+		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove) * 0.65f, ClassViewerRowHeightWithSpacing * (FMath::Min(ClassViewerMaxRowCount, FilteredClassIndices.Num() + 1)));
 
 		// TODO: `ImGui::RenderTextEllipsis` does something similar
 		FAnsiString PreviewText = SelectedClassData ? SelectedClassData->DisplayName : "None";
@@ -433,7 +435,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		ImGui::EndGroup();
 		
-		if (AvailableSpaceBelow > AvailableSpaceAbove)
+		if ((AvailableSpaceBelow > PopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
 		{
 			ImGui::SetNextWindowPos(ImVec2(ClassViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
 		}
