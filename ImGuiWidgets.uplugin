@@ -19,6 +19,8 @@
 			"Name": "ImGuiWidgetShaders",
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit",
+			"TargetDenyList": [ "Server", "Program" ],
+			"TargetConfigurationDenyList": [ "Shipping" ],
 			"PlatformAllowList": [ "Win64" ]
 		},
 		{
