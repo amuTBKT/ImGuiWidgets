@@ -577,17 +577,21 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	{
 		// configuration
 		const float AssetViewerWidth = 400.f * GlobalScale;
-		const char* AssetViewerPopupName = "AssetViewerPopup";
-		const float AssetViewerRowHeight = 36.f * GlobalScale;
 		const float AssetViewerMaxRowCount = 10;
+		const float AssetViewerRowHeight = 36.f * GlobalScale;
+		const char* AssetViewerPopupName = "AssetViewerPopup";
+
 		const float AssetViewerRowHeightWithSpacing = AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
-		const int32 PreviewTextMaxLength = 32;
+		const float AssetViewerDesiredHeight = FMath::Min(AssetViewerMaxRowCount, FilteredAssetIndices.Num() + 1) * AssetViewerRowHeightWithSpacing;
+		const float AssetViewerComboxBoxWidth = FMath::Clamp(256.f, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - (bDrawCompactWidget ? 75.f : 32.f) * GlobalScale);
+		const int32 PreviewTextMaxLength = FMath::Clamp(FMath::CeilToInt(1.25f * AssetViewerComboxBoxWidth / ImGui::GetFontSize()) - 1, 4, 32);
 
 		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
 		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y;
 		const float MonitorDisplaySize = ImGui::GetPlatformIO().Monitors.empty() ? ImGui::GetWindowHeight() : ImGui::GetPlatformIO().Monitors[0].WorkSize.y;
 		const float AvailableSpaceBelow = (MonitorDisplaySize - ImGui::GetCursorScreenPos().y);
-		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove) * 0.65f, AssetViewerRowHeightWithSpacing * (FMath::Min(AssetViewerMaxRowCount, FilteredAssetIndices.Num() + 1)));
+		float AssetViewerPopupHeight = ((AvailableSpaceBelow > AssetViewerDesiredHeight) ? AvailableSpaceBelow : AvailableSpaceAbove) * 0.8f;
+		AssetViewerPopupHeight = FMath::Min(AssetViewerPopupHeight, AssetViewerDesiredHeight);
 
 		// TODO: `ImGui::RenderTextEllipsis` does something similar
 		FString PreviewText = !InOutSoftAssetPtr.IsNull() ? InOutSoftAssetPtr.GetAssetName() : FString(TEXT("None"));
@@ -610,11 +614,11 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImGui::BeginGroup();
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-			if (ImGui::Button(TCHAR_TO_ANSI(*PreviewText), ImVec2(AssetViewerWidth * 0.65f, 0.f)))
+			if (ImGui::Button(TCHAR_TO_ANSI(*PreviewText), ImVec2(AssetViewerComboxBoxWidth, 0.f)))
 			{
 				ImGui::OpenPopup(AssetViewerPopupName);
 			}
-			if (!SelectedSoftAssetPtr.IsNull())
+			if (!SelectedSoftAssetPtr.IsNull() && ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
 			{
 				ImGui::SetItemTooltip("%s", TCHAR_TO_ANSI_PATH(*SelectedSoftAssetPtr.GetLongPackageName()));
 			}
@@ -629,7 +633,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		ImGui::EndGroup();
 
-		if ((AvailableSpaceBelow > PopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
+		if ((AvailableSpaceBelow > AssetViewerPopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
 		{
 			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
 		}
@@ -661,7 +665,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					bFilterAvailableAssets = true;
 				}
 
-				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, FMath::Max(AssetViewerRowHeightWithSpacing, PopupHeight - ImGui::GetItemRectSize().y))))
+				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, FMath::Max(AssetViewerRowHeightWithSpacing, AssetViewerPopupHeight - ImGui::GetItemRectSize().y))))
 				{
 					auto Add_AssetListEntry = [&](int32 AssetIndex, int32 RowIndex)
 						{

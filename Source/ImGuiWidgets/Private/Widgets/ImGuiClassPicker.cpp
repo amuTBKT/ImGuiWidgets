@@ -384,16 +384,20 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		// configuration
 		const float ClassViewerWidth = 256.f * GlobalScale;
 		const char* ClassViewerPopupName = "ClassViewerPopup";
-		const float ClassViewerRowHeight = 18.f * GlobalScale;
 		const float ClassViewerMaxRowCount = 10;
+		const float ClassViewerRowHeight = 18.f * GlobalScale;
+		
 		const float ClassViewerRowHeightWithSpacing = ClassViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
-		const int32 PreviewTextMaxLength = 20;
+		const float ClassViewerDesiredHeight = FMath::Min(ClassViewerMaxRowCount, FilteredClassIndices.Num() + 1) * ClassViewerRowHeightWithSpacing;
+		const float ClassViewerComboxBoxWidth = FMath::Clamp(ClassViewerWidth, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - 100.f * GlobalScale);
+		const int32 PreviewTextMaxLength = FMath::Clamp(FMath::CeilToInt(1.25f * ClassViewerComboxBoxWidth / ImGui::GetFontSize()) - 1, 4, 32);
 
 		const float ClassViewerPopupPosX = ImGui::GetCursorScreenPos().x;
 		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y;
 		const float MonitorDisplaySize = ImGui::GetPlatformIO().Monitors.empty() ? ImGui::GetWindowHeight() : ImGui::GetPlatformIO().Monitors[0].WorkSize.y;
 		const float AvailableSpaceBelow = (MonitorDisplaySize - ImGui::GetCursorScreenPos().y);
-		const float PopupHeight = FMath::Min(FMath::Max(AvailableSpaceBelow, AvailableSpaceAbove) * 0.65f, ClassViewerRowHeightWithSpacing * (FMath::Min(ClassViewerMaxRowCount, FilteredClassIndices.Num() + 1)));
+		float ClassViewerPopupHeight = ((AvailableSpaceBelow > ClassViewerDesiredHeight) ? AvailableSpaceBelow : AvailableSpaceAbove) * 0.8f;
+		ClassViewerPopupHeight = FMath::Min(ClassViewerPopupHeight, ClassViewerDesiredHeight);
 
 		// TODO: `ImGui::RenderTextEllipsis` does something similar
 		FAnsiString PreviewText = SelectedClassData ? SelectedClassData->DisplayName : "None";
@@ -416,11 +420,11 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImGui::BeginGroup();
 		{			
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-			if (ImGui::Button(*PreviewText, ImVec2(ClassViewerWidth * 0.75f, 0.f)))
+			if (ImGui::Button(*PreviewText, ImVec2(ClassViewerComboxBoxWidth, 0.f)))
 			{
 				ImGui::OpenPopup(ClassViewerPopupName);
 			}
-			if (SelectedClassData)
+			if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
 			{
 				ImGui::SetItemTooltip("%s", *SelectedClassData->ObjectPath);
 			}
@@ -435,7 +439,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		ImGui::EndGroup();
 		
-		if ((AvailableSpaceBelow > PopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
+		if ((AvailableSpaceBelow > ClassViewerPopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
 		{
 			ImGui::SetNextWindowPos(ImVec2(ClassViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
 		}
@@ -467,7 +471,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					bFilterAvailableClasses = true;
 				}
 
-				if (ImGui::BeginListBox("##ClassList", ImVec2(ClassViewerWidth, FMath::Max(ClassViewerRowHeightWithSpacing, PopupHeight - ImGui::GetItemRectSize().y))))
+				if (ImGui::BeginListBox("##ClassList", ImVec2(ClassViewerWidth, FMath::Max(ClassViewerRowHeightWithSpacing, ClassViewerPopupHeight - ImGui::GetItemRectSize().y))))
 				{
 					auto Add_ListEntry = [&](int32 ClassIndex, int32 RowIndex)
 					{
