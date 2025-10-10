@@ -389,7 +389,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		
 		const float ClassViewerRowHeightWithSpacing = ClassViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
 		const float ClassViewerDesiredHeight = FMath::Min(ClassViewerMaxRowCount, FilteredClassIndices.Num() + 1) * ClassViewerRowHeightWithSpacing;
-		const float ClassViewerComboxBoxWidth = FMath::Clamp(ClassViewerWidth, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - 100.f * GlobalScale);
+		const float ClassViewerComboxBoxWidth = FMath::Clamp(256.f * GlobalScale, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - 100.f * GlobalScale);
 		const int32 PreviewTextMaxLength = FMath::Clamp(FMath::CeilToInt(1.25f * ClassViewerComboxBoxWidth / ImGui::GetFontSize()) - 1, 4, 32);
 
 		const float ClassViewerPopupPosX = ImGui::GetCursorScreenPos().x;
@@ -424,7 +424,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			{
 				ImGui::OpenPopup(ClassViewerPopupName);
 			}
-			if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
+			if (SelectedClassData && ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
 			{
 				ImGui::SetItemTooltip("%s", *SelectedClassData->ObjectPath);
 			}

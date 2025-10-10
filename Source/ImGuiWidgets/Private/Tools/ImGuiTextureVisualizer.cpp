@@ -1342,7 +1342,7 @@ namespace ImGuiTextureVisualizer
 			const int32 TextureDetailsWidgetHeight = 50.f * ImGui::GetStyle().FontScaleMain;
 
 			const ImVec2 TextureCanvasSize = ImGui::GetContentRegionAvail() - ImVec2(0.f, TextureDetailsWidgetHeight);
-			if (!VisTextureName.IsEmpty())
+			if (!VisTextureName.IsEmpty() && TextureInfo.Format != PF_Unknown)
 			{
 				DrawTextureCanvas(Context, TextureCanvasSize, TextureInfo, TexturePreviewOptions);
 			}

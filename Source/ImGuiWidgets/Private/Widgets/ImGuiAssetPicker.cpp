@@ -583,7 +583,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 		const float AssetViewerRowHeightWithSpacing = AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
 		const float AssetViewerDesiredHeight = FMath::Min(AssetViewerMaxRowCount, FilteredAssetIndices.Num() + 1) * AssetViewerRowHeightWithSpacing;
-		const float AssetViewerComboxBoxWidth = FMath::Clamp(256.f, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - (bDrawCompactWidget ? 75.f : 32.f) * GlobalScale);
+		const float AssetViewerComboxBoxWidth = FMath::Clamp(256.f * GlobalScale, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - (bDrawCompactWidget ? 75.f : 32.f) * GlobalScale);
 		const int32 PreviewTextMaxLength = FMath::Clamp(FMath::CeilToInt(1.25f * AssetViewerComboxBoxWidth / ImGui::GetFontSize()) - 1, 4, 32);
 
 		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
