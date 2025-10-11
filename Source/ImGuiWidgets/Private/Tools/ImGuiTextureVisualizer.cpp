@@ -7,8 +7,10 @@
 #include "ImGuiTextureVisualizerUtils.h"
 
 #include "Engine/Engine.h"
+#include "Engine/Texture.h"
 #include "RHICommandList.h"
 #include "RHIGPUReadback.h"
+#include "TextureResource.h"
 #include "RHIStaticStates.h"
 #include "ScreenRendering.h"
 #include "PipelineStateCache.h"

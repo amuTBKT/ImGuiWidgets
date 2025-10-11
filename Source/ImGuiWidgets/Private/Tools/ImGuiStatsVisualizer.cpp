@@ -10,6 +10,7 @@
 #include "Stats/StatsData.h"
 #include "ImGuiStaticWidget.h"
 #include "ImGuiCommonWidgets.h"
+#include "Misc/ConfigCacheIni.h"
 
 #if WITH_EDITOR
 #include "Editor.h"

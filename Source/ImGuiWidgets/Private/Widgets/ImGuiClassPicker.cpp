@@ -359,21 +359,6 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		FilterAvailableClasses();
 	}
 
-#if WITH_EDITOR
-	TOptional<FSoftObjectPtr> DraggedClassPath;
-	const bool bIsDragDropOperationValid = Context->DragDropOperation.IsValid();
-	if (bIsDragDropOperationValid && Context->DragDropOperation->IsOfType<FAssetDragDropOp>())
-	{
-		TSharedPtr<FAssetDragDropOp> DragDropOp = StaticCastSharedPtr<FAssetDragDropOp>(Context->DragDropOperation);
-		if (DragDropOp->GetAssets().Num() == 1 && ClassPickerUtils::IsClassChildOf(ClassPickerUtils::GetClassPathForAsset(DragDropOp->GetAssets()[0]), BaseClassPath))
-		{
-			DraggedClassPath = FSoftObjectPtr{ ClassPickerUtils::GetClassPathForAsset(DragDropOp->GetAssets()[0]) };
-		}
-	}
-#else
-	const bool bIsDragDropOperationValid = false;
-#endif
-
 	const auto* SelectedClassData = AvailableClasses.IsValidIndex(LastSelectedClassIndex) ? &AvailableClasses[LastSelectedClassIndex] : nullptr;
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
@@ -544,7 +529,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			bool bClosePopup = (NewSelectedIndex != INDEX_NONE);
 			// force close the popup when dragging assets over the window
 			const ImGuiHoveredFlags HoverFlags = ImGuiHoveredFlags_RootWindow|ImGuiHoveredFlags_AllowWhenBlockedByPopup|ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
-			bClosePopup |= (bIsDragDropOperationValid && ImGui::IsWindowHovered(HoverFlags));
+			bClosePopup |= (Context->DragDropOperation.IsValid() && ImGui::IsWindowHovered(HoverFlags));
 			if (bClosePopup)
 			{
 				ImGui::CloseCurrentPopup();
@@ -702,21 +687,10 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	}
 	
 #if WITH_EDITOR
-	const bool bDrawDragDropArea = bIsDragDropOperationValid && (DraggedClassPath.IsSet() || ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max));
-	if (bDrawDragDropArea)
+	if (FImGui::DrawDragDropArea<FAssetDragDropOp>(Context, "AssetDragDrop", AssetDragDropArea,
+		[&](TSharedPtr<FAssetDragDropOp> DragDropOp) { return DragDropOp->GetAssets().Num() == 1 && ClassPickerUtils::IsClassChildOf(ClassPickerUtils::GetClassPathForAsset(DragDropOp->GetAssets()[0]), BaseClassPath); },
+		[&](TSharedPtr<FAssetDragDropOp> DragDropOp) { SelectedSoftClassPtr = ClassPickerUtils::GetClassPathForAsset(DragDropOp->GetAssets()[0]); }))
 	{
-		static const ImU32 ValidColor = FColorToImU32(FSlateColor(EStyleColor::AccentBlue).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
-		static const ImU32 InvalidColor = FColorToImU32(FSlateColor(EStyleColor::Error).GetSpecifiedColor().ToFColor(/*bSRGB=*/true));
-
-		FImGui::DrawDragDropArea(Context, AssetDragDropArea.Min, AssetDragDropArea.Max, GlobalScale, GlobalScale, DraggedClassPath.IsSet() ? ValidColor : InvalidColor);
-	}
-
-	if (DraggedClassPath.IsSet() && ImGui::IsMouseHoveringRect(AssetDragDropArea.Min, AssetDragDropArea.Max))
-	{
-		if (Context->ConsumeDragDropOperation())
-		{
-			SelectedSoftClassPtr = DraggedClassPath.GetValue();
-		}
 	}
 #endif
 

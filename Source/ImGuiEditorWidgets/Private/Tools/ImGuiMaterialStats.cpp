@@ -598,9 +598,10 @@ namespace ImGuiMaterialStats
 
 			if (!bKeepItem)
 			{
+				Reset(&MaterialWindowStates[WindowIndex]);
 				MaterialWindowStates.RemoveAt(WindowIndex);
 				WindowIndex = FMath::Max(0, WindowIndex - 1);
-			}			
+			}
 		}
 
 		// TabBar customization

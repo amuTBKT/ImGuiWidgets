@@ -4,6 +4,10 @@
 
 #include "ImGuiPluginTypes.h"
 
+#if WITH_EDITOR
+#include "DragAndDrop/AssetDragDropOp.h"
+#endif
+
 class FConfigFile;
 
 namespace FImGuiSettings
@@ -107,6 +111,42 @@ namespace FImGui
 	// Hacky/Experimental widget
 	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width);
 	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, double& p_data_0, double& p_data_1, double& p_data_min, double& p_data_max, float input_width, float slider_width);
+
+#if WITH_EDITOR
+	template <typename TDragDropOp, typename Predicate, typename Callback>
+	FORCEINLINE bool DrawDragDropArea(FImGuiTickContext* context, const char* str_id, ImRect drag_rect, Predicate pred_func, Callback callback_func)
+	{
+		FImGuiNamedWidgetScope Scope{ str_id };
+
+		const bool bIsDragDropOperationValid = context->DragDropOperation.IsValid();
+		bool bPredicatePassed = false;
+		if (bIsDragDropOperationValid && context->DragDropOperation->IsOfType<TDragDropOp>())
+		{
+			TSharedPtr<TDragDropOp> DragDropOp = StaticCastSharedPtr<TDragDropOp>(context->DragDropOperation);
+			bPredicatePassed = pred_func(DragDropOp);
+		}
+
+		const bool bDrawDragDropArea = bIsDragDropOperationValid && (bPredicatePassed || ImGui::IsMouseHoveringRect(drag_rect.Min, drag_rect.Max));
+		if (bDrawDragDropArea)
+		{
+			const ImU32 ValidColor = 0xFFFFBB26;
+			const ImU32 InvalidColor = 0xFF3535EF;
+			FImGui::DrawDragDropArea(context, drag_rect.Min, drag_rect.Max, ImGui::GetStyle().FontScaleMain, ImGui::GetStyle().FontScaleMain, bPredicatePassed ? ValidColor : InvalidColor);
+		}
+
+		if (bPredicatePassed && ImGui::IsMouseHoveringRect(drag_rect.Min, drag_rect.Max))
+		{
+			TSharedPtr<TDragDropOp> DragDropOp = StaticCastSharedPtr<TDragDropOp>(context->DragDropOperation);
+			if (context->ConsumeDragDropOperation())
+			{
+				callback_func(DragDropOp);
+				return true;
+			}
+		}
+
+		return false;
+	}
+#endif
 }
 
 class FImGuiTextFilter

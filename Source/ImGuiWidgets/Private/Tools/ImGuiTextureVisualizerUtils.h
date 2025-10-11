@@ -3,6 +3,7 @@
 #include "SceneViewExtension.h"
 #include "RenderGraphBuilder.h"
 #include "RenderGraphResources.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 // copied from Voxel core (https://github.com/VoxelPlugin/VoxelCore/blob/master/Source/VoxelCore/Public/VoxelMinimal/VoxelMacros.h)
 #define DEFINE_PRIVATE_ACCESS(Class, Property) \
@@ -280,7 +281,7 @@ namespace ImGuiTextureVisualizer
 				if (bReadAsStencil)
 				{
 					FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
-					ValueAsString += FAnsiString::Printf("(Stencil)%i", Value.X, Value.X);
+					ValueAsString += FAnsiString::Printf("(Stencil)%i", Value.X);
 				}
 				else
 				{
