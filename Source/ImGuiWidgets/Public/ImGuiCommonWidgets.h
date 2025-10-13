@@ -3,10 +3,7 @@
 #pragma once
 
 #include "ImGuiPluginTypes.h"
-
-#if WITH_EDITOR
-#include "DragAndDrop/AssetDragDropOp.h"
-#endif
+#include "Input/DragAndDrop.h"
 
 class FConfigFile;
 
@@ -112,7 +109,6 @@ namespace FImGui
 	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width);
 	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, double& p_data_0, double& p_data_1, double& p_data_min, double& p_data_max, float input_width, float slider_width);
 
-#if WITH_EDITOR
 	template <typename TDragDropOp, typename Predicate, typename Callback>
 	FORCEINLINE bool DrawDragDropArea(FImGuiTickContext* context, const char* str_id, ImRect drag_rect, Predicate pred_func, Callback callback_func)
 	{
@@ -146,7 +142,6 @@ namespace FImGui
 
 		return false;
 	}
-#endif
 }
 
 class FImGuiTextFilter

@@ -1,3 +1,5 @@
+// Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
+
 #pragma once
 
 #include "SceneViewExtension.h"

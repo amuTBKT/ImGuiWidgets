@@ -1,3 +1,5 @@
+// Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
+
 #include "ImGuiTextureVisualizer.h"
 
 #include "ImGuiSubsystem.h"
