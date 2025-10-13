@@ -99,7 +99,7 @@ namespace FImGui
 		DrawList->ChannelsMerge();
 	}
 
-	void DrawDragDropArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size, float border_uv_scale, ImU32 tint_col)
+	void DrawHighlightArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size, float border_uv_scale, ImU32 tint_col)
 	{
 		EnsureValidImGuiContext(context);
 
@@ -310,7 +310,6 @@ namespace FImGui
 
 		return value_changed;
 	}
-
 
 	bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width)
 	{

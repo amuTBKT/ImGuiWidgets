@@ -1249,12 +1249,11 @@ namespace ImGuiTextureVisualizer
 				float TextureInspectorInfoWidgetOffsetX = TextureInspectorSize;
 				if (AvailableSpaceTop < TextureInspectorSize)
 				{
-					TextureInspectorOffset.y = 0;
+					TextureInspectorOffset.y += (TextureInspectorSize - AvailableSpaceTop);
 				}
 				if (AvailableSpaceRight < (TextureInspectorSize + TextureInspectorInfoWidgetSize))
 				{
-					TextureInspectorOffset.x = -(32.f + TextureInspectorSize);
-					TextureInspectorInfoWidgetOffsetX = -TextureInspectorInfoWidgetSize;
+					TextureInspectorOffset.x -= ((TextureInspectorSize + TextureInspectorInfoWidgetSize) - AvailableSpaceRight);
 				}
 
 				InOutTexturePreviewOptions.TextureInspectorRect.X = AbsoluteMousePos.x + TextureInspectorOffset.x;

@@ -106,7 +106,7 @@ namespace FImGui
 
 	IMGUIWIDGETS_API void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message);
 	
-	IMGUIWIDGETS_API void DrawDragDropArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size = 1.f, float border_uv_scale = 1.f, ImU32 tint_col = 0xFFFFFFFF);
+	IMGUIWIDGETS_API void DrawHighlightArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size = 1.f, float border_uv_scale = 1.f, ImU32 tint_col = 0xFFFFFFFF);
 
 	// Hacky/Experimental widget
 	IMGUIWIDGETS_API bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, float& p_data_0, float& p_data_1, float& p_data_min, float& p_data_max, float input_width, float slider_width);
@@ -126,12 +126,12 @@ namespace FImGui
 			bPredicatePassed = pred_func(DragDropOp);
 		}
 
-		const bool bDrawDragDropArea = bIsDragDropOperationValid && (bPredicatePassed || ImGui::IsMouseHoveringRect(drag_rect.Min, drag_rect.Max));
-		if (bDrawDragDropArea)
+		const bool bHighlightArea = bIsDragDropOperationValid && (bPredicatePassed || ImGui::IsMouseHoveringRect(drag_rect.Min, drag_rect.Max));
+		if (bHighlightArea)
 		{
 			const ImU32 ValidColor = 0xFFFFBB26;
 			const ImU32 InvalidColor = 0xFF3535EF;
-			FImGui::DrawDragDropArea(context, drag_rect.Min, drag_rect.Max, ImGui::GetStyle().FontScaleMain, ImGui::GetStyle().FontScaleMain, bPredicatePassed ? ValidColor : InvalidColor);
+			DrawHighlightArea(context, drag_rect.Min, drag_rect.Max, ImGui::GetStyle().FontScaleMain, ImGui::GetStyle().FontScaleMain, bPredicatePassed ? ValidColor : InvalidColor);
 		}
 
 		if (bPredicatePassed && ImGui::IsMouseHoveringRect(drag_rect.Min, drag_rect.Max))
