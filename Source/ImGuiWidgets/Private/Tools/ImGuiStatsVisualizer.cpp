@@ -4,12 +4,12 @@
 
 #if STATS
 
+#include "ImGuiWidgets.h"
 #include "GPUProfiler.h"
 #include "Engine/Engine.h"
 #include "ImGuiSubsystem.h"
 #include "Stats/StatsData.h"
 #include "ImGuiStaticWidget.h"
-#include "ImGuiCommonWidgets.h"
 #include "Misc/ConfigCacheIni.h"
 
 #if WITH_EDITOR

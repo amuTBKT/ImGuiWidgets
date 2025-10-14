@@ -8,11 +8,11 @@
 #include "Editor.h"
 #endif
 
+#include "ImGuiWidgets.h"
 #include "Engine/World.h"
 #include "NiagaraSystem.h"
 #include "ImGuiSubsystem.h"
 #include "ImGuiStaticWidget.h"
-#include "ImGuiCommonWidgets.h"
 #include "Textures/SlateIcon.h"
 #include "NiagaraSimulationStageBase.h"
 

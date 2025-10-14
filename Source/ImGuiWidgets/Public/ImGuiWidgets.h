@@ -5,8 +5,10 @@
 #include "ImGuiPluginTypes.h"
 #include "Input/DragAndDrop.h"
 
-class FConfigFile;
+// commonly used function to get ImGui icons
+#define IMGUI_ICON(IconName) IMGUI_STYLE_ICON("ImGuiStyle", IconName)
 
+class FConfigFile;
 namespace FImGuiSettings
 {
 	IMGUIWIDGETS_API FConfigFile* GetConfigFile();
@@ -132,8 +134,8 @@ namespace FImGui
 
 		if (bPredicatePassed && ImGui::IsMouseHoveringRect(drag_rect.Min, drag_rect.Max))
 		{
-			TSharedPtr<TDragDropOp> DragDropOp = StaticCastSharedPtr<TDragDropOp>(context->DragDropOperation);
-			if (context->ConsumeDragDropOperation())
+			TSharedPtr<TDragDropOp> DragDropOp = StaticCastSharedPtr<TDragDropOp>(context->ConsumeDragDropOperation());
+			if (DragDropOp)
 			{
 				callback_func(DragDropOp);
 				return true;

@@ -2,9 +2,9 @@
 
 #include "ImGuiTextureVisualizer.h"
 
+#include "ImGuiWidgets.h"
 #include "ImGuiSubsystem.h"
 #include "ImGuiStaticWidget.h"
-#include "ImGuiCommonWidgets.h"
 #include "ImGuiTextureDisplayShaders.h"
 #include "ImGuiTextureVisualizerUtils.h"
 
@@ -688,6 +688,8 @@ namespace ImGuiTextureVisualizer
 
 	static bool DrawTextureList(FImGuiTickContext* Context, FAnsiString& InOutSelectedTextureName)
 	{
+		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
+
 		static FImGuiTextFilter SearchFilter = FImGuiTextFilter::MakeWidget(64u);
 		static bool bSetFocusOnSelectedEntry = false; // flag checked on next frame, hence static
 		
@@ -767,7 +769,7 @@ namespace ImGuiTextureVisualizer
 		{
 			ImGui::SameLine();
 			
-			const FImGuiImageBindingParams ResetToDefaultIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(ComboBoxSize.y));
+			const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(ComboBoxSize.y));
 
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -793,6 +795,8 @@ namespace ImGuiTextureVisualizer
 
 	static void DrawTextureControls(FImGuiTickContext* Context, const FTextureInfo& InTextureInfo, FTexturePreviewOptions& InOutTexturePreviewOptions)
 	{
+		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
+
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 		const float ControlPadding = 10.f * GlobalScale;
 		const float ScrollInput = FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER ? (ImGui::GetIO().MouseWheel > 0.f ? -1.f : 1.f) : 0.f;
@@ -1017,7 +1021,7 @@ namespace ImGuiTextureVisualizer
 
 			{
 				const float CurrentLineHeight = ImGui::GetItemRectSize().y;
-				const FImGuiImageBindingParams CheckerboardIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("Icon.CheckerPattern"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams CheckerboardIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.CheckerPattern"), FVector2D(CurrentLineHeight));
 
 				const bool bIsActive = InOutTexturePreviewOptions.BackgroundColor.A < 0.5f;
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -1052,7 +1056,7 @@ namespace ImGuiTextureVisualizer
 
 			ImGui::SameLine();
 			{
-				const FImGuiImageBindingParams ZoomToTextureIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("Icon.Find"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams ZoomToTextureIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.Find"), FVector2D(CurrentLineHeight));
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -1071,7 +1075,7 @@ namespace ImGuiTextureVisualizer
 
 			ImGui::SameLine();
 			{
-				const FImGuiImageBindingParams ZoomToFitIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("Icon.FrameSelected"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams ZoomToFitIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.FrameSelected"), FVector2D(CurrentLineHeight));
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -1091,7 +1095,7 @@ namespace ImGuiTextureVisualizer
 			
 			ImGui::SameLine();
 			{
-				const FImGuiImageBindingParams ResetToDefaultIcon = UImGuiSubsystem::Get()->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(CurrentLineHeight));
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
