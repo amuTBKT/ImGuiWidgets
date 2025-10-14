@@ -693,11 +693,9 @@ namespace ImGuiStatsVizualizer
 		if (Context->ImGuiContext->DragDropActive)
 		{
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-			const FImGuiImageBindingParams DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("GenericCommands.Delete"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
+			const FImGuiImageBindingParams DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Delete"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
 			
-			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xFFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, 0xFF0000FF);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 			
@@ -713,12 +711,12 @@ namespace ImGuiStatsVizualizer
 			}
 
 			ImGui::PopStyleVar();
-			ImGui::PopStyleColor(4);
+			ImGui::PopStyleColor(2);
 		}
 		else
 		{
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-			const FImGuiImageBindingParams SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.Save"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
+			const FImGuiImageBindingParams SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Save"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
 
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -873,8 +871,8 @@ namespace ImGuiStatsVizualizer
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()));
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()));
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Edit"), FVector2D(ImGui::GetFontSize()));
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Search"), FVector2D(ImGui::GetFontSize()));
 	}
 
 	static void Tick(FImGuiTickContext* Context)

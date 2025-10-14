@@ -23,28 +23,36 @@ public:
 		SetContentRoot(IconDirectory);
 
 		const FVector2D Icon16x16 = FVector2D(16.0, 16.0);
+		
+		Set("ImIcon.Warning", new IMAGE_BRUSH_SVG("Icons/im_alert_triangle", Icon16x16));
+		Set("ImIcon.Search", new IMAGE_BRUSH_SVG("Icons/im_search", Icon16x16));
+		Set("ImIcon.Edit", new IMAGE_BRUSH_SVG("Icons/im_edit", Icon16x16));
+		Set("ImIcon.Statistics", new IMAGE_BRUSH_SVG("Icons/im_statistics", Icon16x16));
+		Set("ImIcon.Cross", new IMAGE_BRUSH_SVG("Icons/im_cross", Icon16x16));
+		Set("ImIcon.Delete", new IMAGE_BRUSH_SVG("Icons/im_delete", Icon16x16));
 
-		Set("Icon.EngineFolder", new IMAGE_BRUSH_SVG("Icons/icon_engine_content", Icon16x16));
-		Set("Icon.ProjectFolder", new IMAGE_BRUSH_SVG("Icons/icon_project_content", Icon16x16));
-		Set("Icon.PluginFolder", new IMAGE_BRUSH_SVG("Icons/icon_plugin_content", Icon16x16));
-		Set("Icon.DeveloperFolder", new IMAGE_BRUSH_SVG("Icons/icon_developer_content", Icon16x16));
-		Set("Icon.AssetCollection", new IMAGE_BRUSH_SVG("Icons/icon_collection_content", Icon16x16));
-		Set("Icon.LocalizedFolder", new IMAGE_BRUSH_SVG("Icons/icon_localized_content", Icon16x16));
-		Set("Icon.DropDownArrow", new IMAGE_BRUSH_SVG("Icons/icon_dropdown_arrow", Icon16x16));
-		Set("Icon.UseSelectedAsset", new IMAGE_BRUSH_SVG("Icons/icon_use_selected_asset", Icon16x16));
-		Set("Icon.ResetToDefault", new IMAGE_BRUSH_SVG("Icons/icon_reset_to_default", Icon16x16));
-		Set("Icon.BrowseToAsset", new IMAGE_BRUSH_SVG("Icons/icon_browse_to_asset", Icon16x16));
-		Set("Icon.FallbackAssetIcon", new IMAGE_BRUSH_SVG("Icons/icon_fallback_asset_icon", Icon16x16));
-		Set("Icon.CheckerPattern", new IMAGE_BRUSH_SVG("Icons/icon_checker_pattern", Icon16x16));
-		Set("Icon.Find", new IMAGE_BRUSH_SVG("Icons/icon_find", Icon16x16));
-		Set("Icon.FrameSelected", new IMAGE_BRUSH_SVG("Icons/icon_frame_selected", Icon16x16));
-		Set("Icon.Save", new IMAGE_BRUSH_SVG("Icons/icon_save", Icon16x16));
-		Set("Icon.CollapseAll", new IMAGE_BRUSH_SVG("Icons/icon_collapse_all", Icon16x16));
-		Set("Icon.ExpandAll", new IMAGE_BRUSH_SVG("Icons/icon_expand_all", Icon16x16));
+		Set("ImIcon.CollapseAll", new IMAGE_BRUSH_SVG("Icons/im_collapse_all", Icon16x16));
+		Set("ImIcon.ExpandAll", new IMAGE_BRUSH_SVG("Icons/im_expand_all", Icon16x16));
+		Set("ImIcon.Save", new IMAGE_BRUSH_SVG("Icons/im_save", Icon16x16));
+		Set("ImIcon.CheckerPattern", new IMAGE_BRUSH_SVG("Icons/im_checker_pattern", Icon16x16));
+		Set("ImIcon.Find", new IMAGE_BRUSH_SVG("Icons/im_find", Icon16x16));
+		Set("ImIcon.FrameSelected", new IMAGE_BRUSH_SVG("Icons/im_frame_selected", Icon16x16));
+		Set("ImIcon.EngineFolder", new IMAGE_BRUSH_SVG("Icons/im_engine_content", Icon16x16));
+		Set("ImIcon.ProjectFolder", new IMAGE_BRUSH_SVG("Icons/im_project_content", Icon16x16));
+		Set("ImIcon.PluginFolder", new IMAGE_BRUSH_SVG("Icons/im_plugin_content", Icon16x16));
+		Set("ImIcon.DeveloperFolder", new IMAGE_BRUSH_SVG("Icons/im_developer_content", Icon16x16));
+		Set("ImIcon.AssetCollection", new IMAGE_BRUSH_SVG("Icons/im_collection_content", Icon16x16));
+		Set("ImIcon.LocalizedFolder", new IMAGE_BRUSH_SVG("Icons/im_localized_content", Icon16x16));
+		Set("ImIcon.DropDownArrow", new IMAGE_BRUSH_SVG("Icons/im_dropdown_arrow", Icon16x16));
+		Set("ImIcon.UseSelectedAsset", new IMAGE_BRUSH_SVG("Icons/im_use_selected_asset", Icon16x16));
+		Set("ImIcon.ResetToDefault", new IMAGE_BRUSH_SVG("Icons/im_reset_to_default", Icon16x16));
+		Set("ImIcon.BrowseToAsset", new IMAGE_BRUSH_SVG("Icons/im_browse_to_asset", Icon16x16));
+		Set("ImIcon.FallbackAssetIcon", new IMAGE_BRUSH_SVG("Icons/im_fallback_asset_icon", Icon16x16));
+		Set("ImIcon.PlusCircle", new IMAGE_BRUSH_SVG("Icons/im_plus_circle", Icon16x16));
 
-		Set("DashLine.Vertical", new IMAGE_BRUSH("Common/dash_line_vertical", FVector2D(1, 10), FLinearColor::White, ESlateBrushTileType::Vertical));
-		Set("DashLine.Horizontal", new IMAGE_BRUSH("Common/dash_line_horizontal", FVector2D(10, 1), FLinearColor::White, ESlateBrushTileType::Horizontal));
-		Set("DropDropArea.Background", new BOX_BRUSH("Common/dragdrop_area_background", FMargin(6.0f / 64.0f)));
+		Set("ImTex.DashLine.Vertical", new IMAGE_BRUSH("Common/im_dash_line_vertical", FVector2D(1, 10), FLinearColor::White, ESlateBrushTileType::Vertical));
+		Set("ImTex.DashLine.Horizontal", new IMAGE_BRUSH("Common/im_dash_line_horizontal", FVector2D(10, 1), FLinearColor::White, ESlateBrushTileType::Horizontal));
+		Set("ImTex.DropDropArea.Background", new BOX_BRUSH("Common/im_dragdrop_area_background", FMargin(6.0f / 64.0f)));
 
 		FSlateStyleRegistry::RegisterSlateStyle(*this);
 	}

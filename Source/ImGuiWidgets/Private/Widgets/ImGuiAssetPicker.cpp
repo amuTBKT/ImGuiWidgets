@@ -43,7 +43,7 @@ namespace AssetPickerUtils
 #if WITH_EDITOR
 			ClassIconBrush = FClassIconFinder::FindThumbnailForClass(AssetType, NAME_None);
 #else
-			ClassIconBrush = IMGUI_ICON("Icon.FallbackAssetIcon");
+			ClassIconBrush = IMGUI_ICON("ImIcon.FallbackAssetIcon");
 #endif
 
 			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(FName("AssetRegistry")))
@@ -503,7 +503,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftAssetPtr, float IconSize)
 	{
-		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.UseSelectedAsset"), FVector2D(IconSize));
+		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.UseSelectedAsset"), FVector2D(IconSize));
 
 		if (WITH_EDITOR == 0)
 		{
@@ -527,7 +527,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftAssetPtr, float IconSize)
 	{
-		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.BrowseToAsset"), FVector2D(IconSize));
+		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.BrowseToAsset"), FVector2D(IconSize));
 
 		if (InSoftAssetPtr.IsNull() || (WITH_EDITOR == 0))
 		{
@@ -547,7 +547,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	auto Add_ResetSelectionButton = [&](FSoftObjectPtr& InOutSoftAssetPtr, float IconSize)
 	{
-		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(IconSize));
+		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ResetToDefault"), FVector2D(IconSize));
 
 		if (FImGui::TransparentImageButton("ResetToDefault", ResetToDefaultIcon))
 		{
@@ -612,7 +612,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 			ImGui::SameLine();
 			
-			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(ComboBoxSize.y * 0.9f));
+			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.DropDownArrow"), FVector2D(ComboBoxSize.y * 0.9f));
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - DropDownArrowIcon.Size.x * 2.f);
 			FImGui::Image(DropDownArrowIcon);
 			ImGui::PopStyleVar(1);
@@ -759,12 +759,12 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 						return bWasActive != bInOutState;
 					};
 
-				const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ProjectFolder"), FVector2D(16.) * GlobalScale);
-				const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.EngineFolder"), FVector2D(16.) * GlobalScale);
-				const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.PluginFolder"), FVector2D(16.) * GlobalScale);
-				const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DeveloperFolder"), FVector2D(16.) * GlobalScale);
-				const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.AssetCollection"), FVector2D(16.) * GlobalScale);
-				const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.LocalizedFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ProjectFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.EngineFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.PluginFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.DeveloperFolder"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.AssetCollection"), FVector2D(16.) * GlobalScale);
+				const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.LocalizedFolder"), FVector2D(16.) * GlobalScale);
 
 				bool bFilterSettingsChanged = false;
 				bFilterSettingsChanged |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectContent, ProjectContentIcon, "Show Project Content?");

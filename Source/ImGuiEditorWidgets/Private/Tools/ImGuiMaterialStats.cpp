@@ -303,10 +303,10 @@ namespace ImGuiMaterialStats
 		static int32 DumpShaderInfoCVarRestoreValue = INDEX_NONE;
 		
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Warning"), FVector2D(ImGui::GetFontSize()));
-		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Search"), FVector2D(ImGui::GetFontSize()));
-		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Edit"), FVector2D(ImGui::GetFontSize()));
-		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DerivedData.Cache.Statistics"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Warning"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Search"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Edit"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Statistics"), FVector2D(ImGui::GetFontSize()));
 
 		bool bIsAnyWindowCompilingMaterial = false;
 		for (FMaterialWindowState& MaterialWindowState : MaterialWindowStates)

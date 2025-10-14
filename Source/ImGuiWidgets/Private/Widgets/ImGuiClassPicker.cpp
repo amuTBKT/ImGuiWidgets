@@ -417,7 +417,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			
 			ImGui::SameLine();
 			
-			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.DropDownArrow"), FVector2D(ComboBoxSize.y * 0.9f));
+			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.DropDownArrow"), FVector2D(ComboBoxSize.y * 0.9f));
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - DropDownArrowIcon.Size.x * 2.f);
 			FImGui::Image(DropDownArrowIcon);
 			ImGui::PopStyleVar(1);			
@@ -548,7 +548,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
-		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.UseSelectedAsset"), FVector2D(IconSize));
+		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.UseSelectedAsset"), FVector2D(IconSize));
 		if (WITH_EDITOR == 0)
 		{
 			ImGui::BeginDisabled();
@@ -571,7 +571,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftClassPtr, float IconSize)
 	{
-		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.BrowseToAsset"), FVector2D(IconSize));
+		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.BrowseToAsset"), FVector2D(IconSize));
 		if (InSoftClassPtr.IsNull() || (!SelectedClassData || !SelectedClassData->bIsAsset) || (WITH_EDITOR == 0))
 		{
 			ImGui::BeginDisabled();
@@ -590,7 +590,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	auto Add_CreateBlueprintButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
-		const FImGuiImageBindingParams CreateNewBlueprintIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.PlusCircle"), FVector2D(IconSize));
+		const FImGuiImageBindingParams CreateNewBlueprintIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.PlusCircle"), FVector2D(IconSize));
 #if WITH_EDITOR
 		if (FImGui::TransparentImageButton("CreateNewBP", CreateNewBlueprintIcon))
 		{
@@ -620,7 +620,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	auto Add_ClearValueButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
-		const FImGuiImageBindingParams ClearValueIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.X"), FVector2D(IconSize));
+		const FImGuiImageBindingParams ClearValueIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Cross"), FVector2D(IconSize));
 		ImGui::BeginDisabled(InOutSoftClassPtr.IsNull());
 		if (FImGui::TransparentImageButton("ClearValue", ClearValueIcon))
 		{

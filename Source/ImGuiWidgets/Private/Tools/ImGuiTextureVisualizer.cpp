@@ -769,7 +769,7 @@ namespace ImGuiTextureVisualizer
 		{
 			ImGui::SameLine();
 			
-			const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(ComboBoxSize.y));
+			const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ResetToDefault"), FVector2D(ComboBoxSize.y));
 
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -1021,7 +1021,7 @@ namespace ImGuiTextureVisualizer
 
 			{
 				const float CurrentLineHeight = ImGui::GetItemRectSize().y;
-				const FImGuiImageBindingParams CheckerboardIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.CheckerPattern"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams CheckerboardIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.CheckerPattern"), FVector2D(CurrentLineHeight));
 
 				const bool bIsActive = InOutTexturePreviewOptions.BackgroundColor.A < 0.5f;
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -1056,7 +1056,7 @@ namespace ImGuiTextureVisualizer
 
 			ImGui::SameLine();
 			{
-				const FImGuiImageBindingParams ZoomToTextureIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.Find"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams ZoomToTextureIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Find"), FVector2D(CurrentLineHeight));
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -1075,7 +1075,7 @@ namespace ImGuiTextureVisualizer
 
 			ImGui::SameLine();
 			{
-				const FImGuiImageBindingParams ZoomToFitIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.FrameSelected"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams ZoomToFitIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.FrameSelected"), FVector2D(CurrentLineHeight));
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -1095,7 +1095,7 @@ namespace ImGuiTextureVisualizer
 			
 			ImGui::SameLine();
 			{
-				const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icon.ResetToDefault"), FVector2D(CurrentLineHeight));
+				const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ResetToDefault"), FVector2D(CurrentLineHeight));
 
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);

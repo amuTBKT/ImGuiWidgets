@@ -61,7 +61,7 @@ namespace FImGui
 		EnsureValidImGuiContext(context);
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("Icons.Warning"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Warning"), FVector2D(ImGui::GetFontSize()));
 
 		/*
 		TODO: there must be a better way to add this ^^'
@@ -106,9 +106,9 @@ namespace FImGui
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
-		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DashLine.Vertical"));
-		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DashLine.Horizontal"));
-		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("DropDropArea.Background"));
+		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImTex.DashLine.Vertical"));
+		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImTex.DashLine.Horizontal"));
+		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImTex.DropDropArea.Background"));
 
 		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
 		ImGui::GetWindowDrawList()->AddImage(BackgroundImage.Id, p_min, p_max, BackgroundImage.UV0 + ImVec2(0.001f, 0.001f), BackgroundImage.UV1 - ImVec2(0.001f, 0.001f), tint_col);
