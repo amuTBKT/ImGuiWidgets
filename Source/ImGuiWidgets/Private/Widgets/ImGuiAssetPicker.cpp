@@ -472,9 +472,9 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		if (AssetThumbnail)
 		{
 			const FImGuiImageBindingParams ThumbnailIcon = ImGuiSubsystem->RegisterOneFrameResource(AssetThumbnail);
-			ImGui::GetWindowDrawList()->AddCallback(ImDrawCallback_SetRenderState, MakeImGuiRenderState(EImGuiRenderState::DisableAlphaBlending));
+			ImGui::GetWindowDrawList()->AddCallback(ImDrawCallback_SetShaderState, MakeImGuiShaderState(EImGuiShaderState::DisableAlphaBlending));
 			ImGui::Image(ThumbnailIcon.Id, ImVec2(IconSize, IconSize), ThumbnailIcon.UV0, ThumbnailIcon.UV1);
-			ImGui::GetWindowDrawList()->AddCallback(ImDrawCallback_SetRenderState, MakeImGuiRenderState(EImGuiRenderState::Default));
+			ImGui::GetWindowDrawList()->AddCallback(ImDrawCallback_SetShaderState, MakeImGuiShaderState(EImGuiShaderState::Default));
 		}
 		else
 		{

@@ -9,7 +9,6 @@
 #include "Engine/Engine.h"
 #include "ImGuiSubsystem.h"
 #include "Stats/StatsData.h"
-#include "ImGuiStaticWidget.h"
 #include "Misc/ConfigCacheIni.h"
 
 #if WITH_EDITOR
@@ -689,8 +688,10 @@ namespace ImGuiStatsVizualizer
 
 	static void RenderStatsHeader(FImGuiTickContext* Context, int32& GroupIndexToRemove)
 	{
+		static const char* HeaderButtonDragDropPayloadType = "DND_STATGROUP_BUTTON";
+
 		bool bDeleteIconHovered = false;
-		if (Context->ImGuiContext->DragDropActive)
+		if (Context->ImGuiContext->DragDropActive && Context->ImGuiContext->DragDropPayload.IsDataType(HeaderButtonDragDropPayloadType))
 		{
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 			const FImGuiImageBindingParams DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Delete"), FVector2D(ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f));
@@ -703,7 +704,7 @@ namespace ImGuiStatsVizualizer
 			bDeleteIconHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly);
 			if (ImGui::BeginDragDropTarget())
 			{
-				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("DND_STATGROUP_BUTTON"))
+				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(HeaderButtonDragDropPayloadType))
 				{
 					GroupIndexToRemove = *(const int32*)Payload->Data;
 				}
@@ -820,7 +821,7 @@ namespace ImGuiStatsVizualizer
 
 			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
 			{
-				ImGui::SetDragDropPayload("DND_STATGROUP_BUTTON", &GroupIndex, sizeof(int32));
+				ImGui::SetDragDropPayload(HeaderButtonDragDropPayloadType, &GroupIndex, sizeof(int32));
 
 				if (bDeleteIconHovered)
 				{
@@ -836,7 +837,7 @@ namespace ImGuiStatsVizualizer
 
 			if (ImGui::BeginDragDropTarget())
 			{
-				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload("DND_STATGROUP_BUTTON"))
+				if (const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(HeaderButtonDragDropPayloadType))
 				{
 					int32 SourceButtonIndex = *(const int32*)Payload->Data;
 					if (SourceButtonIndex != GroupIndex)

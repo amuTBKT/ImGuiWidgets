@@ -4,7 +4,6 @@
 #include "ImGuiSubsystem.h"
 #include "UObject/Package.h"
 #include "ImGuiAssetPicker.h"
-#include "ImGuiStaticWidget.h"
 #include "Materials/Material.h"
 #include "MaterialStatsCommon.h"
 #include "ShaderCompilerCommon.h"

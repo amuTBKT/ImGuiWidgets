@@ -4,7 +4,6 @@
 
 #include "ImGuiWidgets.h"
 #include "ImGuiSubsystem.h"
-#include "ImGuiStaticWidget.h"
 #include "ImGuiTextureDisplayShaders.h"
 #include "ImGuiTextureVisualizerUtils.h"
 
