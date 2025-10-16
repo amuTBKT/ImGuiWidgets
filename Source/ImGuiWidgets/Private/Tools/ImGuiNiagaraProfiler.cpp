@@ -335,8 +335,8 @@ namespace ImGuiNiagaraProfiler
 				// collapse/expand buttons
 				{
 					UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-					const FImGuiImageBindingParams CollapseAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.CollapseAll"), FVector2D(16.) * ImGui::GetStyle().FontScaleMain);
-					const FImGuiImageBindingParams ExpandAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ExpandAll"), FVector2D(16.) * ImGui::GetStyle().FontScaleMain);
+					const FImGuiImageBindingParams CollapseAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.CollapseAll"), 16.f * ImGui::GetStyle().FontScaleMain);
+					const FImGuiImageBindingParams ExpandAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ExpandAll"), 16.f * ImGui::GetStyle().FontScaleMain);
 
 					ImGui::PushStyleColor(ImGuiCol_Button, 0);
 					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);

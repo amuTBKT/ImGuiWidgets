@@ -61,7 +61,7 @@ namespace FImGui
 		EnsureValidImGuiContext(context);
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Warning"), FVector2D(ImGui::GetFontSize()));
+		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Warning"), ImGui::GetFontSize());
 
 		/*
 		TODO: there must be a better way to add this ^^'

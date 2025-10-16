@@ -28,8 +28,8 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 	FImGui::EnsureValidImGuiContext(Context);
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-	const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Search"), FVector2D(ImGui::GetFontSize()));
-	const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Cross"), FVector2D(ImGui::GetFontSize()));
+	const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Search"), ImGui::GetFontSize());
+	const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Cross"), ImGui::GetFontSize());
 
 	FImGuiNamedWidgetScope WidgetScope{ Label };
 
