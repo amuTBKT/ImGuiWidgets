@@ -630,6 +630,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 
 		int32 NewSelectedIndex = INDEX_NONE;
+		ImGui::SetNextWindowSize(ImVec2(0.f, FMath::Max(AssetViewerPopupHeight, 200.f * GlobalScale)), ImGuiCond_Always);
 		if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 		{
 			bool bFilterAvailableAssets = false;
@@ -651,7 +652,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					bFilterAvailableAssets = true;
 				}
 
-				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, FMath::Max(AssetViewerRowHeightWithSpacing, AssetViewerPopupHeight - ImGui::GetItemRectSize().y))))
+				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, ImGui::GetContentRegionAvail().y)))
 				{
 					auto Add_AssetListEntry = [&](int32 AssetIndex, int32 RowIndex)
 						{
