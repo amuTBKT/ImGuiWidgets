@@ -12,12 +12,15 @@
 #endif
 
 #include "ImGuiSubsystem.h"
+#include "ImGuiWidgetUtils.h"
 #include "Engine/Blueprint.h"
 #include "AssetRegistry/AssetData.h"
 #include "UObject/UObjectIterator.h"
 #include "Blueprint/BlueprintSupport.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+
+DECLARE_MEMORY_STAT(TEXT("ClassPicker::Memory"), STAT_ClassPickerMemory, STATGROUP_ImGui);
 
 namespace ClassPickerUtils
 {
@@ -174,6 +177,8 @@ namespace ClassPickerUtils
 			}
 
 			AvailableClasses.Sort([](const auto& A, const auto& B) { return SortClassDataPredicate(A, B); });
+
+			INC_MEMORY_STAT_BY(STAT_ClassPickerMemory, AvailableClasses.Max() * sizeof(FClassData));
 		}
 
 		~FClassContainer()
@@ -185,10 +190,12 @@ namespace ClassPickerUtils
 				AssetRegistry.OnAssetRemoved().RemoveAll(this);
 				AssetRegistry.OnAssetRenamed().RemoveAll(this);
 			}
+
+			DEC_MEMORY_STAT_BY(STAT_ClassPickerMemory, AvailableClasses.Max() * sizeof(FClassData));
 		}
 
-		uint32 GetRevisionId()							const { return RevisionId; }
-		const TArray<FClassData>& GetAvailableClasses()	const { return AvailableClasses; }
+		uint32		GetRevisionId()			const { return RevisionId; }
+		const auto& GetAvailableClasses()	const { return AvailableClasses; }
 
 	private:
 		static FORCEINLINE bool SortClassDataPredicate(const FClassData& LHS, const FClassData& RHS)
@@ -225,6 +232,8 @@ namespace ClassPickerUtils
 					AvailableClasses.Insert(ClassData, InsertIndex);
 
 					CacheAssetParentClass(AssetData);
+
+					INC_MEMORY_STAT_BY(STAT_ClassPickerMemory, sizeof(FClassData));
 				}
 			}
 		}
@@ -239,6 +248,8 @@ namespace ClassPickerUtils
 
 				FSoftClassPath ClassPath = GetClassPathForAsset(AssetData);
 				AvailableClasses.RemoveAll([ClassPath](const auto& Entry) { return Entry.ClassPath == ClassPath; });
+
+				DEC_MEMORY_STAT_BY(STAT_ClassPickerMemory, sizeof(FClassData));
 			}
 		}
 
@@ -257,6 +268,8 @@ namespace ClassPickerUtils
 					{
 						Itr.RemoveCurrent();
 						bReAddAsset = true;
+
+						DEC_MEMORY_STAT_BY(STAT_ClassPickerMemory, sizeof(FClassData));
 					}
 				}
 			}
@@ -268,7 +281,7 @@ namespace ClassPickerUtils
 		}
 
 	private:
-		TArray<FClassData> AvailableClasses;
+		TArray<FClassData, FImGuiAllocatorWithoutRangeCheck> AvailableClasses;
 		uint32 RevisionId = 0;
 	};
 
@@ -709,6 +722,8 @@ void FImGuiClassPicker::FilterAvailableClasses()
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::FilterClasses"), STAT_ImGuiClassPicker_FilterClasses, STATGROUP_ImGui);
 
+	DEC_MEMORY_STAT_BY(STAT_ClassPickerMemory, FilteredClassIndices.Max() * sizeof(int32));
+
 	FilteredClassIndices.Reset();
 	LastSelectedClassIndexInFilteredList = INDEX_NONE;
 	PackedClassFilter = ClassPickerUtils::GetPackedClassFilter();
@@ -736,4 +751,6 @@ void FImGuiClassPicker::FilterAvailableClasses()
 	}
 
 	ContainerRevisionId = ClassContainer.GetRevisionId();
+
+	INC_MEMORY_STAT_BY(STAT_ClassPickerMemory, FilteredClassIndices.Max() * sizeof(int32));
 }

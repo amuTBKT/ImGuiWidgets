@@ -19,6 +19,7 @@
 #include "Algo/AllOf.h"
 #include "Misc/Paths.h"
 #include "ImGuiSubsystem.h"
+#include "ImGuiWidgetUtils.h"
 #include "Engine/Blueprint.h"
 #include "Algo/BinarySearch.h"
 #include "Misc/ConfigCacheIni.h"
@@ -31,6 +32,8 @@
 #error TCHAR_TO_ANSI_PATH already defined
 #endif
 #define TCHAR_TO_ANSI_PATH(path) (ANSICHAR*)StringCast<ANSICHAR, FName::StringBufferSize>(static_cast<const TCHAR*>(path)).Get()
+
+DECLARE_MEMORY_STAT(TEXT("AssetPicker::Memory"), STAT_AssetPickerMemory, STATGROUP_ImGui);
 
 namespace AssetPickerUtils
 {
@@ -65,11 +68,13 @@ namespace AssetPickerUtils
 				AssetRegistry.OnAssetRemoved().RemoveAll(this);
 				AssetRegistry.OnAssetRenamed().RemoveAll(this);
 			}
+
+			DEC_MEMORY_STAT_BY(STAT_AssetPickerMemory, AvailableAssets.Max() * sizeof(FAssetData));
 		}
 
-		uint32 GetRevisionId()							const { return RevisionId; }
-		const FSlateBrush* GetClassIconBrush()			const { return ClassIconBrush; }
-		const TArray<FAssetData>& GetAvailableAssets()	const { return AvailableAssets; }
+		uint32				GetRevisionId()			const { return RevisionId; }
+		const FSlateBrush*	GetClassIconBrush()		const { return ClassIconBrush; }
+		const auto&			GetAvailableAssets()	const { return AvailableAssets; }
 
 	private:
 		static FORCEINLINE bool SortAssetDataPredicate(const FAssetData& LHS, const FAssetData& RHS)
@@ -89,9 +94,14 @@ namespace AssetPickerUtils
 			FARFilter Filter;
 			Filter.ClassPaths.Add(AssetType->GetClassPathName());
 			Filter.bRecursiveClasses = true;
-			AssetRegistry.GetAssets(Filter, AvailableAssets);
+			
+			TArray<FAssetData> AvailableAssetsTemp;
+			AssetRegistry.GetAssets(Filter, AvailableAssetsTemp);
+			AvailableAssetsTemp.Sort([](const auto& A, const auto& B) { return SortAssetDataPredicate(A, B); });
 
-			AvailableAssets.Sort([](const auto& A, const auto& B) { return SortAssetDataPredicate(A, B); });
+			AvailableAssets = TArray<FAssetData, FImGuiAllocatorWithoutRangeCheck>{ MoveTemp(AvailableAssetsTemp) };
+
+			INC_MEMORY_STAT_BY(STAT_AssetPickerMemory, AvailableAssets.Max() * sizeof(FAssetData));
 		}
 
 		FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
@@ -112,6 +122,8 @@ namespace AssetPickerUtils
 				if (!bExists && InsertIndex >= 0)
 				{
 					AvailableAssets.Insert(AssetData, InsertIndex);
+
+					INC_MEMORY_STAT_BY(STAT_AssetPickerMemory, sizeof(FAssetData));
 				}
 			}
 		}
@@ -124,6 +136,8 @@ namespace AssetPickerUtils
 			{
 				RevisionId++;
 				AvailableAssets.Remove(AssetData);
+
+				DEC_MEMORY_STAT_BY(STAT_AssetPickerMemory, sizeof(FAssetData));
 			}
 		}
 
@@ -157,7 +171,7 @@ namespace AssetPickerUtils
 
 	private:
 		const UClass* AssetType = nullptr;
-		TArray<FAssetData> AvailableAssets;
+		TArray<FAssetData, FImGuiAllocatorWithoutRangeCheck> AvailableAssets;
 		const FSlateBrush* ClassIconBrush = nullptr;
 		uint32 RevisionId = 0;
 	};
@@ -434,7 +448,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	FImGuiNamedWidgetScope WidgetScope{ Label };
 
 	auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetType);
-	const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
+	const auto& AvailableAssets = AssetContainer.GetAvailableAssets();
 
 	FSlateShaderResource* SelectedAssetTexture = nullptr;
 	FSoftObjectPtr SelectedSoftAssetPtr = InOutSelectedAsset;
@@ -963,6 +977,8 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::FilterAssets"), STAT_ImGuiAssetPicker_FilterAssets, STATGROUP_ImGui);
 
+	DEC_MEMORY_STAT_BY(STAT_AssetPickerMemory, FilteredAssetIndices.Max() * sizeof(int32));
+
 	FilteredAssetIndices.Reset();
 	LastSelectedAssetIndexInFilteredList = INDEX_NONE;
 	PackedAssetPathFilter = AssetPickerUtils::GetPackedAssetPathFilter();
@@ -972,7 +988,7 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 #endif
 
 	const auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetType);
-	const TArray<FAssetData>& AvailableAssets = AssetContainer.GetAvailableAssets();
+	const auto& AvailableAssets = AssetContainer.GetAvailableAssets();
 	for (int32 AssetIndex = 0; AssetIndex < AvailableAssets.Num(); ++AssetIndex)
 	{
 		FNameBuilder AssetName{ AvailableAssets[AssetIndex].AssetName };
@@ -1029,6 +1045,8 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 	}
 
 	ContainerRevisionId = AssetContainer.GetRevisionId();
+
+	INC_MEMORY_STAT_BY(STAT_AssetPickerMemory, FilteredAssetIndices.Max() * sizeof(int32));
 }
 
 #undef TCHAR_TO_ANSI_PATH
