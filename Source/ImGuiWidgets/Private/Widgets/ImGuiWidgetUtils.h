@@ -23,3 +23,14 @@ template <>
 struct TAllocatorTraits<FImGuiAllocatorWithoutRangeCheck> : TAllocatorTraits<FImGuiAllocatorWithoutRangeCheck::Super>
 {
 };
+
+template <>
+struct TCanMoveBetweenAllocators<FDefaultAllocator, FImGuiAllocatorWithRangeCheck>
+{
+	enum { Value = true };
+};
+template <>
+struct TCanMoveBetweenAllocators<FDefaultAllocator, FImGuiAllocatorWithoutRangeCheck>
+{
+	enum { Value = true };
+};

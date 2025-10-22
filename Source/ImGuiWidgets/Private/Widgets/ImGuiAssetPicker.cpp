@@ -33,7 +33,8 @@
 #endif
 #define TCHAR_TO_ANSI_PATH(path) (ANSICHAR*)StringCast<ANSICHAR, FName::StringBufferSize>(static_cast<const TCHAR*>(path)).Get()
 
-DECLARE_MEMORY_STAT(TEXT("AssetPicker::Memory"), STAT_AssetPickerMemory, STATGROUP_ImGui);
+DECLARE_LLM_MEMORY_STAT(TEXT("ImGuiAssetPicker"), STAT_ImGuiAssetPickerLLM, STATGROUP_ImGui);
+LLM_DEFINE_TAG(ImGuiAssetPicker, TEXT("AssetPicker"), TEXT("ImGui"), GET_STATFNAME(STAT_ImGuiAssetPickerLLM));
 
 namespace AssetPickerUtils
 {
@@ -68,8 +69,6 @@ namespace AssetPickerUtils
 				AssetRegistry.OnAssetRemoved().RemoveAll(this);
 				AssetRegistry.OnAssetRenamed().RemoveAll(this);
 			}
-
-			DEC_MEMORY_STAT_BY(STAT_AssetPickerMemory, AvailableAssets.Max() * sizeof(FAssetData));
 		}
 
 		uint32				GetRevisionId()			const { return RevisionId; }
@@ -89,19 +88,19 @@ namespace AssetPickerUtils
 		FORCEINLINE void GatherAssets(IAssetRegistry& AssetRegistry)
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::GatherAssets"), STAT_ImGuiAssetPicker_GatherAssets, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiAssetPicker);
 
 			// TODO: expose filter settings
 			FARFilter Filter;
 			Filter.ClassPaths.Add(AssetType->GetClassPathName());
 			Filter.bRecursiveClasses = true;
+			Filter.bIncludeOnlyOnDiskAssets = true;
 			
 			TArray<FAssetData> AvailableAssetsTemp;
 			AssetRegistry.GetAssets(Filter, AvailableAssetsTemp);
 			AvailableAssetsTemp.Sort([](const auto& A, const auto& B) { return SortAssetDataPredicate(A, B); });
 
 			AvailableAssets = TArray<FAssetData, FImGuiAllocatorWithoutRangeCheck>{ MoveTemp(AvailableAssetsTemp) };
-
-			INC_MEMORY_STAT_BY(STAT_AssetPickerMemory, AvailableAssets.Max() * sizeof(FAssetData));
 		}
 
 		FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
@@ -112,6 +111,7 @@ namespace AssetPickerUtils
 		void OnAssetAdded(const FAssetData& AssetData)
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::OnAssetAdded"), STAT_ImGuiAssetPicker_OnAssetAdded, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiAssetPicker);
 
 			if (FilterAsset(AssetData))
 			{
@@ -122,8 +122,6 @@ namespace AssetPickerUtils
 				if (!bExists && InsertIndex >= 0)
 				{
 					AvailableAssets.Insert(AssetData, InsertIndex);
-
-					INC_MEMORY_STAT_BY(STAT_AssetPickerMemory, sizeof(FAssetData));
 				}
 			}
 		}
@@ -131,19 +129,19 @@ namespace AssetPickerUtils
 		void OnAssetRemoved(const FAssetData& AssetData)
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::OnAssetRemoved"), STAT_ImGuiAssetPicker_OnAssetRemoved, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiAssetPicker);
 
 			if (FilterAsset(AssetData))
 			{
 				RevisionId++;
 				AvailableAssets.Remove(AssetData);
-
-				DEC_MEMORY_STAT_BY(STAT_AssetPickerMemory, sizeof(FAssetData));
 			}
 		}
 
 		void OnAssetRenamed(const FAssetData& AssetData, const FString& OldName)
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::OnAssetRenamed"), STAT_ImGuiAssetPicker_OnAssetRenamed, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiAssetPicker);
 
 			bool bReAddAsset = false;
 			if (FilterAsset(AssetData))
@@ -428,6 +426,7 @@ FImGuiAssetPicker FImGuiAssetPicker::MakeWidget(const TNonNullPtr<UClass>& Class
 void FImGuiAssetPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage, bool bDrawCompactWidget)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
+	LLM_SCOPE_BYNAME("ImGui/AssetPicker/DrawWidget");
 
 	FImGui::DrawWarningMessageBox(Context, bDrawCompactWidget ? 4.f : 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("AssetPicker('%s') : %s", Label, ErrorMessage));
 }
@@ -435,6 +434,7 @@ void FImGuiAssetPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char
 bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawCompactWidget)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
+	LLM_SCOPE_BYNAME("ImGui/AssetPicker/DrawWidget");
 
 	if (!ensure(AssetType))
 	{
@@ -976,8 +976,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 void FImGuiAssetPicker::FilterAvailableAssets()
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::FilterAssets"), STAT_ImGuiAssetPicker_FilterAssets, STATGROUP_ImGui);
-
-	DEC_MEMORY_STAT_BY(STAT_AssetPickerMemory, FilteredAssetIndices.Max() * sizeof(int32));
+	LLM_SCOPE_BYTAG(ImGuiAssetPicker);
 
 	FilteredAssetIndices.Reset();
 	LastSelectedAssetIndexInFilteredList = INDEX_NONE;
@@ -1045,8 +1044,6 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 	}
 
 	ContainerRevisionId = AssetContainer.GetRevisionId();
-
-	INC_MEMORY_STAT_BY(STAT_AssetPickerMemory, FilteredAssetIndices.Max() * sizeof(int32));
 }
 
 #undef TCHAR_TO_ANSI_PATH

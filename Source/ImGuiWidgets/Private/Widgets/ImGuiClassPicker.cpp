@@ -20,7 +20,8 @@
 #include "Engine/BlueprintGeneratedClass.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
-DECLARE_MEMORY_STAT(TEXT("ClassPicker::Memory"), STAT_ClassPickerMemory, STATGROUP_ImGui);
+DECLARE_LLM_MEMORY_STAT(TEXT("ImGuiClassPicker"), STAT_ImGuiClassPickerLLM, STATGROUP_ImGui);
+LLM_DEFINE_TAG(ImGuiClassPicker, TEXT("ClassPicker"), TEXT("ImGui"), GET_STATFNAME(STAT_ImGuiClassPickerLLM));
 
 namespace ClassPickerUtils
 {
@@ -116,6 +117,8 @@ namespace ClassPickerUtils
 
 		FClassContainer()
 		{
+			LLM_SCOPE_BYTAG(ImGuiClassPicker);
+
 			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(FName("AssetRegistry")))
 			{
 				IAssetRegistry& AssetRegistry = AssetRegistryModulePtr->Get();
@@ -132,16 +135,17 @@ namespace ClassPickerUtils
 					CacheAssetParentClass(Asset);
 				};
 
-				TArray<FAssetData> Assets;
-				AssetRegistry.GetAssetsByClass(UBlueprint::StaticClass()->GetClassPathName(), Assets, /*bSearchSubClasses=*/true);
-				for (const FAssetData& Asset : Assets)
+				TArray<FAssetData> BlueprintAssets;
+				TArray<FAssetData> GeneratedBlueprintAssets;
+				AssetRegistry.GetAssetsByClass(UBlueprint::StaticClass()->GetClassPathName(), BlueprintAssets, /*bSearchSubClasses=*/true);
+				AssetRegistry.GetAssetsByClass(UBlueprintGeneratedClass::StaticClass()->GetClassPathName(), GeneratedBlueprintAssets, /*bSearchSubClasses=*/true);
+				
+				AvailableClasses.Reserve(BlueprintAssets.Num() + GeneratedBlueprintAssets.Num());
+				for (const FAssetData& Asset : BlueprintAssets)
 				{
 					AddAsset(Asset);
 				}
-
-				Assets.Reset();
-				AssetRegistry.GetAssetsByClass(UBlueprintGeneratedClass::StaticClass()->GetClassPathName(), Assets, /*bSearchSubClasses=*/true);
-				for (const FAssetData& Asset : Assets)
+				for (const FAssetData& Asset : GeneratedBlueprintAssets)
 				{
 					AddAsset(Asset);
 				}
@@ -177,8 +181,6 @@ namespace ClassPickerUtils
 			}
 
 			AvailableClasses.Sort([](const auto& A, const auto& B) { return SortClassDataPredicate(A, B); });
-
-			INC_MEMORY_STAT_BY(STAT_ClassPickerMemory, AvailableClasses.Max() * sizeof(FClassData));
 		}
 
 		~FClassContainer()
@@ -190,8 +192,6 @@ namespace ClassPickerUtils
 				AssetRegistry.OnAssetRemoved().RemoveAll(this);
 				AssetRegistry.OnAssetRenamed().RemoveAll(this);
 			}
-
-			DEC_MEMORY_STAT_BY(STAT_ClassPickerMemory, AvailableClasses.Max() * sizeof(FClassData));
 		}
 
 		uint32		GetRevisionId()			const { return RevisionId; }
@@ -211,6 +211,7 @@ namespace ClassPickerUtils
 		void OnAssetAdded(const FAssetData& AssetData)
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::OnAssetAdded"), STAT_ImGuiClassPicker_OnAssetAdded, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiClassPicker);
 
 			if (FilterAsset(AssetData))
 			{
@@ -232,8 +233,6 @@ namespace ClassPickerUtils
 					AvailableClasses.Insert(ClassData, InsertIndex);
 
 					CacheAssetParentClass(AssetData);
-
-					INC_MEMORY_STAT_BY(STAT_ClassPickerMemory, sizeof(FClassData));
 				}
 			}
 		}
@@ -241,6 +240,7 @@ namespace ClassPickerUtils
 		void OnAssetRemoved(const FAssetData& AssetData)
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::OnAssetRemoved"), STAT_ImGuiClassPicker_OnAssetRemoved, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiClassPicker);
 
 			if (FilterAsset(AssetData))
 			{
@@ -248,14 +248,13 @@ namespace ClassPickerUtils
 
 				FSoftClassPath ClassPath = GetClassPathForAsset(AssetData);
 				AvailableClasses.RemoveAll([ClassPath](const auto& Entry) { return Entry.ClassPath == ClassPath; });
-
-				DEC_MEMORY_STAT_BY(STAT_ClassPickerMemory, sizeof(FClassData));
 			}
 		}
 
 		void OnAssetRenamed(const FAssetData& AssetData, const FString& OldName)
 		{
 			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::OnAssetRenamed"), STAT_ImGuiClassPicker_OnAssetRenamed, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiClassPicker);
 
 			bool bReAddAsset = false;
 			if (FilterAsset(AssetData))
@@ -268,8 +267,6 @@ namespace ClassPickerUtils
 					{
 						Itr.RemoveCurrent();
 						bReAddAsset = true;
-
-						DEC_MEMORY_STAT_BY(STAT_ClassPickerMemory, sizeof(FClassData));
 					}
 				}
 			}
@@ -334,6 +331,7 @@ FImGuiClassPicker FImGuiClassPicker::MakeWidget(const FSoftClassPath& ClassPath,
 void FImGuiClassPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
+	LLM_SCOPE_BYNAME("ImGui/ClassPicker/DrawWidget");
 
 	FImGui::DrawWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *FAnsiString::Printf("ClassPicker('%s') : %s", Label, ErrorMessage));
 }
@@ -341,6 +339,7 @@ void FImGuiClassPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char
 bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
+	LLM_SCOPE_BYNAME("ImGui/ClassPicker/DrawWidget");
 
 	if (!ensure(BaseClassPath.IsValid()))
 	{
@@ -721,8 +720,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 void FImGuiClassPicker::FilterAvailableClasses()
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::FilterClasses"), STAT_ImGuiClassPicker_FilterClasses, STATGROUP_ImGui);
-
-	DEC_MEMORY_STAT_BY(STAT_ClassPickerMemory, FilteredClassIndices.Max() * sizeof(int32));
+	LLM_SCOPE_BYTAG(ImGuiClassPicker);
 
 	FilteredClassIndices.Reset();
 	LastSelectedClassIndexInFilteredList = INDEX_NONE;
@@ -751,6 +749,4 @@ void FImGuiClassPicker::FilterAvailableClasses()
 	}
 
 	ContainerRevisionId = ClassContainer.GetRevisionId();
-
-	INC_MEMORY_STAT_BY(STAT_ClassPickerMemory, FilteredClassIndices.Max() * sizeof(int32));
 }
