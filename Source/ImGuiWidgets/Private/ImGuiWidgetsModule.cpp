@@ -22,7 +22,7 @@ public:
 		SetCoreContentRoot(FPaths::EngineContentDir() / TEXT("Slate"));
 		SetContentRoot(IconDirectory);
 
-		const FVector2D Icon16x16 = FVector2D(16.0, 16.0);
+		const FVector2f Icon16x16 = FVector2f(16.f, 16.f);
 		
 		Set("ImIcon.Warning", new IMAGE_BRUSH_SVG("Icons/im_alert_triangle", Icon16x16));
 		Set("ImIcon.Search", new IMAGE_BRUSH_SVG("Icons/im_search", Icon16x16));
@@ -50,8 +50,8 @@ public:
 		Set("ImIcon.FallbackAssetIcon", new IMAGE_BRUSH_SVG("Icons/im_fallback_asset_icon", Icon16x16));
 		Set("ImIcon.PlusCircle", new IMAGE_BRUSH_SVG("Icons/im_plus_circle", Icon16x16));
 
-		Set("ImTex.DashLine.Vertical", new IMAGE_BRUSH("Common/im_dash_line_vertical", FVector2D(1, 10), FLinearColor::White, ESlateBrushTileType::Vertical));
-		Set("ImTex.DashLine.Horizontal", new IMAGE_BRUSH("Common/im_dash_line_horizontal", FVector2D(10, 1), FLinearColor::White, ESlateBrushTileType::Horizontal));
+		Set("ImTex.DashLine.Vertical", new IMAGE_BRUSH("Common/im_dash_line_vertical", FVector2f(1.f, 10.f), FLinearColor::White, ESlateBrushTileType::Vertical));
+		Set("ImTex.DashLine.Horizontal", new IMAGE_BRUSH("Common/im_dash_line_horizontal", FVector2f(10.f, 1.f), FLinearColor::White, ESlateBrushTileType::Horizontal));
 		Set("ImTex.DropDropArea.Background", new BOX_BRUSH("Common/im_dragdrop_area_background", FMargin(6.0f / 64.0f)));
 
 		FSlateStyleRegistry::RegisterSlateStyle(*this);
