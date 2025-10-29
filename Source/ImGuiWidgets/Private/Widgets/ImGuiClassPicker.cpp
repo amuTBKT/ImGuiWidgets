@@ -606,11 +606,11 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 #if WITH_EDITOR
 		if (FImGui::TransparentImageButton("CreateNewBP", CreateNewBlueprintIcon))
 		{
-			// TODO: add validation/error handline if the class is invalid
+			// TODO: add validation/error handling
 			UClass* Class = Cast<UClass>(BaseClassPath.TryLoad());
-			UBlueprint* Blueprint = Class ? FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), Class, FString::Printf(TEXT("New%s"), *BaseClassPath.GetAssetName())) : nullptr;
+			UBlueprint* Blueprint = FKismetEditorUtilities::CanCreateBlueprintOfClass(Class) ? FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), Class, FString::Printf(TEXT("New%s"), *BaseClassPath.GetAssetName())) : nullptr;
 
-			UClass* RequiredInterface = nullptr;
+			UClass* RequiredInterface = nullptr;//TODO: filter not expoxed
 			if (Blueprint != NULL && Blueprint->GeneratedClass)
 			{
 				if (RequiredInterface != nullptr && FKismetEditorUtilities::CanBlueprintImplementInterface(Blueprint, RequiredInterface))
@@ -681,9 +681,12 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
 				Add_BrowseToAssetButton(SelectedSoftClassPtr, IconSize);
 
-				ImGui::SameLine();
-				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
-				Add_CreateBlueprintButton(SelectedSoftClassPtr, IconSize);
+				//if (FKismetEditorUtilities::CanCreateBlueprintOfClass(...)) //TODO: checking this here will load the class/BP :(
+				{
+					ImGui::SameLine();
+					ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
+					Add_CreateBlueprintButton(SelectedSoftClassPtr, IconSize);
+				}
 
 				ImGui::SameLine();
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);

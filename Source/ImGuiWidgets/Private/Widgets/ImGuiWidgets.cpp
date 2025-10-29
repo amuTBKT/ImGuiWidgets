@@ -134,7 +134,7 @@ namespace FImGui
 		}
 	}
 
-	template <typename TDataType, ImGuiDataType TImGuiDataType>
+	template <typename TDataType, ImGuiDataType DataType>
 	bool TSliderWithTwoHandles(FImGuiTickContext* context, const char* label, TDataType& p_data_0, TDataType& p_data_1, TDataType& p_data_min, TDataType& p_data_max, float input_width, float slider_width)
 	{
 		const TDataType prev_data_0 = p_data_0;
@@ -212,7 +212,7 @@ namespace FImGui
 				const bool active_0 = g.CurrentWindow->StateStorage.GetBool(id);
 
 				ImRect grab_bb_unused;
-				value_changed = ImGui::SliderBehavior(frame_bb, id, TImGuiDataType, active_0 ? &p_data_0 : &p_data_1, &p_min, &p_max, "", ImGuiSliderFlags_NoInput, &grab_bb_unused);
+				value_changed = ImGui::SliderBehavior(frame_bb, id, DataType, active_0 ? &p_data_0 : &p_data_1, &p_min, &p_max, "", ImGuiSliderFlags_NoInput, &grab_bb_unused);
 				if (value_changed)
 				{
 					if (active_0)
@@ -283,7 +283,7 @@ namespace FImGui
 		const char* display_format = (p_data_max < 10.) ? "%.8f" : "%.4f";
 
 		ImGui::SameLine(); ImGui::SetNextItemWidth(input_width * GlobalScale);
-		TDataType val_min_temp = p_data_0; ImGui::InputScalar("##p_min", TImGuiDataType, &val_min_temp, nullptr, nullptr, display_format);
+		TDataType val_min_temp = p_data_0; ImGui::InputScalar("##p_min", DataType, &val_min_temp, nullptr, nullptr, display_format);
 		if (ImGui::IsItemDeactivatedAfterEdit())
 		{
 			p_data_0 = p_data_min = FMath::Min(p_data_max, val_min_temp);
@@ -299,7 +299,7 @@ namespace FImGui
 		}
 
 		ImGui::SameLine(); ImGui::SetNextItemWidth(input_width * GlobalScale);
-		TDataType val_max_temp = p_data_1; ImGui::InputScalar("##p_max", TImGuiDataType, &val_max_temp, nullptr, nullptr, display_format);
+		TDataType val_max_temp = p_data_1; ImGui::InputScalar("##p_max", DataType, &val_max_temp, nullptr, nullptr, display_format);
 		if (ImGui::IsItemDeactivatedAfterEdit())
 		{
 			p_data_1 = p_data_max = FMath::Max(p_data_min, val_max_temp);

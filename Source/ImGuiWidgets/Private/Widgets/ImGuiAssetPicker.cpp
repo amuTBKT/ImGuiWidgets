@@ -592,6 +592,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		const float AvailableSpaceBelow = (MonitorDisplaySize - ImGui::GetCursorScreenPos().y);
 		float AssetViewerPopupHeight = ((AvailableSpaceBelow > AssetViewerDesiredHeight) ? AvailableSpaceBelow : AvailableSpaceAbove) * 0.8f;
 		AssetViewerPopupHeight = FMath::Min(AssetViewerPopupHeight, AssetViewerDesiredHeight);
+		float AssetViewerPopupHeightMin = (AssetViewerRowHeightWithSpacing * 5.25f);
 
 		// TODO: `ImGui::RenderTextEllipsis` does something similar
 		FString PreviewText = !InOutSoftAssetPtr.IsNull() ? InOutSoftAssetPtr.GetAssetName() : FString(TEXT("None"));
@@ -644,7 +645,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 
 		int32 NewSelectedIndex = INDEX_NONE;
-		ImGui::SetNextWindowSize(ImVec2(0.f, FMath::Max(AssetViewerPopupHeight, 200.f * GlobalScale)), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(0.f, FMath::Max(AssetViewerPopupHeight, AssetViewerPopupHeightMin)), ImGuiCond_Always);
 		if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 		{
 			bool bFilterAvailableAssets = false;
