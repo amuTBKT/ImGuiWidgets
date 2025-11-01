@@ -700,63 +700,72 @@ namespace ImGuiTextureVisualizer
 		ImGui::BeginDisabled(bIsUsingTextureOverride);
 
 		ImGui::SetNextItemWidth(400.f * GlobalScale);
+		ImGui::SetNextWindowSize(ImVec2(400.f * GlobalScale, 200.f * GlobalScale), ImGuiCond_Always);
 		const bool bShowTextureList = ImGui::BeginCombo("##TextureList", InOutSelectedTextureName.IsEmpty() ? "Select a Texture..." : *InOutSelectedTextureName);
 		const ImVec2 ComboBoxSize = ImGui::GetItemRectSize();
 		if (bShowTextureList)
 		{
-			ImGui::BeginGroup();
+			ImGui::BeginChild("TextureWidgetArea", ImVec2(400.f * GlobalScale, (200.f - 16.f) * GlobalScale), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
 			{
-				SearchFilter.Draw(Context, "##Filter", "Search Textures", 400.f * GlobalScale, ImGui::IsWindowAppearing());
-				
-				ImGui::SameLine();
-				if (ImGui::Button("Refresh") || AvailableTextures.IsEmpty())
+				if (ImGui::BeginChild("FilteringArea", ImVec2(400.f * GlobalScale, 20.f * GlobalScale), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
 				{
-					AvailableTextures.Reset();
+					SearchFilter.Draw(Context, "##Filter", "Search Textures", 325.f * GlobalScale, ImGui::IsWindowAppearing());
 
-					FlushRenderingCommands();
-					for (const FString& Texture : ViewExtension->AvailableTextures)
+					ImGui::SameLine();
+					if (ImGui::Button("Refresh") || AvailableTextures.IsEmpty())
 					{
-						FAnsiString TextureName = TCHAR_TO_ANSI(*Texture);
-						if (!TextureName.IsEmpty())
+						AvailableTextures.Reset();
+
+						FlushRenderingCommands();
+						for (const FString& Texture : ViewExtension->AvailableTextures)
 						{
-							AvailableTextures.AddUnique(MoveTemp(TextureName));
+							FAnsiString TextureName = TCHAR_TO_ANSI(*Texture);
+							if (!TextureName.IsEmpty())
+							{
+								AvailableTextures.AddUnique(MoveTemp(TextureName));
+							}
 						}
 					}
 				}
-			}
-			ImGui::EndGroup();
+				ImGui::EndChild();
 
-			for (const auto& TextureName : AvailableTextures)
-			{
-				if (!SearchFilter.PassFilter(TextureName))
+				if (ImGui::BeginChild("ListArea", ImVec2(395.f * GlobalScale, (200.f - 16.f - 20.f - 2.f) * GlobalScale), ImGuiChildFlags_NavFlattened))
 				{
-					continue;
-				}
-
-				if (ImGui::Selectable(*TextureName, TextureName.Equals(PreviouslySelectedTextureName)))
-				{
-					InOutSelectedTextureName = TextureName;
-
-					ImGui::CloseCurrentPopup();
-					break;
-				}
-
-				if (TextureName.Equals(PreviouslySelectedTextureName))
-				{
-					if (bSetFocusOnSelectedEntry)
+					for (const auto& TextureName : AvailableTextures)
 					{
-						bSetFocusOnSelectedEntry = false;
+						if (!SearchFilter.PassFilter(TextureName))
+						{
+							continue;
+						}
 
-						ImGui::ScrollToItem();
-						ImGui::SetItemDefaultFocus();
-					}
+						if (ImGui::Selectable(*TextureName, TextureName.Equals(PreviouslySelectedTextureName)))
+						{
+							InOutSelectedTextureName = TextureName;
 
-					if (ImGui::IsWindowAppearing())
-					{
-						bSetFocusOnSelectedEntry = true;
+							ImGui::CloseCurrentPopup();
+							break;
+						}
+
+						if (TextureName.Equals(PreviouslySelectedTextureName))
+						{
+							if (bSetFocusOnSelectedEntry)
+							{
+								bSetFocusOnSelectedEntry = false;
+
+								ImGui::ScrollToItem();
+								ImGui::SetItemDefaultFocus();
+							}
+
+							if (ImGui::IsWindowAppearing())
+							{
+								bSetFocusOnSelectedEntry = true;
+							}
+						}
 					}
 				}
+				ImGui::EndChild();
 			}
+			ImGui::EndChild();
 
 			ImGui::EndCombo();
 		}
@@ -764,7 +773,7 @@ namespace ImGuiTextureVisualizer
 		ImGui::EndDisabled();
 
 		// reset icon
-		if (!InOutSelectedTextureName.IsEmpty())
+		if (!bShowTextureList && !InOutSelectedTextureName.IsEmpty())
 		{
 			ImGui::SameLine();
 			
