@@ -675,7 +675,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 							FNameBuilder AssetPath{ AvailableAssets[AssetIndex].PackagePath };
 							const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
 							{
-								FImGuiNamedWidgetScope Scope{ RowIndex };
+								FImGuiNamedWidgetScope Scope{ AssetIndex };
 
 								if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, AssetViewerRowHeight)))
 								{
@@ -725,7 +725,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					}
 
 					int32 RowIndex = 0;
-					while (Clipper.Step() && (NewSelectedIndex == INDEX_NONE))
+					while (Clipper.Step())
 					{
 						for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
 						{

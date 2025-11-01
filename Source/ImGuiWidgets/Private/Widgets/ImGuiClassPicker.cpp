@@ -474,7 +474,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					{
 						const bool bWasSelected = (ClassIndex == LastSelectedClassIndex);
 						{
-							FImGuiNamedWidgetScope Scope{ RowIndex };
+							FImGuiNamedWidgetScope Scope{ ClassIndex };
 
 							if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, ClassViewerRowHeight)))
 							{
@@ -516,7 +516,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					}
 
 					int32 RowIndex = 0;
-					while (Clipper.Step() && (NewSelectedIndex == INDEX_NONE))
+					while (Clipper.Step())
 					{
 						for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
 						{
