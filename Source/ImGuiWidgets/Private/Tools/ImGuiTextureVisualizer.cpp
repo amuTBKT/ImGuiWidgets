@@ -690,8 +690,7 @@ namespace ImGuiTextureVisualizer
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 
 		static FImGuiTextFilter SearchFilter = FImGuiTextFilter::MakeWidget(64u);
-		static bool bSetFocusOnSelectedEntry = false; // flag checked on next frame, hence static
-		
+
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 		const FAnsiString PreviouslySelectedTextureName = InOutSelectedTextureName;
 		
@@ -705,8 +704,9 @@ namespace ImGuiTextureVisualizer
 		const ImVec2 ComboBoxSize = ImGui::GetItemRectSize();
 		if (bShowTextureList)
 		{
-			ImGui::BeginChild("TextureWidgetArea", ImGui::GetContentRegionAvail(), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
+			if (ImGui::BeginChild("TextureWidgetArea", ImGui::GetContentRegionAvail(), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
 			{
+				// section pinned at the top (doesn't scroll)
 				if (ImGui::BeginChild("FilteringArea", ImVec2(ImGui::GetContentRegionAvail().x, 0.f), ImGuiChildFlags_AutoResizeY|ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
 				{
 					SearchFilter.Draw(Context, "##Filter", "Search Textures", ImGui::GetContentRegionAvail().x * 0.85f, ImGui::IsWindowAppearing());
@@ -730,7 +730,7 @@ namespace ImGuiTextureVisualizer
 				}
 				ImGui::EndChild();
 
-				if (ImGui::BeginChild("ListArea", ImGui::GetContentRegionAvail(), ImGuiChildFlags_NavFlattened))
+				if (ImGui::BeginListBox("ListView", ImGui::GetContentRegionAvail()))
 				{
 					for (const auto& TextureName : AvailableTextures)
 					{
@@ -739,7 +739,8 @@ namespace ImGuiTextureVisualizer
 							continue;
 						}
 
-						if (ImGui::Selectable(*TextureName, TextureName.Equals(PreviouslySelectedTextureName)))
+						const bool bIsSelected = TextureName.Equals(PreviouslySelectedTextureName);
+						if (ImGui::Selectable(*TextureName, bIsSelected))
 						{
 							InOutSelectedTextureName = TextureName;
 
@@ -747,24 +748,14 @@ namespace ImGuiTextureVisualizer
 							break;
 						}
 
-						if (TextureName.Equals(PreviouslySelectedTextureName))
+						if (ImGui::IsWindowAppearing() && bIsSelected)
 						{
-							if (bSetFocusOnSelectedEntry)
-							{
-								bSetFocusOnSelectedEntry = false;
-
-								ImGui::ScrollToItem();
-								ImGui::SetItemDefaultFocus();
-							}
-
-							if (ImGui::IsWindowAppearing())
-							{
-								bSetFocusOnSelectedEntry = true;
-							}
+							ImGui::ScrollToItem();
+							ImGui::SetItemDefaultFocus();
 						}
 					}
+					ImGui::EndListBox();
 				}
-				ImGui::EndChild();
 			}
 			ImGui::EndChild();
 
