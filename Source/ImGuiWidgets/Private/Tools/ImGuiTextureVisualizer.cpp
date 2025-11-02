@@ -699,20 +699,21 @@ namespace ImGuiTextureVisualizer
 
 		ImGui::BeginDisabled(bIsUsingTextureOverride);
 
-		ImGui::SetNextItemWidth(400.f * GlobalScale);
-		ImGui::SetNextWindowSize(ImVec2(400.f * GlobalScale, 200.f * GlobalScale), ImGuiCond_Always);
+		ImGui::SetNextItemWidth(450.f * GlobalScale);
+		ImGui::SetNextWindowSize(ImVec2(450.f * GlobalScale, 200.f * GlobalScale), ImGuiCond_Always);
 		const bool bShowTextureList = ImGui::BeginCombo("##TextureList", InOutSelectedTextureName.IsEmpty() ? "Select a Texture..." : *InOutSelectedTextureName);
 		const ImVec2 ComboBoxSize = ImGui::GetItemRectSize();
 		if (bShowTextureList)
 		{
-			ImGui::BeginChild("TextureWidgetArea", ImVec2(400.f * GlobalScale, (200.f - 16.f) * GlobalScale), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
+			ImGui::BeginChild("TextureWidgetArea", ImGui::GetContentRegionAvail(), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
 			{
-				if (ImGui::BeginChild("FilteringArea", ImVec2(400.f * GlobalScale, 20.f * GlobalScale), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
+				if (ImGui::BeginChild("FilteringArea", ImVec2(ImGui::GetContentRegionAvail().x, 0.f), ImGuiChildFlags_AutoResizeY|ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
 				{
-					SearchFilter.Draw(Context, "##Filter", "Search Textures", 325.f * GlobalScale, ImGui::IsWindowAppearing());
+					SearchFilter.Draw(Context, "##Filter", "Search Textures", ImGui::GetContentRegionAvail().x * 0.85f, ImGui::IsWindowAppearing());
 
 					ImGui::SameLine();
-					if (ImGui::Button("Refresh") || AvailableTextures.IsEmpty())
+
+					if (ImGui::Button("Refresh", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)) || AvailableTextures.IsEmpty())
 					{
 						AvailableTextures.Reset();
 
@@ -729,7 +730,7 @@ namespace ImGuiTextureVisualizer
 				}
 				ImGui::EndChild();
 
-				if (ImGui::BeginChild("ListArea", ImVec2(395.f * GlobalScale, (200.f - 16.f - 20.f - 2.f) * GlobalScale), ImGuiChildFlags_NavFlattened))
+				if (ImGui::BeginChild("ListArea", ImGui::GetContentRegionAvail(), ImGuiChildFlags_NavFlattened))
 				{
 					for (const auto& TextureName : AvailableTextures)
 					{
@@ -769,7 +770,7 @@ namespace ImGuiTextureVisualizer
 
 			ImGui::EndCombo();
 		}
-		
+
 		ImGui::EndDisabled();
 
 		// reset icon
