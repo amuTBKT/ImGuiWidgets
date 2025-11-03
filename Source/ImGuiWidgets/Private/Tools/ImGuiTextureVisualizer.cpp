@@ -1152,7 +1152,7 @@ namespace ImGuiTextureVisualizer
 		{
 			const float Zoom = (ImGui::GetIO().MouseWheel > 0.f ? 1.1f : 0.9f);
 
-			ImVec2 RelativeMousePos = (ImGui::GetIO().MousePos - ImGui::GetItemRectMin());
+			ImVec2 RelativeMousePos = (Context->ImGuiContext->MouseLastValidPos - ImGui::GetItemRectMin());
 			FVector2f ZoomPivot =
 			{
 				FMath::Clamp(RelativeMousePos.x, 0.f, ImGui::GetItemRectSize().x),
@@ -1225,7 +1225,7 @@ namespace ImGuiTextureVisualizer
 		};
 
 		{
-			ImVec2 RelativeMousePos = (ImGui::GetIO().MousePos - ImGui::GetItemRectMin());
+			ImVec2 RelativeMousePos = (Context->ImGuiContext->MouseLastValidPos - ImGui::GetItemRectMin());
 			RelativeMousePos.x = FMath::Clamp(RelativeMousePos.x, 0.f, ImGui::GetItemRectSize().x);
 			RelativeMousePos.y = FMath::Clamp(RelativeMousePos.y, 0.f, ImGui::GetItemRectSize().y);
 
@@ -1272,7 +1272,7 @@ namespace ImGuiTextureVisualizer
 
 				ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
 				ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
-				if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+				if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoInputs))
 				{
 					ImGui::Text("UV: %.4f %.4f",
 						(float)HoveredTexCoordX / (float)InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip),
