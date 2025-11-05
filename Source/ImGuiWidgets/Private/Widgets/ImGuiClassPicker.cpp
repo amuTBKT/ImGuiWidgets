@@ -414,6 +414,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 
 		ImVec2 ComboBoxSize;
+		bool bIsComboBoxVisible;
 		ImGui::BeginGroup();
 		{			
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
@@ -426,7 +427,8 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::SetItemTooltip("%s", *SelectedClassData->ObjectPath);
 			}
 			ComboBoxSize = ImGui::GetItemRectSize();
-			
+			bIsComboBoxVisible = ImGui::IsItemVisible();
+
 			ImGui::SameLine();
 			
 			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.DropDownArrow"), ComboBoxSize.y * 0.9f);
@@ -539,6 +541,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			}
 
 			bool bClosePopup = (NewSelectedIndex != INDEX_NONE);
+			bClosePopup |= !bIsComboBoxVisible;
 			// force close the popup when dragging assets over the window
 			const ImGuiHoveredFlags HoverFlags = ImGuiHoveredFlags_RootWindow|ImGuiHoveredFlags_AllowWhenBlockedByPopup|ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
 			bClosePopup |= (Context->DragDropOperation.IsValid() && ImGui::IsWindowHovered(HoverFlags));
