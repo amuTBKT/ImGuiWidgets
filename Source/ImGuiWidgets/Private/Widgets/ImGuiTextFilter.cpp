@@ -67,7 +67,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 
 		ImGui::SameLine();
 
-		const float SearchBoxWidth = WidgetWidth - SearchIcon.Size.x - ImGui::GetStyle().FramePadding.x * 2.f;
+		const float SearchBoxWidth = (WidgetWidth > 0 ? WidgetWidth : ImGui::CalcItemWidth()) - SearchIcon.Size.x - ImGui::GetStyle().FramePadding.x * 2.f;
 		if (SearchBoxWidth > KINDA_SMALL_NUMBER)
 		{
 			ImGui::SetNextItemWidth(SearchBoxWidth);
