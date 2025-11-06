@@ -709,11 +709,9 @@ namespace ImGuiTextureVisualizer
 				// section pinned at the top (doesn't scroll)
 				if (ImGui::BeginChild("FilteringArea", ImVec2(ImGui::GetContentRegionAvail().x, 0.f), ImGuiChildFlags_AutoResizeY|ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
 				{
-					SearchFilter.Draw(Context, "##Filter", "Search Textures", ImGui::GetContentRegionAvail().x * 0.85f, ImGui::IsWindowAppearing());
+					SearchFilter.Draw(Context, "##Filter", "Search Textures", ImGui::GetContentRegionAvail().x, ImGui::IsWindowAppearing());
 
-					ImGui::SameLine();
-
-					if (ImGui::Button("Refresh", ImVec2(ImGui::GetContentRegionAvail().x, 0.f)) || AvailableTextures.IsEmpty())
+					if (ImGui::IsWindowAppearing())
 					{
 						AvailableTextures.Reset();
 
