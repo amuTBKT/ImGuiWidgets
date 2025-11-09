@@ -14,6 +14,22 @@ FImGuiTextFilter FImGuiTextFilter::MakeWidget(uint32 MaxLength)
 	return Widget;
 }
 
+void FImGuiTextFilter::Reset()
+{
+	if (!ensure(FilterStringBuffer_ANSI.Max() > 0))
+	{
+		return;
+	}
+
+	FilterStringBuffer.Reset();
+	FilterKeywordTokens.Reset();
+	FilterStringBuffer_ANSI.Reset();
+	FilterStringBuffer_ANSI.GetData()[0] = '\0';
+
+	SearchIconTint = 0.75f;
+	ClearIconTint = 0.75f;
+}
+
 bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const char* HintText, float WidgetWidth, bool bSetFocus)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("TextFilter::Draw"), STAT_ImGuiTextFilter_Draw, STATGROUP_ImGui);
@@ -130,20 +146,4 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 	}
 
 	return bFilterChanged;
-}
-
-void FImGuiTextFilter::Reset()
-{
-	if (!ensure(FilterStringBuffer_ANSI.Max() > 0))
-	{
-		return;
-	}
-
-	FilterStringBuffer.Reset();
-	FilterKeywordTokens.Reset();
-	FilterStringBuffer_ANSI.Reset();
-	FilterStringBuffer_ANSI.GetData()[0] = '\0';
-
-	SearchIconTint = 0.75f;
-	ClearIconTint = 0.75f;
 }

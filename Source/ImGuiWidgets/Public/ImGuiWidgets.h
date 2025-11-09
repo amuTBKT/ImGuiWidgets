@@ -159,6 +159,31 @@ public:
 	FStringView GetFilterString()					const { return FStringView{ FilterStringBuffer.GetData(), FilterStringBuffer.Num() }; }
 	FAnsiStringView GetFilterStringANSI()			const { return FAnsiStringView{ FilterStringBuffer_ANSI.GetData(), FilterStringBuffer_ANSI.Num() }; }
 
+	FImGuiTextFilter() noexcept = default;
+	~FImGuiTextFilter() noexcept = default;
+	FImGuiTextFilter(const FImGuiTextFilter& Other) noexcept
+	{
+		*this = Other;
+	}
+	FImGuiTextFilter& operator=(const FImGuiTextFilter& Other) noexcept
+	{
+		FilterStringBuffer = Other.FilterStringBuffer;
+		FilterStringBuffer_ANSI = Other.FilterStringBuffer_ANSI;
+		FilterKeywordTokens = Other.FilterKeywordTokens;
+		SearchIconTint = Other.SearchIconTint;
+		ClearIconTint = Other.ClearIconTint;
+
+		// ensure we have valid buffer capacity
+		FilterStringBuffer.Reserve(Other.FilterStringBuffer.Max());
+		FilterStringBuffer_ANSI.Reserve(Other.FilterStringBuffer_ANSI.Max());
+		if (FilterStringBuffer_ANSI.Num() < FilterStringBuffer_ANSI.Max())
+		{
+			FilterStringBuffer_ANSI.GetData()[FilterStringBuffer_ANSI.Num()] = '\0';
+		}
+
+		return *this;
+	}
+
 private:
 	template <typename TStringViewType>
 	bool PassFilterInternal(TStringViewType SourceString, TStringViewType StringToCheck) const
