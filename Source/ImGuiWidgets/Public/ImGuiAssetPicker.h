@@ -10,28 +10,27 @@
 class FImGuiAssetPicker
 {
 public:
-	struct FFilter
-	{
-		FName AssetTag = NAME_None;
-		FString TagValue;
-	};
-	IMGUIWIDGETS_API static FFilter MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass);
+	using FFilter = TVariant<FImGuiAssetTagFilter, FImGuiAllowedClassFilter, FImGuiDisallowedClassFilter>;
 
-	IMGUIWIDGETS_API static FImGuiAssetPicker MakeWidget(const TNonNullPtr<UClass>& Class, TArray<FFilter> OptionalFilters = {});
-	FORCEINLINE static FImGuiAssetPicker MakeWidget(const TNonNullPtr<UClass>& Class, FFilter OptionalFilter)
+	IMGUIWIDGETS_API static FImGuiAssetPicker MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters = {});
+
+	template <typename TImGuiFilterType>
+	FORCEINLINE FImGuiAssetPicker& AddFilter(TImGuiFilterType Filter)
 	{
-		return MakeWidget(Class, TArray<FFilter>{ MoveTemp(OptionalFilter) });
+		OptionalFilters.Add(FFilter(TInPlaceType<TImGuiFilterType>(), MoveTemp(Filter)));
+		return *this;
 	}
-	
+
 	template <typename TAssetType>
 	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TSoftObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
 	{
-		if (!AssetType)
+		const UClass* AssetClass = GetAssetClass();
+		if (!AssetClass)
 		{
 			DrawInvalidWidget(Context, Label, "'AssetType' unset!", bDrawCompactWidget);
 			return false;
 		}
-		if (TAssetType::StaticClass() != AssetType)
+		if (TAssetType::StaticClass() != AssetClass)
 		{
 			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", bDrawCompactWidget);
 			return false;
@@ -49,12 +48,13 @@ public:
 	template <typename TAssetType>
 	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TAssetType*& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
 	{
-		if (!AssetType)
+		const UClass* AssetClass = GetAssetClass();
+		if (!AssetClass)
 		{
 			DrawInvalidWidget(Context, Label, "'AssetType' unset!", bDrawCompactWidget);
 			return false;
 		}
-		if (TAssetType::StaticClass() != AssetType)
+		if (TAssetType::StaticClass() != AssetClass)
 		{
 			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", bDrawCompactWidget);
 			return false;
@@ -98,15 +98,37 @@ private:
 	IMGUIWIDGETS_API bool DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawCompactWidget);
 	void FilterAvailableAssets();
 
+	const UClass* GetAssetClass()
+	{
+		UClass* AssetClass = AssetClassPtr.Get();
+		if (AssetClass)
+		{
+			return AssetClass;
+		}
+
+		// check `bIsAssetTypeValid` to avoid spamming load
+		if (bIsAssetTypeValid)
+		{
+			AssetClassPtr = AssetClass = Cast<UClass>(AssetClassPath.TryLoad());
+			if (!AssetClass)
+			{
+				bIsAssetTypeValid = false;
+			}
+		}
+		return AssetClass;
+	}
+
 private:
-	const UClass* AssetType = nullptr;
+	FSoftClassPath AssetClassPath;
+	TWeakObjectPtr<UClass> AssetClassPtr;
 	TArray<FFilter> OptionalFilters;
 
 	FImGuiTextFilter TextFilter = FImGuiTextFilter::MakeWidget(64u);
 
 	TArray<int32> FilteredAssetIndices;
-	uint8 PackedAssetPathFilter : 7 = 0;
-	uint8 bIsAssetViewerVisible : 1 = false;
+	uint16 PackedAssetPathFilter : 7 = 0;
+	uint16 bIsAssetViewerVisible : 1 = false;
+	uint16 bIsAssetTypeValid	 : 1 = true;
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedAssetIndex = INDEX_NONE;
 	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;

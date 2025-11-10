@@ -8,12 +8,49 @@
 // commonly used function to get ImGui icons
 #define IMGUI_ICON(IconName) IMGUI_STYLE_ICON("ImGuiStyle", IconName)
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <bool bRequireRangeCheck>
+class FImGuiAllocator : public FDefaultAllocator
+{
+public:
+	enum { RequireRangeCheck = bRequireRangeCheck };
+	using Super = FDefaultAllocator;
+};
+
+using FImGuiAllocatorWithRangeCheck = FImGuiAllocator<true>;
+using FImGuiAllocatorWithoutRangeCheck = FImGuiAllocator<false>;
+
+template <>
+struct TAllocatorTraits<FImGuiAllocatorWithRangeCheck> : TAllocatorTraits<FImGuiAllocatorWithRangeCheck::Super>
+{
+};
+template <>
+struct TAllocatorTraits<FImGuiAllocatorWithoutRangeCheck> : TAllocatorTraits<FImGuiAllocatorWithoutRangeCheck::Super>
+{
+};
+
+template <>
+struct TCanMoveBetweenAllocators<FDefaultAllocator, FImGuiAllocatorWithRangeCheck>
+{
+	enum { Value = true };
+};
+template <>
+struct TCanMoveBetweenAllocators<FDefaultAllocator, FImGuiAllocatorWithoutRangeCheck>
+{
+	enum { Value = true };
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
 class FConfigFile;
 namespace FImGuiSettings
 {
 	IMGUIWIDGETS_API FConfigFile* GetConfigFile();
 	IMGUIWIDGETS_API bool SaveConfigFile();
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 namespace FImGui
 {
@@ -145,6 +182,37 @@ namespace FImGui
 		return false;
 	}
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// asset/class picker filters
+struct FImGuiAssetTagFilter
+{
+	FName TagName = NAME_None;
+	FString ExpectedValue;
+};
+struct FImGuiAllowedClassFilter
+{
+	FSoftClassPath ClassPath;
+};
+struct FImGuiDisallowedClassFilter
+{
+	FSoftClassPath ClassPath;
+};
+struct FImGuiRequiredInterfaceFilter
+{
+	FSoftClassPath ClassPath;
+};
+struct FImGuiDisallowAbstractClassFilter
+{
+};
+
+namespace FImGui
+{
+	IMGUIWIDGETS_API FImGuiAssetTagFilter MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 class FImGuiTextFilter
 {

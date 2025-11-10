@@ -10,19 +10,22 @@
 class FImGuiClassPicker
 {
 public:
-	struct FFilters
-	{
-		// allow abstract
-		// allowed classes
-		// disallowed classes
-		// required interface
-	};
-	IMGUIWIDGETS_API static FImGuiClassPicker MakeWidget(const FSoftClassPath& ClassPath, FFilters OptionalFilters = {});
+	using FFilter = TVariant<FImGuiAllowedClassFilter, FImGuiDisallowedClassFilter, FImGuiRequiredInterfaceFilter, FImGuiDisallowAbstractClassFilter>;
+
+	IMGUIWIDGETS_API static FImGuiClassPicker MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters = {});
 	
+	template <typename TImGuiFilterType>
+	FORCEINLINE FImGuiClassPicker& AddFilter(TImGuiFilterType Filter)
+	{
+		OptionalFilters.Add(FFilter(TInPlaceType<TImGuiFilterType>(), MoveTemp(Filter)));
+		return *this;
+	}
+
 	template <typename TClassType>
 	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TSoftClassPtr<TClassType>& InOutSelectedClassPtr)
 	{
-		if (!BaseClassPath.IsValid())
+		const UClass* BaseClass = GetBaseClass();
+		if (!BaseClass)
 		{
 			DrawInvalidWidget(Context, Label, "'BaseClassType' unset!");
 			return false;
@@ -39,7 +42,8 @@ public:
 
 	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, UClass*& InOutSelectedClassPtr)
 	{
-		if (!BaseClassPath.IsValid())
+		const UClass* BaseClass = GetBaseClass();
+		if (!BaseClass)
 		{
 			DrawInvalidWidget(Context, Label, "'BaseClassType' unset!");
 			return false;
@@ -70,13 +74,37 @@ private:
 	IMGUIWIDGETS_API bool DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass);
 	void FilterAvailableClasses();
 
+	const UClass* GetBaseClass()
+	{
+		UClass* BaseClass = BaseClassPtr.Get();
+		if (BaseClass)
+		{
+			return BaseClass;
+		}
+
+		// check `bIsBaseClassValid` to avoid spamming load
+		if (bIsBaseClassValid)
+		{
+			BaseClassPtr = BaseClass = Cast<UClass>(BaseClassPath.TryLoad());
+			if (!BaseClass)
+			{
+				bIsBaseClassValid = false;
+			}
+		}
+		return BaseClass;
+	}
+
 private:
 	FSoftClassPath BaseClassPath;
+	TWeakObjectPtr<UClass> BaseClassPtr;
+	TArray<FFilter> OptionalFilters;
+
 	FImGuiTextFilter TextFilter = FImGuiTextFilter::MakeWidget(32u);
 
 	TArray<int32> FilteredClassIndices;
-	uint8 PackedClassFilter : 7 = 0;
-	uint8 bIsClassViewerVisible : 1 = false;
+	uint16 PackedClassFilter	 : 7 = 0;
+	uint16 bIsClassViewerVisible : 1 = false;
+	uint16 bIsBaseClassValid	 : 1 = true;
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedClassIndex = INDEX_NONE;
 	int32 LastSelectedClassIndexInFilteredList = INDEX_NONE;

@@ -16,16 +16,12 @@
 #include "ThumbnailRendering/ThumbnailManager.h"
 #endif
 
-#include "Algo/AllOf.h"
 #include "Misc/Paths.h"
 #include "ImGuiSubsystem.h"
-#include "ImGuiWidgetUtils.h"
-#include "Engine/Blueprint.h"
 #include "Algo/BinarySearch.h"
 #include "Misc/ConfigCacheIni.h"
 #include "AssetRegistry/AssetData.h"
 #include "Interfaces/IPluginManager.h"
-#include "Blueprint/BlueprintSupport.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
 #ifdef TCHAR_TO_ANSI_PATH
@@ -41,11 +37,11 @@ namespace AssetPickerUtils
 	class FAssetContainer : FNoncopyable
 	{
 	public:
-		FAssetContainer(const UClass* Class)
-			: AssetType(Class)
+		FAssetContainer(const FSoftClassPath& ClassPath)
+			: AssetClassPath(ClassPath)
 		{
 #if WITH_EDITOR
-			ClassIconBrush = FClassIconFinder::FindThumbnailForClass(AssetType, NAME_None);
+			ClassIconBrush = FClassIconFinder::FindThumbnailForClass(Cast<UClass>(AssetClassPath.TryLoad()), NAME_None);
 #else
 			ClassIconBrush = IMGUI_ICON("ImIcon.FallbackAssetIcon");
 #endif
@@ -57,6 +53,7 @@ namespace AssetPickerUtils
 				AssetRegistry.OnAssetAdded().AddRaw(this, &FAssetContainer::OnAssetAdded);
 				AssetRegistry.OnAssetRemoved().AddRaw(this, &FAssetContainer::OnAssetRemoved);
 				AssetRegistry.OnAssetRenamed().AddRaw(this, &FAssetContainer::OnAssetRenamed);
+				AssetRegistry.OnAssetUpdated().AddRaw(this, &FAssetContainer::OnAssetUpdated);
 			}
 		}
 
@@ -68,6 +65,7 @@ namespace AssetPickerUtils
 				AssetRegistry.OnAssetAdded().RemoveAll(this);
 				AssetRegistry.OnAssetRemoved().RemoveAll(this);
 				AssetRegistry.OnAssetRenamed().RemoveAll(this);
+				AssetRegistry.OnAssetUpdated().RemoveAll(this);
 			}
 		}
 
@@ -92,7 +90,7 @@ namespace AssetPickerUtils
 
 			// TODO: expose filter settings
 			FARFilter Filter;
-			Filter.ClassPaths.Add(AssetType->GetClassPathName());
+			Filter.ClassPaths.Add(AssetClassPath.GetAssetPath());
 			Filter.bRecursiveClasses = true;
 			Filter.bIncludeOnlyOnDiskAssets = true;
 			
@@ -105,7 +103,7 @@ namespace AssetPickerUtils
 
 		FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
 		{
-			return AssetData.GetClass() && AssetData.GetClass()->IsChildOf(AssetType);
+			return AssetData.GetClass() && AssetData.GetClass()->IsChildOf(Cast<UClass>(AssetClassPath.TryLoad()));
 		}
 
 		void OnAssetAdded(const FAssetData& AssetData)
@@ -167,21 +165,38 @@ namespace AssetPickerUtils
 			}
 		}
 
+		// triggers when asset is saved!
+		void OnAssetUpdated(const FAssetData& AssetData)
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::OnAssetUpdated"), STAT_ImGuiAssetPicker_OnAssetUpdated, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiAssetPicker);
+
+			if (FilterAsset(AssetData))
+			{
+				FAssetData* ExistingAssetData = AvailableAssets.FindByKey(AssetData);
+				if (ExistingAssetData && ExistingAssetData->TagsAndValues != AssetData.TagsAndValues)
+				{
+					ExistingAssetData->TagsAndValues = AssetData.TagsAndValues;
+					RevisionId++;
+				}
+			}
+		}
+
 	private:
-		const UClass* AssetType = nullptr;
+		FSoftClassPath AssetClassPath;
 		TArray<FAssetData, FImGuiAllocatorWithoutRangeCheck> AvailableAssets;
 		const FSlateBrush* ClassIconBrush = nullptr;
 		uint32 RevisionId = 0;
 	};
 
 	static TMap<uint32, TUniquePtr<FAssetContainer>> AssetContainerInstances;
-	static FAssetContainer& GetAssetContainer(const UClass* Class)
+	static FAssetContainer& GetAssetContainer(const FSoftClassPath& ClassPath)
 	{
-		const uint32 ContainerHash = PointerHash(Class);
+		const uint32 ContainerHash = GetTypeHash(ClassPath);
 		TUniquePtr<FAssetContainer>* ContainerInstance = AssetContainerInstances.Find(ContainerHash);
 		if (!ContainerInstance)
 		{
-			ContainerInstance = &AssetContainerInstances.Add(ContainerHash, MakeUnique<FAssetContainer>(Class));
+			ContainerInstance = &AssetContainerInstances.Add(ContainerHash, MakeUnique<FAssetContainer>(ClassPath));
 		}
 		return *ContainerInstance->Get();
 	}
@@ -407,18 +422,10 @@ namespace AssetPickerUtils
 	}
 }
 
-FImGuiAssetPicker::FFilter FImGuiAssetPicker::MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass)
-{
-	FFilter TagAndValue;
-	TagAndValue.AssetTag = FBlueprintTags::NativeParentClassPath;
-	TagAndValue.TagValue = FObjectPropertyBase::GetExportPath(ParentClass);
-	return TagAndValue;
-}
-
-FImGuiAssetPicker FImGuiAssetPicker::MakeWidget(const TNonNullPtr<UClass>& Class, TArray<FFilter> OptionalFilters)
+FImGuiAssetPicker FImGuiAssetPicker::MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters)
 {
 	FImGuiAssetPicker Widget = {};
-	Widget.AssetType = Class;
+	Widget.AssetClassPath = ClassPath;
 	Widget.OptionalFilters = MoveTemp(OptionalFilters);
 	return Widget;
 }
@@ -436,7 +443,8 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 	LLM_SCOPE_BYNAME("ImGui/AssetPicker/DrawWidget");
 
-	if (!ensure(AssetType))
+	const UClass* AssetClass = GetAssetClass();
+	if (!ensure(AssetClass))
 	{
 		return false;
 	}
@@ -447,7 +455,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	FImGuiNamedWidgetScope WidgetScope{ Label };
 
-	auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetType);
+	auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetClassPath);
 	const auto& AvailableAssets = AssetContainer.GetAvailableAssets();
 
 	FSlateShaderResource* SelectedAssetTexture = nullptr;
@@ -464,17 +472,38 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			SelectedSoftAssetPtr.Reset();
 		}
 	}
-#if WITH_EDITOR
-	if (!SelectedSoftAssetPtr.IsNull())
-	{
-		SelectedAssetTexture = AssetPickerUtils::GetAssetThumbnail(FAssetData(SelectedSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), SelectedSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetType->GetClassPathName()));
-	}
-#endif
 
 	if (bAssetCountainerChanged)
 	{
 		FilterAvailableAssets();
+
+		// check if selected asset has become invalid now? (not relevant for this asset picker)
+		if ((LastSelectedAssetIndex != INDEX_NONE) && !OptionalFilters.IsEmpty())
+		{
+			bool bOptionalFiltersPassed = true;
+			for (int32 FilterIndex = 0; FilterIndex < OptionalFilters.Num(); ++FilterIndex)
+			{
+				const FFilter& Filter = OptionalFilters[FilterIndex];
+				if (Filter.IsType<FImGuiAssetTagFilter>())
+				{
+					const FImGuiAssetTagFilter& AssetTagFilter = Filter.Get<FImGuiAssetTagFilter>();
+					FAssetDataTagMapSharedView::FFindTagResult TagResult = AvailableAssets[LastSelectedAssetIndex].TagsAndValues.FindTag(AssetTagFilter.TagName);
+					bOptionalFiltersPassed &= (TagResult.IsSet() && TagResult.Equals(AssetTagFilter.ExpectedValue));
+				}
+			}
+			if (!bOptionalFiltersPassed)
+			{
+				SelectedSoftAssetPtr.Reset();
+			}
+		}
 	}
+
+#if WITH_EDITOR
+	if (!SelectedSoftAssetPtr.IsNull())
+	{
+		SelectedAssetTexture = AssetPickerUtils::GetAssetThumbnail(FAssetData(SelectedSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), SelectedSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetClassPath.GetAssetPath()));
+	}
+#endif
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
@@ -529,7 +558,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		{
 			if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
 			{
-				FSoftObjectPtr AssetPtr = (AssetPickerUtils::GetSelectedAssetOfType(AssetType));
+				FSoftObjectPtr AssetPtr = (AssetPickerUtils::GetSelectedAssetOfType(AssetClass));
 				if (!AssetPtr.IsNull())
 				{
 					InOutSoftAssetPtr = AssetPtr;
@@ -553,7 +582,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		{
 			if (FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon))
 			{
-				AssetPickerUtils::SyncContentBrowserToAsset(FAssetData(InSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), InSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetType->GetClassPathName()));
+				AssetPickerUtils::SyncContentBrowserToAsset(FAssetData(InSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), InSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetClassPath.GetAssetPath()));
 			}
 			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InSoftAssetPtr.GetAssetName()));
 		}
@@ -726,12 +755,11 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 						Clipper.IncludeItemByIndex(LastSelectedAssetIndexInFilteredList);
 					}
 
-					int32 RowIndex = 0;
 					while (Clipper.Step())
 					{
 						for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
 						{
-							Add_AssetListEntry(FilteredAssetIndices[Index], RowIndex++);
+							Add_AssetListEntry(FilteredAssetIndices[Index], Index);
 						}
 					}
 
@@ -959,7 +987,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 #if WITH_EDITOR
 	if (FImGui::DrawDragDropArea<FAssetDragDropOp>(Context, "AssetDragDrop", AssetDragDropArea,
-		[&](TSharedPtr<FAssetDragDropOp> DragDropOp) { return DragDropOp->GetAssets().Num() == 1 && DragDropOp->GetAssets()[0].GetClass()->IsChildOf(AssetType); },
+		[&](TSharedPtr<FAssetDragDropOp> DragDropOp) { return DragDropOp->GetAssets().Num() == 1 && DragDropOp->GetAssets()[0].GetClass()->IsChildOf(AssetClass); },
 		[&](TSharedPtr<FAssetDragDropOp> DragDropOp) { SelectedSoftAssetPtr = DragDropOp->GetAssets()[0].ToSoftObjectPath(); }))
 	{
 	}
@@ -982,6 +1010,8 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::FilterAssets"), STAT_ImGuiAssetPicker_FilterAssets, STATGROUP_ImGui);
 	LLM_SCOPE_BYTAG(ImGuiAssetPicker);
 
+	const UClass* AssetClass = GetAssetClass();
+
 	FilteredAssetIndices.Reset();
 	LastSelectedAssetIndexInFilteredList = INDEX_NONE;
 	PackedAssetPathFilter = AssetPickerUtils::GetPackedAssetPathFilter();
@@ -990,7 +1020,25 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 	const ICollectionManager* CollectionManager = AssetPickerUtils::bSearchAssetCollections ? &FCollectionManagerModule::GetModule().Get() : nullptr;
 #endif
 
-	const auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetType);
+	TArray<UClass*> ResolvedFilterClasses;
+	ResolvedFilterClasses.Reserve(OptionalFilters.Num());
+	for (const FFilter& Filter : OptionalFilters)
+	{
+		if (Filter.IsType<FImGuiAllowedClassFilter>())
+		{
+			ResolvedFilterClasses.Add(Cast<UClass>(Filter.Get<FImGuiAllowedClassFilter>().ClassPath.TryLoad()));
+		}
+		else if (Filter.IsType<FImGuiDisallowedClassFilter>())
+		{
+			ResolvedFilterClasses.Add(Cast<UClass>(Filter.Get<FImGuiDisallowedClassFilter>().ClassPath.TryLoad()));
+		}
+		else
+		{
+			ResolvedFilterClasses.Add(nullptr);
+		}
+	}
+
+	const auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetClassPath);
 	const auto& AvailableAssets = AssetContainer.GetAvailableAssets();
 	for (int32 AssetIndex = 0; AssetIndex < AvailableAssets.Num(); ++AssetIndex)
 	{
@@ -1030,12 +1078,33 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 			continue;
 		}
 
-		if ((OptionalFilters.Num() > 0) && !Algo::AllOf(OptionalFilters,
-			[&](const FFilter& RequiredTag)
+		bool bOptionalFiltersPassed = true;
+		if (!OptionalFilters.IsEmpty())
+		{
+			for (int32 FilterIndex = 0; FilterIndex < OptionalFilters.Num(); ++FilterIndex)
 			{
-				FAssetDataTagMapSharedView::FFindTagResult TagResult = AvailableAssets[AssetIndex].TagsAndValues.FindTag(RequiredTag.AssetTag);
-				return (TagResult.IsSet() && TagResult.Equals(RequiredTag.TagValue));
-			}))
+				const FFilter& Filter = OptionalFilters[FilterIndex];
+				if (Filter.IsType<FImGuiAssetTagFilter>())
+				{
+					const FImGuiAssetTagFilter& AssetTagFilter = Filter.Get<FImGuiAssetTagFilter>();
+					FAssetDataTagMapSharedView::FFindTagResult TagResult = AvailableAssets[AssetIndex].TagsAndValues.FindTag(AssetTagFilter.TagName);
+					bOptionalFiltersPassed &= (TagResult.IsSet() && TagResult.Equals(AssetTagFilter.ExpectedValue));
+				}
+				else if (Filter.IsType<FImGuiAllowedClassFilter>())
+				{
+					bOptionalFiltersPassed &= AvailableAssets[AssetIndex].GetClass()->IsChildOf(ResolvedFilterClasses[FilterIndex]);
+				}
+				else if (Filter.IsType<FImGuiDisallowedClassFilter>())
+				{
+					bOptionalFiltersPassed &= !AvailableAssets[AssetIndex].GetClass()->IsChildOf(ResolvedFilterClasses[FilterIndex]);
+				}
+				else
+				{
+					checkNoEntry();
+				}
+			}
+		}
+		if (!bOptionalFiltersPassed)
 		{
 			continue;
 		}

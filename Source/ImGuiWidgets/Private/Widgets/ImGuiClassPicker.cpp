@@ -12,7 +12,6 @@
 #endif
 
 #include "ImGuiSubsystem.h"
-#include "ImGuiWidgetUtils.h"
 #include "Engine/Blueprint.h"
 #include "AssetRegistry/AssetData.h"
 #include "UObject/UObjectIterator.h"
@@ -78,31 +77,14 @@ namespace ClassPickerUtils
 		struct FClassData
 		{
 			FSoftClassPath ClassPath;
+			FString ParentClassPath;
 			FAnsiString ObjectPath;
 			FAnsiString DisplayName;
 
 			uint8 bIsAsset : 1 = false;
+			uint8 bIsAbstractClass : 1 = false;
 
-			mutable TWeakObjectPtr<UClass> ResolvedClassPtr;
-			UClass* ResolveClass() const
-			{
-				UClass* ClassPtr = ResolvedClassPtr.Get();
-				if (!ClassPtr)
-				{
-					UObject* Object = ClassPath.TryLoad();
-					if (UBlueprint* Blueprint = Cast<UBlueprint>(Object))
-					{
-						ClassPtr = Blueprint->GeneratedClass;
-					}
-					else
-					{
-						ClassPtr = Cast<UClass>(Object);
-					}
-
-					ResolvedClassPtr = ClassPtr;
-				}
-				return ClassPtr;
-			}
+			TArray<FSoftClassPath> ImplementedInterfaces;
 
 			friend bool operator==(const FClassData& A, const FClassData& B)
 			{
@@ -123,16 +105,17 @@ namespace ClassPickerUtils
 			{
 				IAssetRegistry& AssetRegistry = AssetRegistryModulePtr->Get();
 				
-				auto AddAsset = [&](const FAssetData& Asset)
+				auto AddAsset = [&](const FAssetData& AssetData)
 				{
 					FClassData ClassData{};
-					ClassData.ClassPath = GetClassPathForAsset(Asset);
-					ClassData.DisplayName = TCHAR_TO_ANSI(*Asset.AssetName.ToString());
+					ClassData.ClassPath = GetClassPathForAsset(AssetData);
+					ClassData.DisplayName = TCHAR_TO_ANSI(*AssetData.AssetName.ToString());
 					ClassData.ObjectPath = TCHAR_TO_ANSI(*ClassData.ClassPath.ToString());
 					ClassData.bIsAsset = true;
-					AvailableClasses.AddUnique(ClassData);
 
-					CacheAssetParentClass(Asset);
+					CacheAssetMetadata(ClassData, AssetData);
+
+					AvailableClasses.AddUnique(ClassData);
 				};
 
 				TArray<FAssetData> BlueprintAssets;
@@ -153,6 +136,7 @@ namespace ClassPickerUtils
 				AssetRegistry.OnAssetAdded().AddRaw(this, &FClassContainer::OnAssetAdded);
 				AssetRegistry.OnAssetRemoved().AddRaw(this, &FClassContainer::OnAssetRemoved);
 				AssetRegistry.OnAssetRenamed().AddRaw(this, &FClassContainer::OnAssetRenamed);
+				AssetRegistry.OnAssetUpdated().AddRaw(this, &FClassContainer::OnAssetUpdated);
 			}
 
 			for (TObjectIterator<UClass> ClassIt; ClassIt; ++ClassIt)
@@ -172,10 +156,20 @@ namespace ClassPickerUtils
 				ClassData.ClassPath = FSoftClassPath(CurrentClass);
 				ClassData.DisplayName = TCHAR_TO_ANSI(*CurrentClass->GetName());
 				ClassData.ObjectPath = TCHAR_TO_ANSI(*ClassData.ClassPath.ToString());
+				ClassData.bIsAsset = false;
+				ClassData.bIsAbstractClass = CurrentClass->HasAnyClassFlags(EClassFlags::CLASS_Abstract);
+				
+				ClassData.ImplementedInterfaces.Reserve(CurrentClass->Interfaces.Num());
+				for (FImplementedInterface& Interface : CurrentClass->Interfaces)
+				{
+					ClassData.ImplementedInterfaces.Emplace(Interface.Class);
+				}
+				
 				AvailableClasses.AddUnique(ClassData);
 
 				if (CurrentClass->GetSuperClass())
 				{
+					ClassData.ParentClassPath = CurrentClass->GetSuperClass()->GetPathName();
 					ParentClassMap.FindOrAdd(FSoftClassPath{ CurrentClass }, FSoftClassPath{ CurrentClass->GetSuperClass() });
 				}
 			}
@@ -191,6 +185,7 @@ namespace ClassPickerUtils
 				AssetRegistry.OnAssetAdded().RemoveAll(this);
 				AssetRegistry.OnAssetRemoved().RemoveAll(this);
 				AssetRegistry.OnAssetRenamed().RemoveAll(this);
+				AssetRegistry.OnAssetUpdated().RemoveAll(this);
 			}
 		}
 
@@ -206,6 +201,72 @@ namespace ClassPickerUtils
 		FORCEINLINE bool FilterAsset(const FAssetData& AssetData) const
 		{
 			return AssetData.GetClass() && AssetData.GetClass()->IsChildOf(UBlueprint::StaticClass());
+		}
+
+		bool CacheAssetMetadata(FClassData& ClassData, const FAssetData& AssetData)
+		{
+			bool bUpdated = false;
+
+			FString ClassFlagsString;
+			if (AssetData.GetTagValue(FBlueprintTags::ClassFlags, ClassFlagsString))
+			{
+				const uint32 ClassFlags = FCString::Atoi(*ClassFlagsString);
+				const bool bIsAbstractClass = (ClassFlags & CLASS_Abstract) > 0u;
+				if (ClassData.bIsAbstractClass != bIsAbstractClass)
+				{
+					ClassData.bIsAbstractClass = bIsAbstractClass;
+					bUpdated = true;
+				}
+			}
+
+			TArray<FSoftClassPath> ImplementedInterfaces;
+			const FString ImplementedInterfacesString = AssetData.GetTagValueRef<FString>(FBlueprintTags::ImplementedInterfaces);
+			if (!ImplementedInterfacesString.IsEmpty())
+			{
+				FString FullInterface;
+				FString CurrentString = *ImplementedInterfacesString;
+				while (CurrentString.Split(TEXT("Interface="), nullptr, &FullInterface))
+				{
+					// Cutoff at next )
+					int32 RightParen = INDEX_NONE;
+					if (FullInterface.FindChar(TCHAR(')'), RightParen))
+					{
+						// Keep parsing
+						CurrentString = FullInterface.Mid(RightParen);
+
+						// Strip class name
+						FullInterface = *FPackageName::ExportTextPathToObjectPath(FullInterface.Left(RightParen));
+
+						// Handle quotes
+						FString InterfacePath;
+						const TCHAR* NewBuffer = FPropertyHelpers::ReadToken(*FullInterface, InterfacePath, true);
+
+						if (NewBuffer)
+						{
+							ImplementedInterfaces.Add(FSoftClassPath(InterfacePath));
+						}
+					}
+				}
+			}
+			if (ClassData.ImplementedInterfaces != ImplementedInterfaces)
+			{
+				ClassData.ImplementedInterfaces = ImplementedInterfaces;
+				bUpdated = true;
+			}
+
+			FString ParentClassPathString;
+			if (AssetData.GetTagValue(FBlueprintTags::ParentClassPath, ParentClassPathString))
+			{
+				if (ClassData.ParentClassPath != ParentClassPathString)
+				{
+					ClassData.ParentClassPath = ParentClassPathString;
+					bUpdated = true;
+					
+					CacheAssetParentClass(AssetData);
+				}
+			}
+
+			return bUpdated;
 		}
 
 		void OnAssetAdded(const FAssetData& AssetData)
@@ -230,9 +291,9 @@ namespace ClassPickerUtils
 					ClassData.ObjectPath = TCHAR_TO_ANSI(*ClassData.ClassPath.ToString());
 					ClassData.bIsAsset = true;
 
-					AvailableClasses.Insert(ClassData, InsertIndex);
+					CacheAssetMetadata(ClassData, AssetData);
 
-					CacheAssetParentClass(AssetData);
+					AvailableClasses.Insert(ClassData, InsertIndex);
 				}
 			}
 		}
@@ -274,6 +335,35 @@ namespace ClassPickerUtils
 			if (bReAddAsset)
 			{
 				OnAssetAdded(AssetData);
+			}
+		}
+
+		// triggers when asset is saved!
+		void OnAssetUpdated(const FAssetData& AssetData)
+		{
+			DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::OnAssetUpdated"), STAT_ImGuiClassPicker_OnAssetUpdated, STATGROUP_ImGui);
+			LLM_SCOPE_BYTAG(ImGuiClassPicker);
+
+			if (FilterAsset(AssetData))
+			{
+				bool bContainerModified = false;
+
+				FSoftClassPath ClassPath = GetClassPathForAsset(AssetData);
+				for (auto Itr = AvailableClasses.CreateIterator(); Itr; ++Itr)
+				{
+					if (Itr->ClassPath == ClassPath)
+					{
+						if (CacheAssetMetadata(*Itr, AssetData))
+						{
+							bContainerModified = true;
+						}
+					}
+				}
+
+				if (bContainerModified)
+				{
+					RevisionId++;
+				}
 			}
 		}
 
@@ -321,10 +411,11 @@ namespace ClassPickerUtils
 	}
 }
 
-FImGuiClassPicker FImGuiClassPicker::MakeWidget(const FSoftClassPath& ClassPath, FFilters OptionalFilters)
+FImGuiClassPicker FImGuiClassPicker::MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters)
 {
 	FImGuiClassPicker Widget = {};
 	Widget.BaseClassPath = ClassPath;
+	Widget.OptionalFilters = OptionalFilters;
 	return Widget;
 }
 
@@ -341,7 +432,8 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
 	LLM_SCOPE_BYNAME("ImGui/ClassPicker/DrawWidget");
 
-	if (!ensure(BaseClassPath.IsValid()))
+	const UClass* BaseClass = GetBaseClass();
+	if (!ensure(BaseClass))
 	{
 		return false;
 	}
@@ -369,6 +461,36 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	if (bClassContainerChanged)
 	{
 		FilterAvailableClasses();
+
+		// check if selected class has become invalid now? (not relevant for this class picker)
+		if ((LastSelectedClassIndex != INDEX_NONE) && AvailableClasses[LastSelectedClassIndex].bIsAsset && !OptionalFilters.IsEmpty())
+		{
+			bool bOptionalFiltersPassed = true;
+			for (int32 FilterIndex = 0; FilterIndex < OptionalFilters.Num(); ++FilterIndex)
+			{
+				const FFilter& Filter = OptionalFilters[FilterIndex];
+				if (Filter.IsType<FImGuiAllowedClassFilter>())
+				{
+					bOptionalFiltersPassed &= ClassPickerUtils::IsClassChildOf(AvailableClasses[LastSelectedClassIndex].ClassPath, Filter.Get<FImGuiAllowedClassFilter>().ClassPath);
+				}
+				else if (Filter.IsType<FImGuiDisallowedClassFilter>())
+				{
+					bOptionalFiltersPassed &= !ClassPickerUtils::IsClassChildOf(AvailableClasses[LastSelectedClassIndex].ClassPath, Filter.Get<FImGuiDisallowedClassFilter>().ClassPath);
+				}
+				else if (Filter.IsType<FImGuiRequiredInterfaceFilter>())
+				{
+					bOptionalFiltersPassed &= AvailableClasses[LastSelectedClassIndex].ImplementedInterfaces.Contains(Filter.Get<FImGuiRequiredInterfaceFilter>().ClassPath);
+				}
+				else if (Filter.IsType<FImGuiDisallowAbstractClassFilter>())
+				{
+					bOptionalFiltersPassed &= !AvailableClasses[LastSelectedClassIndex].bIsAbstractClass;
+				}
+			}
+			if (!bOptionalFiltersPassed)
+			{
+				SelectedSoftClassPtr.Reset();
+			}
+		}
 	}
 
 	const auto* SelectedClassData = AvailableClasses.IsValidIndex(LastSelectedClassIndex) ? &AvailableClasses[LastSelectedClassIndex] : nullptr;
@@ -517,12 +639,11 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 						Clipper.IncludeItemByIndex(LastSelectedClassIndexInFilteredList);
 					}
 
-					int32 RowIndex = 0;
 					while (Clipper.Step())
 					{
 						for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
 						{
-							Add_ListEntry(FilteredClassIndices[Index], RowIndex++);
+							Add_ListEntry(FilteredClassIndices[Index], Index);
 						}
 					}
 
@@ -603,15 +724,13 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 	};
 
+#if WITH_EDITOR
 	auto Add_CreateBlueprintButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams CreateNewBlueprintIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.PlusCircle"), IconSize);
-#if WITH_EDITOR
 		if (FImGui::TransparentImageButton("CreateNewBP", CreateNewBlueprintIcon))
 		{
-			// TODO: add validation/error handling
-			UClass* Class = Cast<UClass>(BaseClassPath.TryLoad());
-			UBlueprint* Blueprint = FKismetEditorUtilities::CanCreateBlueprintOfClass(Class) ? FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), Class, FString::Printf(TEXT("New%s"), *BaseClassPath.GetAssetName())) : nullptr;
+			UBlueprint* Blueprint = FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), const_cast<UClass*>(BaseClass), FString::Printf(TEXT("New%s"), *BaseClassPath.GetAssetName()));
 
 			UClass* RequiredInterface = nullptr;//TODO: filter not expoxed
 			if (Blueprint != NULL && Blueprint->GeneratedClass)
@@ -626,12 +745,8 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			}
 		}
 		ImGui::SetItemTooltip("Create New Blueprint");
-#else
-		ImGui::BeginDisabled(true);
-		FImGui::TransparentImageButton("CreateNewBP", CreateNewBlueprintIcon);
-		ImGui::EndDisabled();
-#endif
 	};
+#endif
 
 	auto Add_ClearValueButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
@@ -684,12 +799,14 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
 				Add_BrowseToAssetButton(SelectedSoftClassPtr, IconSize);
 
-				//if (FKismetEditorUtilities::CanCreateBlueprintOfClass(...)) //TODO: checking this here will load the class/BP :(
+#if WITH_EDITOR
+				if (FKismetEditorUtilities::CanCreateBlueprintOfClass(BaseClass))
 				{
 					ImGui::SameLine();
 					ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
 					Add_CreateBlueprintButton(SelectedSoftClassPtr, IconSize);
 				}
+#endif
 
 				ImGui::SameLine();
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
@@ -734,7 +851,6 @@ void FImGuiClassPicker::FilterAvailableClasses()
 
 	auto& ClassContainer = ClassPickerUtils::GetClassContainer();
 	const auto& AvailableClasses = ClassContainer.GetAvailableClasses();
-
 	for (int32 ClassIndex = 0; ClassIndex < AvailableClasses.Num(); ++ClassIndex)
 	{
 		if (!ClassPickerUtils::IsClassChildOf(AvailableClasses[ClassIndex].ClassPath, BaseClassPath))
@@ -745,6 +861,39 @@ void FImGuiClassPicker::FilterAvailableClasses()
 		if (!TextFilter.PassFilter(AvailableClasses[ClassIndex].DisplayName))
 		{
 			continue;
+		}
+		
+		if (!OptionalFilters.IsEmpty())
+		{
+			bool bOptionalFiltersPassed = true;
+			for (int32 FilterIndex = 0; FilterIndex < OptionalFilters.Num(); ++FilterIndex)
+			{
+				const FFilter& Filter = OptionalFilters[FilterIndex];
+				if (Filter.IsType<FImGuiAllowedClassFilter>())
+				{
+					bOptionalFiltersPassed &= ClassPickerUtils::IsClassChildOf(AvailableClasses[ClassIndex].ClassPath, Filter.Get<FImGuiAllowedClassFilter>().ClassPath);
+				}
+				else if (Filter.IsType<FImGuiDisallowedClassFilter>())
+				{
+					bOptionalFiltersPassed &= !ClassPickerUtils::IsClassChildOf(AvailableClasses[ClassIndex].ClassPath, Filter.Get<FImGuiDisallowedClassFilter>().ClassPath);
+				}
+				else if (Filter.IsType<FImGuiRequiredInterfaceFilter>())
+				{
+					bOptionalFiltersPassed &= AvailableClasses[ClassIndex].ImplementedInterfaces.Contains(Filter.Get<FImGuiRequiredInterfaceFilter>().ClassPath);
+				}
+				else if (Filter.IsType<FImGuiDisallowAbstractClassFilter>())
+				{
+					bOptionalFiltersPassed &= !AvailableClasses[ClassIndex].bIsAbstractClass;
+				}
+				else
+				{
+					checkNoEntry();
+				}
+			}
+			if (!bOptionalFiltersPassed)
+			{
+				continue;
+			}
 		}
 
 		if (LastSelectedClassIndex == ClassIndex)

@@ -6,6 +6,7 @@
 #include "Misc/App.h"
 #include "Misc/EngineVersion.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Blueprint/BlueprintSupport.h"
 
 namespace FImGuiSettings
 {
@@ -319,5 +320,16 @@ namespace FImGui
 	bool SliderWithTwoHandles(FImGuiTickContext* context, const char* label, double& p_data_0, double& p_data_1, double& p_data_min, double& p_data_max, float input_width, float slider_width)
 	{
 		return TSliderWithTwoHandles<double, ImGuiDataType_Double>(context, label, p_data_0, p_data_1, p_data_min, p_data_max, input_width, slider_width);
+	}
+}
+
+namespace FImGui
+{
+	FImGuiAssetTagFilter MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass)
+	{
+		FImGuiAssetTagFilter Filter;
+		Filter.TagName = FBlueprintTags::NativeParentClassPath;
+		Filter.ExpectedValue = FObjectPropertyBase::GetExportPath(ParentClass);
+		return Filter;
 	}
 }
