@@ -10,39 +10,6 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-template <bool bRequireRangeCheck>
-class FImGuiAllocator : public FDefaultAllocator
-{
-public:
-	enum { RequireRangeCheck = bRequireRangeCheck };
-	using Super = FDefaultAllocator;
-};
-
-using FImGuiAllocatorWithRangeCheck = FImGuiAllocator<true>;
-using FImGuiAllocatorWithoutRangeCheck = FImGuiAllocator<false>;
-
-template <>
-struct TAllocatorTraits<FImGuiAllocatorWithRangeCheck> : TAllocatorTraits<FImGuiAllocatorWithRangeCheck::Super>
-{
-};
-template <>
-struct TAllocatorTraits<FImGuiAllocatorWithoutRangeCheck> : TAllocatorTraits<FImGuiAllocatorWithoutRangeCheck::Super>
-{
-};
-
-template <>
-struct TCanMoveBetweenAllocators<FDefaultAllocator, FImGuiAllocatorWithRangeCheck>
-{
-	enum { Value = true };
-};
-template <>
-struct TCanMoveBetweenAllocators<FDefaultAllocator, FImGuiAllocatorWithoutRangeCheck>
-{
-	enum { Value = true };
-};
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-
 class FConfigFile;
 namespace FImGuiSettings
 {
@@ -183,37 +150,6 @@ namespace FImGui
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// asset/class picker filters
-struct FImGuiAssetTagFilter
-{
-	FName TagName = NAME_None;
-	FString ExpectedValue;
-};
-struct FImGuiAllowedClassFilter
-{
-	FSoftClassPath ClassPath;
-};
-struct FImGuiDisallowedClassFilter
-{
-	FSoftClassPath ClassPath;
-};
-struct FImGuiRequiredInterfaceFilter
-{
-	FSoftClassPath ClassPath;
-};
-struct FImGuiDisallowAbstractClassFilter
-{
-};
-
-namespace FImGui
-{
-	IMGUIWIDGETS_API FImGuiAssetTagFilter MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass);
-}
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-
 class FImGuiTextFilter
 {
 public:
@@ -285,4 +221,66 @@ private:
 	TArray<TPair<int16, int16>> FilterKeywordTokens;
 	float SearchIconTint = 0.75f;
 	float ClearIconTint = 0.75f;
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// asset/class picker filters
+struct FImGuiAssetTagFilter
+{
+	FName TagName = NAME_None;
+	FString ExpectedValue;
+};
+struct FImGuiAllowedClassFilter
+{
+	FSoftClassPath ClassPath;
+};
+struct FImGuiDisallowedClassFilter
+{
+	FSoftClassPath ClassPath;
+};
+struct FImGuiRequiredInterfaceFilter
+{
+	FSoftClassPath ClassPath;
+};
+struct FImGuiDisallowAbstractClassFilter
+{
+};
+
+namespace FImGui
+{
+	IMGUIWIDGETS_API FImGuiAssetTagFilter MakeBlueprintSubClassFilter(const TNonNullPtr<UClass>& ParentClass);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+template <bool bRequireRangeCheck>
+class FImGuiAllocator : public FDefaultAllocator
+{
+public:
+	enum { RequireRangeCheck = bRequireRangeCheck };
+	using Super = FDefaultAllocator;
+};
+
+using FImGuiAllocatorWithRangeCheck = FImGuiAllocator<true>;
+using FImGuiAllocatorWithoutRangeCheck = FImGuiAllocator<false>;
+
+template <>
+struct TAllocatorTraits<FImGuiAllocatorWithRangeCheck> : TAllocatorTraits<FImGuiAllocatorWithRangeCheck::Super>
+{
+};
+template <>
+struct TAllocatorTraits<FImGuiAllocatorWithoutRangeCheck> : TAllocatorTraits<FImGuiAllocatorWithoutRangeCheck::Super>
+{
+};
+
+template <>
+struct TCanMoveBetweenAllocators<FDefaultAllocator, FImGuiAllocatorWithRangeCheck>
+{
+	enum { Value = true };
+};
+template <>
+struct TCanMoveBetweenAllocators<FDefaultAllocator, FImGuiAllocatorWithoutRangeCheck>
+{
+	enum { Value = true };
 };
