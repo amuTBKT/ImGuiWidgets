@@ -944,7 +944,8 @@ namespace ImGuiStatsVizualizer
 		.TickFunction		= &Tick,
 		.WidgetIcon			= FSlateIcon(FName("EditorStyle"), FName("Profiler.Tab")),
 		.WidgetName			= "Stats Visualizer",
-		.WidgetDescription	= "Widget for displaying stat groups."
+		.WidgetDescription	= "Widget for displaying stat groups.",
+		.bEnableViewports	= false
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
 }

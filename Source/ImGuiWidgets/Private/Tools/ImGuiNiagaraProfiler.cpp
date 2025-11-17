@@ -391,7 +391,8 @@ namespace ImGuiNiagaraProfiler
 		.TickFunction		= &Tick,
 		.WidgetIcon			= FSlateIcon(FName("NiagaraEditorStyle"), FName("Tab.Debugger")),
 		.WidgetName			= "Niagara Profiler",
-		.WidgetDescription	= "Widget for displaying Niagara gpu stats."
+		.WidgetDescription	= "Widget for displaying Niagara gpu stats.",
+		.bEnableViewports	= false
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
 }
