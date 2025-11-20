@@ -803,9 +803,8 @@ namespace ImGuiTextureVisualizer
 
 		// zoom controls
 		{
-			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
+			ImGui::AlignTextToFramePadding();
 			ImGui::Text("Zoom");
-			ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
 			ImGui::SameLine();
 			if (ImGui::Button("1:1"))
 			{
@@ -1404,10 +1403,9 @@ namespace ImGuiTextureVisualizer
 
 				if (TexturePreviewOptions.LastSelectedPixelValue.IsSet())
 				{
-					ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
+					ImGui::AlignTextToFramePadding();
 					ImGui::TextUnformatted("Last Selected Pixel");
-					ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
-
+					
 					ImGui::SameLine();
 					FAnsiString PixelValueAsString = PixelFormatUtils::GetPixelValueAsStringInline((uint8*)&TexturePreviewOptions.LastSelectedPixelValue.GetValue(), TextureInfo.Format, TexturePreviewOptions.bDisplayStencil);
 					ImGui::InputText("##PixelValue", (ANSICHAR*)*PixelValueAsString, PixelValueAsString.Len() + 1, ImGuiInputTextFlags_ReadOnly);

@@ -277,9 +277,8 @@ namespace FImGui
 			return value_changed;
 		};
 
-		ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
+		ImGui::AlignTextToFramePadding();
 		ImGui::TextUnformatted(label);
-		ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
 
 		const char* display_format = (p_data_max < 10.) ? "%.8f" : "%.4f";
 

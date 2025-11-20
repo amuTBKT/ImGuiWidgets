@@ -770,9 +770,8 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			if (strstr(Label, "##") == nullptr)
 			{
 				ImGui::BeginGroup();
-				ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = ImGui::GetStyle().FramePadding.y;
+				ImGui::AlignTextToFramePadding();
 				ImGui::TextUnformatted(Label);
-				ImGui::GetCurrentWindow()->DC.CurrLineTextBaseOffset = 0.f;
 				ImGui::EndGroup();
 
 				ImGui::SameLine();
