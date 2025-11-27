@@ -606,7 +606,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 							}
 							if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
 							{
-								ImGui::SetTooltip(*AvailableClasses[ClassIndex].ObjectPath);
+								ImGui::SetTooltip("%s", *AvailableClasses[ClassIndex].ObjectPath);
 							}
 
 							if (!bWasSelected)

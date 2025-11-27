@@ -797,7 +797,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 						{
 							bInOutState = !bInOutState;
 						}
-						ImGui::SetItemTooltip(ToolTip);
+						ImGui::SetItemTooltip("%s", ToolTip);
 
 						ImGui::PopStyleVar(2);
 						ImGui::PopStyleColor(3);

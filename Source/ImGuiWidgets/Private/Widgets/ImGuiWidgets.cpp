@@ -85,7 +85,7 @@ namespace FImGui
 			ImGui::Dummy(ImVec2(0, padding)); // <padding top>
 
 			ImGui::Dummy(ImVec2(padding, 0.f)); ImGui::SameLine(); // <padding left>
-			FImGui::Image(WarningIcon, col); ImGui::SameLine(); ImGui::Text(message); // <content>
+			FImGui::Image(WarningIcon, col); ImGui::SameLine(); ImGui::TextUnformatted(message); // <content>
 			ImGui::SameLine(); ImGui::Dummy(ImVec2(padding, 0.f)); // <padding right>
 
 			ImGui::Dummy(ImVec2(0, padding)); // <padding bottom>

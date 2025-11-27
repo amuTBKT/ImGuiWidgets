@@ -476,7 +476,7 @@ namespace ImGuiMaterialStats
 								{
 									InOutState ^= BitsToToggle;
 								}
-								ImGui::SetItemTooltip(ToolTip);
+								ImGui::SetItemTooltip("%s", ToolTip);
 
 								if (bApplyStyle)
 								{

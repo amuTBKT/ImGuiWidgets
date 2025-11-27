@@ -200,7 +200,7 @@ private:
 		for (TPair<int16, int16> KeywordTokens : FilterKeywordTokens)
 		{
 			TStringViewType Keyword = SourceString.Mid(KeywordTokens.Key, KeywordTokens.Value);
-			if ((Keyword.Len() > 1) && (Keyword[0] == TStringViewType::ElementType('!')))
+			if ((Keyword.Len() > 1) && (Keyword[0] == typename TStringViewType::ElementType('!')))
 			{
 				if (StringToCheck.Contains(Keyword.RightChop(1), ESearchCase::IgnoreCase))
 				{
