@@ -222,7 +222,7 @@ namespace ImGuiTextureVisualizer
 		}
 		else
 		{
-			QueuedReadbackBuffers.Add(MakeShared<FRHIGPUBufferReadback, ESPMode::NotThreadSafe>(TEXT("TexDisplay::CurrentPixelReadback")));
+			QueuedReadbackBuffers.Add(MakeShared<FRHIGPUBufferReadback, ESPMode::NotThreadSafe>(IMGUI_FNAME("TexDisplay::CurrentPixelReadback")));
 		}
 		return QueuedReadbackBuffers.Last();
 	}
@@ -360,7 +360,11 @@ namespace ImGuiTextureVisualizer
 				RHICmdList.DispatchComputeShader(ThreadGroupCountX, ThreadGroupCountY, 1);
 			}
 
-			RHICmdList.Transition(FRHITransitionInfo(TileMinMaxBuffer.GetReference(), ERHIAccess::UAVCompute, ERHIAccess::SRVCompute));
+			RHICmdList.Transition(
+				{
+					FRHITransitionInfo(TileMinMaxBuffer.GetReference(), ERHIAccess::UAVCompute, ERHIAccess::SRVCompute),
+					FRHITransitionInfo(GPixelValueDestBuffer->VertexBufferRHI, ERHIAccess::Unknown, ERHIAccess::UAVCompute)
+				});
 
 			// result min max
 			{
@@ -386,13 +390,15 @@ namespace ImGuiTextureVisualizer
 
 				RHICmdList.DispatchComputeShader(1, 1, 1);
 			}
+
+			RHICmdList.Transition(FRHITransitionInfo(GPixelValueDestBuffer->VertexBufferRHI, ERHIAccess::UAVCompute, ERHIAccess::CopySrc));
 		}
 
 		// default to [0, 1] range if readback fails
 		FVector4 MinValue = FVector4::Zero();
 		FVector4 MaxValue = FVector4::One();
 		{
-			FRHIGPUBufferReadback Readback(TEXT("TexDisplay::MinMaxReadback"));
+			FRHIGPUBufferReadback Readback(IMGUI_FNAME("TexDisplay::MinMaxReadback"));
 			uint32 NumBytes = sizeof(FVector4f) * 2;
 			Readback.EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, NumBytes);
 			RHICmdList.BlockUntilGPUIdle();
@@ -535,6 +541,8 @@ namespace ImGuiTextureVisualizer
 			const int32 HoveredTexCoordX = InPreviewOptions.TextureInspectorCursorPosition.X >> InPreviewOptions.CurrentMip;
 			const int32 HoveredTexCoordY = InPreviewOptions.TextureInspectorCursorPosition.Y >> InPreviewOptions.CurrentMip;
 
+			RHICmdList.Transition(FRHITransitionInfo(GPixelValueDestBuffer->VertexBufferRHI, ERHIAccess::Unknown, ERHIAccess::UAVCompute));
+
 			SetComputePipelineState(RHICmdList, ComputeShader.GetComputeShader());
 			SetShaderParametersLegacyCS(
 				RHICmdList, ComputeShader,
@@ -546,6 +554,8 @@ namespace ImGuiTextureVisualizer
 				FIntPoint(HoveredTexCoordX, HoveredTexCoordY));
 
 			RHICmdList.DispatchComputeShader(1, 1, 1);
+
+			RHICmdList.Transition(FRHITransitionInfo(GPixelValueDestBuffer->VertexBufferRHI, ERHIAccess::UAVCompute, ERHIAccess::CopySrc));
 
 			WriteBuffer->EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, sizeof(FUintVector4));
 		}
