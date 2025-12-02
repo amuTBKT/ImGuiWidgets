@@ -50,7 +50,7 @@ namespace ImGuiTextureVisualizer
 		if (TextureResourceOverride)
 		{
 			TextureResourceOverride = TextureResource;
-			
+
 			ENQUEUE_RENDER_COMMAND(SetTextureOverrideName)(
 				[TextureName = FAnsiString(TCHAR_TO_ANSI(*DisplayName))](FRHICommandListImmediate& RHICmdList)
 				{
@@ -69,7 +69,7 @@ namespace ImGuiTextureVisualizer
 	{
 		TextureOverride.Reset();
 		TextureResourceOverride = nullptr;
-		
+
 		ENQUEUE_RENDER_COMMAND(SetTextureOverrideName)(
 			[](FRHICommandListImmediate& RHICmdList)
 			{
@@ -112,7 +112,7 @@ namespace ImGuiTextureVisualizer
 			bIsCubemap = false;
 
 			SelectedPixelValue = FUintVector4::ZeroValue;
-			
+
 			TextureOverrideName.Reset();
 		}
 
@@ -166,7 +166,7 @@ namespace ImGuiTextureVisualizer
 		FVector2f CanvasCenter = FVector2f(0.f, 0.f);
 		FVector4f UVScaleAndOffset	 = FVector4f(1.f, 1.f, 0.f, 0.f);
 		ERequestedZoomLevel RequestedZoomLevel = ERequestedZoomLevel::None;
-		
+
 		FLinearColor BackgroundColor = FLinearColor(0.f, 0.f, 0.f, 0.f);
 
 		bool bRequestMinMaxTextureValues = false;
@@ -179,6 +179,7 @@ namespace ImGuiTextureVisualizer
 		// if valid, prefer this over the textures collected from GraphBuilder
 		const FTextureResource* TextureResourceOverride = nullptr;
 
+		FIntPoint LastSelectedCursorPosition;
 		TOptional<FUintVector4> LastSelectedPixelValue;
 
 		void Reset()
@@ -208,7 +209,7 @@ namespace ImGuiTextureVisualizer
 		}
 	};
 	static FTexturePreviewOptions TexturePreviewOptions;
-	
+
 	static TArray<FAnsiString> AvailableTextures;
 	static TSharedPtr<FTextureCollectorSceneViewExtension> ViewExtension = nullptr;
 
@@ -675,7 +676,7 @@ namespace ImGuiTextureVisualizer
 		TextureInfo.bIsArray = TextureDesc.IsArray();
 		TextureInfo.bIsCubemap = TextureDesc.IsCubemap();
 		TextureInfo.TextureOverrideName = TextureOverrideName;
-		
+
 		if (TextureDesc.IsCubemap())
 		{
 			TextureInfo.ArraySize = TextureDesc.ArraySize * 6;
@@ -703,7 +704,7 @@ namespace ImGuiTextureVisualizer
 
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 		const FAnsiString PreviouslySelectedTextureName = InOutSelectedTextureName;
-		
+
 		const bool bIsUsingTextureOverride = IsTextureOverrideValid();
 
 		ImGui::BeginDisabled(bIsUsingTextureOverride);
@@ -776,7 +777,7 @@ namespace ImGuiTextureVisualizer
 		if (!bShowTextureList && !InOutSelectedTextureName.IsEmpty())
 		{
 			ImGui::SameLine();
-			
+
 			const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ResetToDefault"), ComboBoxSize.y);
 
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
@@ -793,7 +794,7 @@ namespace ImGuiTextureVisualizer
 				}
 			}
 			ImGui::SetItemTooltip(bIsUsingTextureOverride ? "Clear Texture Override" : "Reset");
-			
+
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(3);
 		}
@@ -1099,7 +1100,7 @@ namespace ImGuiTextureVisualizer
 				ImGui::PopStyleVar();
 				ImGui::PopStyleColor(3);
 			}
-			
+
 			ImGui::SameLine();
 			{
 				const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ResetToDefault"), CurrentLineHeight);
@@ -1150,7 +1151,7 @@ namespace ImGuiTextureVisualizer
 		ConstrainedCanvasSize = ImVec2(InTextureInfo.SizeX, InTextureInfo.SizeY) * (InOutTexturePreviewOptions.CanvasScale);
 
 		InOutTexturePreviewOptions.TextureInspectorRect = FIntVector4::ZeroValue;
-		
+
 		ImGui::InvisibleButton("TextureCanvas", InCanvasSize, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
 
 		const bool bIsCanvasHovered = ImGui::IsItemHovered();
@@ -1173,7 +1174,7 @@ namespace ImGuiTextureVisualizer
 			InOutTexturePreviewOptions.CanvasScale = FMath::Clamp(InOutTexturePreviewOptions.CanvasScale, 0.1f, 256.f);
 
 			InOutTexturePreviewOptions.CanvasCenter -= ZoomPivot * (InOutTexturePreviewOptions.CanvasScale);
-			
+
 			ConstrainedCanvasSize = ImVec2(InTextureInfo.SizeX, InTextureInfo.SizeY) * (InOutTexturePreviewOptions.CanvasScale);
 		}
 		if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.f))
@@ -1249,6 +1250,11 @@ namespace ImGuiTextureVisualizer
 
 				InOutTexturePreviewOptions.TextureInspectorCursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
 
+				const int32 HoveredTexCoordX = InOutTexturePreviewOptions.TextureInspectorCursorPosition.X >> InOutTexturePreviewOptions.CurrentMip;
+				const int32 HoveredTexCoordY = InOutTexturePreviewOptions.TextureInspectorCursorPosition.Y >> InOutTexturePreviewOptions.CurrentMip;
+
+				InOutTexturePreviewOptions.LastSelectedCursorPosition = FIntPoint(HoveredTexCoordX, HoveredTexCoordY);
+
 				const float TextureInspectorSize = 144.f;
 				const float TextureInspectorInfoWidgetSize = 200.f;
 				const float AvailableSpaceLeft = RelativeMousePos.x;
@@ -1258,24 +1264,21 @@ namespace ImGuiTextureVisualizer
 
 				ImVec2 AbsoluteMousePos = RelativeMousePos + ImGui::GetItemRectMin();
 
-				ImVec2 TextureInspectorOffset = ImVec2(32.f, -TextureInspectorSize);
+				ImVec2 TextureInspectorOffset = ImVec2(4.f, -TextureInspectorSize - 4.f);
 				float TextureInspectorInfoWidgetOffsetX = TextureInspectorSize;
 				if (AvailableSpaceTop < TextureInspectorSize)
 				{
-					TextureInspectorOffset.y += (TextureInspectorSize - AvailableSpaceTop);
+					TextureInspectorOffset.y += (TextureInspectorSize - AvailableSpaceTop + 8.f);
 				}
 				if (AvailableSpaceRight < (TextureInspectorSize + TextureInspectorInfoWidgetSize))
 				{
-					TextureInspectorOffset.x -= ((TextureInspectorSize + TextureInspectorInfoWidgetSize) - AvailableSpaceRight);
+					TextureInspectorOffset.x -= ((TextureInspectorSize + TextureInspectorInfoWidgetSize + 8.f) - AvailableSpaceRight);
 				}
 
 				InOutTexturePreviewOptions.TextureInspectorRect.X = AbsoluteMousePos.x + TextureInspectorOffset.x;
 				InOutTexturePreviewOptions.TextureInspectorRect.Y = AbsoluteMousePos.y + TextureInspectorOffset.y;
 				InOutTexturePreviewOptions.TextureInspectorRect.Z = AbsoluteMousePos.x + TextureInspectorOffset.x + TextureInspectorSize;
 				InOutTexturePreviewOptions.TextureInspectorRect.W = AbsoluteMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
-
-				const int32 HoveredTexCoordX = InOutTexturePreviewOptions.TextureInspectorCursorPosition.X >> InOutTexturePreviewOptions.CurrentMip;
-				const int32 HoveredTexCoordY = InOutTexturePreviewOptions.TextureInspectorCursorPosition.Y >> InOutTexturePreviewOptions.CurrentMip;
 
 				ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
 				ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
@@ -1414,8 +1417,8 @@ namespace ImGuiTextureVisualizer
 				if (TexturePreviewOptions.LastSelectedPixelValue.IsSet())
 				{
 					ImGui::AlignTextToFramePadding();
-					ImGui::TextUnformatted("Last Selected Pixel");
-					
+					ImGui::Text("Last Selected Pixel (%i, %i)", TexturePreviewOptions.LastSelectedCursorPosition.X, TexturePreviewOptions.LastSelectedCursorPosition.Y);
+
 					ImGui::SameLine();
 					FAnsiString PixelValueAsString = PixelFormatUtils::GetPixelValueAsStringInline((uint8*)&TexturePreviewOptions.LastSelectedPixelValue.GetValue(), TextureInfo.Format, TexturePreviewOptions.bDisplayStencil);
 					ImGui::InputText("##PixelValue", (ANSICHAR*)*PixelValueAsString, PixelValueAsString.Len() + 1, ImGuiInputTextFlags_ReadOnly);
@@ -1433,7 +1436,7 @@ namespace ImGuiTextureVisualizer
 					SCOPED_DRAW_EVENT(RHICmdList, ImGuiTexDisplay_Flip);
 
 					TextureInfoReadIndex_RT = TextureInfoReadIndex;
-					
+
 					if (bRequestNewTexture)
 					{
 						ViewExtension->SetTextureNameToDisplay(ANSI_TO_TCHAR(*VisTextureName));
