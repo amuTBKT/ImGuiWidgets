@@ -1419,6 +1419,12 @@ namespace ImGuiTextureVisualizer
 					ImGui::AlignTextToFramePadding();
 					ImGui::Text("Last Selected Pixel (%i, %i)", TexturePreviewOptions.LastSelectedCursorPosition.X, TexturePreviewOptions.LastSelectedCursorPosition.Y);
 
+					// make sure the pixel value widget doesn't move around due to changes in pixel coordinate text length
+					ImGui::SameLine();
+					static int32 CursorPosX = ImGui::GetCursorPosX();
+					CursorPosX = FMath::Max(CursorPosX, ImGui::GetCursorPosX() / ImGui::GetStyle().FontScaleMain);
+					ImGui::SetCursorPosX(CursorPosX * ImGui::GetStyle().FontScaleMain);
+
 					ImGui::SameLine();
 					FAnsiString PixelValueAsString = PixelFormatUtils::GetPixelValueAsStringInline((uint8*)&TexturePreviewOptions.LastSelectedPixelValue.GetValue(), TextureInfo.Format, TexturePreviewOptions.bDisplayStencil);
 					ImGui::InputText("##PixelValue", (ANSICHAR*)*PixelValueAsString, PixelValueAsString.Len() + 1, ImGuiInputTextFlags_ReadOnly);
