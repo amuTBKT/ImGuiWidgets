@@ -569,16 +569,15 @@ namespace ImGuiTextureVisualizer
 		ImVec2 ClipRectMax;
 		FTexturePreviewOptions Options;
 	};
-	static void TexturePreviewCallback(void* immediate_command_list, void* user_data, size_t user_data_size)
+	static void TexturePreviewCallback(FRHICommandListImmediate& RHICmdList, const ImRect& DrawRect, void* UserData, size_t UserDataSize)
 	{
-		if (!ensure(user_data && (sizeof(FTexturePreviewUserData) == user_data_size)))
+		if (!ensure(UserData && (sizeof(FTexturePreviewUserData) == UserDataSize)))
 		{
 			return;
 		}
 
-		FRHICommandListImmediate& RHICmdList = *(FRHICommandListImmediate*)immediate_command_list;
-		const FTexturePreviewUserData& PreviewParams = *(const FTexturePreviewUserData*)user_data;
-
+		FTexturePreviewUserData PreviewParams = *(FTexturePreviewUserData*)UserData;
+		
 		FRHITexture* TextureToDisplay = GetTextureToDisplay(PreviewParams.Options);
 		if (!TextureToDisplay)
 		{
@@ -637,6 +636,11 @@ namespace ImGuiTextureVisualizer
 			.SetArrayRange(0, TextureDesc.IsCubemap() ? TextureDesc.ArraySize * 6 : TextureDesc.ArraySize)
 			.SetFormat((IsStencilFormat(TextureDesc.Format) && PreviewParams.Options.bDisplayStencil) ? PF_X24_G8 : TextureDesc.Format);
 
+		FIntVector4 TextureInspectRect = PreviewParams.Options.TextureInspectorRect;
+		if (TextureInspectRect.Z > TextureInspectRect.X)
+		{
+			TextureInspectRect += FIntVector4(DrawRect.Min.x, DrawRect.Min.y, DrawRect.Min.x, DrawRect.Min.y);
+		}
 		SetShaderParametersLegacyPS(
 			RHICmdList, PixelShader,
 			RHICmdList.CreateShaderResourceView(TextureToDisplay, TextureSRVDesc),
@@ -649,10 +653,13 @@ namespace ImGuiTextureVisualizer
 			PreviewParams.Options.UVScaleAndOffset,
 			PreviewParams.Options.BackgroundColor.A > 0.5f ? PreviewParams.Options.BackgroundColor.ToFColor(/*sRGB=*/false).DWColor() : 0u,
 			FIntPoint(TexturePreviewOptions.TextureInspectorCursorPosition.X, TexturePreviewOptions.TextureInspectorCursorPosition.Y),
-			PreviewParams.Options.TextureInspectorRect);
+			TextureInspectRect);
 
-		RHICmdList.SetViewport(0.f, 0.f, 0.f, PreviewParams.ViewportSize.x, PreviewParams.ViewportSize.y, 1.f);
-		RHICmdList.SetScissorRect(true, PreviewParams.ClipRectMin.x, PreviewParams.ClipRectMin.y, PreviewParams.ClipRectMax.x, PreviewParams.ClipRectMax.y);
+		const ImRect ViewportRect = ImRect(
+			FMath::RoundToFloat(DrawRect.Min.x), FMath::RoundToFloat(DrawRect.Min.y),
+			FMath::RoundToFloat(DrawRect.Max.x), FMath::RoundToFloat(DrawRect.Max.y));
+		RHICmdList.SetViewport(ViewportRect.Min.x, ViewportRect.Min.y, 0.f, ViewportRect.Min.x + PreviewParams.ViewportSize.x, ViewportRect.Min.y + PreviewParams.ViewportSize.y, 1.f);
+		RHICmdList.SetScissorRect(true, ViewportRect.Min.x + PreviewParams.ClipRectMin.x, ViewportRect.Min.y + PreviewParams.ClipRectMin.y, ViewportRect.Min.x + PreviewParams.ClipRectMax.x, ViewportRect.Min.y + PreviewParams.ClipRectMax.y);
 
 		UE::Renderer::PostProcess::DrawRectangle(
 			RHICmdList,
