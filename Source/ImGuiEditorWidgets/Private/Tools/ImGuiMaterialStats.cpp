@@ -238,7 +238,7 @@ namespace ImGuiMaterialStats
 	};
 	static TArray<FMaterialWindowState> MaterialWindowStates = {};
 
-	static void Reset(FMaterialWindowState* WindowToReset)
+	static void ResetWindowState(FMaterialWindowState* WindowToReset)
 	{
 		TArray<FMaterialWindowState*> WindowsToReset;
 		if (WindowToReset)
@@ -289,7 +289,7 @@ namespace ImGuiMaterialStats
 		FCoreDelegates::OnEnginePreExit.AddLambda(
 			[]()
 			{
-				Reset(nullptr);
+				ResetWindowState(nullptr);
 			});
 	}
 
@@ -413,7 +413,7 @@ namespace ImGuiMaterialStats
 
 				if (MaterialPicker.Draw(Context, "Selected Material", SelectedMaterial))
 				{
-					Reset(&MaterialWindowState);
+					ResetWindowState(&MaterialWindowState);
 				}
 
 				// stats collection
@@ -424,7 +424,7 @@ namespace ImGuiMaterialStats
 					const char* ButtonText = bIsCompilingPermutations ? "Compiling..." : (MaterialStats.ShaderVFLookup.IsEmpty() ? "Gather Stats" : "Refresh Stats");
 					if (ImGui::Button(ButtonText))
 					{
-						Reset(&MaterialWindowState);
+						ResetWindowState(&MaterialWindowState);
 
 						bIsCompilingPermutations = true;
 						if (DumpShaderInfoCVar)
@@ -597,7 +597,7 @@ namespace ImGuiMaterialStats
 
 			if (!bKeepItem)
 			{
-				Reset(&MaterialWindowStates[WindowIndex]);
+				ResetWindowState(&MaterialWindowStates[WindowIndex]);
 				MaterialWindowStates.RemoveAt(WindowIndex);
 				WindowIndex = FMath::Max(0, WindowIndex - 1);
 			}
