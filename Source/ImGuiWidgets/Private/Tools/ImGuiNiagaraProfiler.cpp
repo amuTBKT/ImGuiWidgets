@@ -2,7 +2,7 @@
 
 #include "NiagaraGPUProfilerInterface.h"
 
-#if WITH_IMGUI && WITH_NIAGARA_GPU_PROFILER
+#if WITH_NIAGARA_GPU_PROFILER
 
 #if WITH_EDITOR
 #include "Editor.h"

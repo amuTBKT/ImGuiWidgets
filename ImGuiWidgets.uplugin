@@ -18,24 +18,17 @@
 		{
 			"Name": "ImGuiWidgetShaders",
 			"Type": "Runtime",
-			"LoadingPhase": "PostConfigInit",
-			"TargetDenyList": [ "Server", "Program" ],
-			"TargetConfigurationDenyList": [ "Shipping" ],
-			"PlatformAllowList": [ "Win64" ]
+			"LoadingPhase": "PostConfigInit"
 		},
 		{
 			"Name": "ImGuiWidgets",
 			"Type": "Runtime",
-			"LoadingPhase": "PostDefault",
-			"TargetDenyList": [ "Server", "Program" ],
-			"TargetConfigurationDenyList": [ "Shipping" ],
-			"PlatformAllowList": [ "Win64" ]
+			"LoadingPhase": "PostDefault"
 		},
 		{
 			"Name": "ImGuiEditorWidgets",
 			"Type": "Editor",
-			"LoadingPhase": "PostDefault",
-			"PlatformAllowList": [ "Win64" ]
+			"LoadingPhase": "PostDefault"
 		}
 	],
 	"Plugins": [
