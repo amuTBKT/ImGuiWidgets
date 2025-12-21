@@ -47,7 +47,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 	const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Search"), ImGui::GetFontSize());
 	const FImGuiImageBindingParams ClearIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Cross"), ImGui::GetFontSize());
 
-	FImGuiNamedWidgetScope WidgetScope{ Label };
+	FImGuiNamedScope WidgetScope{ Label };
 
 	bool bFilterChanged = false;
 	bool bSearchBoxHasFocus = false;

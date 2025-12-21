@@ -245,7 +245,7 @@ namespace ImGuiStatsVizualizer
 
 				if (UObject* Asset = LinkedAsset.Find(RawStatName)->Get())
 				{
-					FImGuiNamedWidgetScope Scope{ GetTypeHash(StatDescription) };
+					FImGuiNamedScope Scope{ GetTypeHash(StatDescription) };
 
 					ImGui::PushStyleColor(ImGuiCol_Button, 0);
 					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
@@ -765,7 +765,7 @@ namespace ImGuiStatsVizualizer
 			FStatGroupData& GroupData = StatGroups[GroupIndex];
 			const char* GroupName = *GroupData.DisplayName;
 
-			FImGuiNamedWidgetScope StatGroupScope{ GroupName };
+			FImGuiNamedScope StatGroupScope{ GroupName };
 
 			const bool bApplyStyle = GroupData.bIsActive;
 			if (bApplyStyle)

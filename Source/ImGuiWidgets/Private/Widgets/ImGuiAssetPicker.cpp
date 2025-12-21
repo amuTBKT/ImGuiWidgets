@@ -453,7 +453,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	FImGui::EnsureValidImGuiContext(Context);
 
-	FImGuiNamedWidgetScope WidgetScope{ Label };
+	FImGuiNamedScope WidgetScope{ Label };
 
 	auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetClassPath);
 	const auto& AvailableAssets = AssetContainer.GetAvailableAssets();
@@ -701,7 +701,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 							FNameBuilder AssetPath{ AvailableAssets[AssetIndex].PackagePath };
 							const bool bWasSelected = (AssetIndex == LastSelectedAssetIndex);
 							{
-								FImGuiNamedWidgetScope Scope{ AssetIndex };
+								FImGuiNamedScope Scope{ AssetIndex };
 
 								if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, AssetViewerRowHeight)))
 								{

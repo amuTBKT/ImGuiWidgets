@@ -440,7 +440,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	FImGui::EnsureValidImGuiContext(Context);
 
-	FImGuiNamedWidgetScope WidgetScope{ Label };
+	FImGuiNamedScope WidgetScope{ Label };
 
 	auto& ClassContainer = ClassPickerUtils::GetClassContainer();
 	const auto& AvailableClasses = ClassContainer.GetAvailableClasses();
@@ -593,7 +593,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					{
 						const bool bWasSelected = (ClassIndex == LastSelectedClassIndex);
 						{
-							FImGuiNamedWidgetScope Scope{ ClassIndex };
+							FImGuiNamedScope Scope{ ClassIndex };
 
 							if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, ClassViewerRowHeight)))
 							{

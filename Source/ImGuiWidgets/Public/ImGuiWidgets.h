@@ -118,7 +118,7 @@ namespace FImGui
 	template <typename TDragDropOp, typename Predicate, typename Callback>
 	FORCEINLINE bool DrawDragDropArea(FImGuiTickContext* context, const char* str_id, ImRect drag_rect, Predicate pred_func, Callback callback_func)
 	{
-		FImGuiNamedWidgetScope Scope{ str_id };
+		FImGuiNamedScope Scope{ str_id };
 
 		const bool bIsDragDropOperationValid = context->DragDropOperation.IsValid();
 		bool bPredicatePassed = false;
@@ -138,7 +138,7 @@ namespace FImGui
 
 		if (bPredicatePassed && ImGui::IsMouseHoveringRect(drag_rect.Min, drag_rect.Max))
 		{
-			TSharedPtr<TDragDropOp> DragDropOp = StaticCastSharedPtr<TDragDropOp>(context->ConsumeDragDropOperation());
+			TSharedPtr<TDragDropOp> DragDropOp = StaticCastSharedPtr<TDragDropOp>(context->TryConsumeDragDropOperation());
 			if (DragDropOp)
 			{
 				callback_func(DragDropOp);

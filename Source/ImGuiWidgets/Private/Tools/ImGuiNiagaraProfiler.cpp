@@ -196,7 +196,7 @@ namespace ImGuiNiagaraProfiler
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
 		if (ImGui::TreeNode(TCHAR_TO_ANSI(*EmitterName), "%s - %f", TCHAR_TO_ANSI(*EmitterName), EmitterStat.TotalTime))
 		{
-			FImGuiNamedWidgetScope Scope{ *EmitterName };
+			FImGuiNamedScope Scope{ *EmitterName };
 
 			static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
 			if (ImGui::BeginTable("SimStages", 3, TableFlags))
@@ -298,7 +298,7 @@ namespace ImGuiNiagaraProfiler
 						continue;
 					}
 
-					FImGuiNamedWidgetScope Scope{ GetTypeHash(SystemStatItr.Key) };
+					FImGuiNamedScope Scope{ GetTypeHash(SystemStatItr.Key) };
 
 					DisplaySystemStats(SystemStatItr.Value);
 				}

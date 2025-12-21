@@ -144,7 +144,7 @@ namespace FImGui
 
 		EnsureValidImGuiContext(context);
 
-		FImGuiNamedWidgetScope Scope{ label };
+		FImGuiNamedScope Scope{ label };
 
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
