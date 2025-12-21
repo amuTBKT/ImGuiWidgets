@@ -564,7 +564,6 @@ namespace ImGuiTextureVisualizer
 
 	struct FTexturePreviewUserData
 	{
-		ImVec2 ViewportSize;
 		ImVec2 ClipRectMin;
 		ImVec2 ClipRectMax;
 		FTexturePreviewOptions Options;
@@ -658,7 +657,7 @@ namespace ImGuiTextureVisualizer
 		const ImRect ViewportRect = ImRect(
 			FMath::RoundToFloat(DrawRect.Min.x), FMath::RoundToFloat(DrawRect.Min.y),
 			FMath::RoundToFloat(DrawRect.Max.x), FMath::RoundToFloat(DrawRect.Max.y));
-		RHICmdList.SetViewport(ViewportRect.Min.x, ViewportRect.Min.y, 0.f, ViewportRect.Min.x + PreviewParams.ViewportSize.x, ViewportRect.Min.y + PreviewParams.ViewportSize.y, 1.f);
+		RHICmdList.SetViewport(ViewportRect.Min.x, ViewportRect.Min.y, 0.f, ViewportRect.Max.x, ViewportRect.Max.y, 1.f);
 		RHICmdList.SetScissorRect(true, ViewportRect.Min.x + PreviewParams.ClipRectMin.x, ViewportRect.Min.y + PreviewParams.ClipRectMin.y, ViewportRect.Min.x + PreviewParams.ClipRectMax.x, ViewportRect.Min.y + PreviewParams.ClipRectMax.y);
 
 		UE::Renderer::PostProcess::DrawRectangle(
@@ -670,7 +669,7 @@ namespace ImGuiTextureVisualizer
 			PreviewParams.ClipRectMax.y - PreviewParams.ClipRectMin.y,
 			0, 0,
 			TextureDesc.Extent.X, TextureDesc.Extent.Y,
-			FIntPoint(PreviewParams.ViewportSize.x, PreviewParams.ViewportSize.y),
+			FIntPoint(ViewportRect.GetWidth(), ViewportRect.GetHeight()),
 			FIntPoint(TextureDesc.Extent.X, TextureDesc.Extent.Y),
 			EDRF_Default);
 
@@ -1382,7 +1381,6 @@ namespace ImGuiTextureVisualizer
 			}
 
 			FTexturePreviewUserData Params;
-			Params.ViewportSize = ImGui::GetIO().DisplaySize;
 			Params.ClipRectMin = ImGui::GetItemRectMin() - ImGui::GetWindowPos();
 			Params.ClipRectMax = ImGui::GetItemRectMax() - ImGui::GetWindowPos();
 			Params.Options = TexturePreviewOptions;
