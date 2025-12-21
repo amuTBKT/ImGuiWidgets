@@ -635,11 +635,6 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			PreviewText[PreviewTextMaxLength - 3] = TCHAR('.');
 		}
 
-		if (!ImGui::IsPopupOpen(AssetViewerPopupName))
-		{
-			bIsAssetViewerVisible = false;
-		}
-
 		ImVec2 ComboBoxSize;
 		bool bIsComboBoxVisible;
 		ImGui::BeginGroup();
@@ -682,7 +677,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			bool bFilterAvailableAssets = false;
 
 			// reset filter text and set focus when asset viewer is triggered
-			if (!bIsAssetViewerVisible)
+			if (ImGui::IsWindowAppearing())
 			{
 				if (TextFilter.IsActive())
 				{
@@ -693,7 +688,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 			ImGui::BeginGroup();
 			{
-				if (TextFilter.Draw(Context, "Filter", "Search Assets", AssetViewerWidth, /*bSetFocus*/!bIsAssetViewerVisible))
+				if (TextFilter.Draw(Context, "Filter", "Search Assets", AssetViewerWidth, /*bSetFocus=*/ImGui::IsWindowAppearing()))
 				{
 					bFilterAvailableAssets = true;
 				}
@@ -740,7 +735,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 							if (bWasSelected || ((RowIndex == 0) && (LastSelectedAssetIndex == INDEX_NONE)))
 							{
 								// scroll to item when popup is opened
-								if (!bIsAssetViewerVisible)
+								if (ImGui::IsWindowAppearing())
 								{
 									ImGui::ScrollToItem();
 								}
@@ -762,10 +757,6 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 							Add_AssetListEntry(FilteredAssetIndices[Index], Index);
 						}
 					}
-
-					// NOTE: ImGui::BeginListBox can return false on first attempt (rect not visible in the popup window)
-					// So this flag is set there, instead of using `ImGui::IsPopupOpen(AssetViewerPopupName)`
-					bIsAssetViewerVisible = true;
 
 					ImGui::EndListBox();
 				}

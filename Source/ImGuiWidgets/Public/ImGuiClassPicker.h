@@ -103,7 +103,6 @@ private:
 
 	TArray<int32> FilteredClassIndices;
 	uint16 PackedClassFilter	 : 7 = 0;
-	uint16 bIsClassViewerVisible : 1 = false;
 	uint16 bIsBaseClassValid	 : 1 = true;
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedClassIndex = INDEX_NONE;

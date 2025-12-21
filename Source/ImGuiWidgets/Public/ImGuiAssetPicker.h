@@ -127,7 +127,6 @@ private:
 
 	TArray<int32> FilteredAssetIndices;
 	uint16 PackedAssetPathFilter : 7 = 0;
-	uint16 bIsAssetViewerVisible : 1 = false;
 	uint16 bIsAssetTypeValid	 : 1 = true;
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedAssetIndex = INDEX_NONE;

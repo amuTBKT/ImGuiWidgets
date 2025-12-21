@@ -530,11 +530,6 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			PreviewText[PreviewTextMaxLength - 3] = ANSICHAR('.');
 		}
 
-		if (!ImGui::IsPopupOpen(ClassViewerPopupName))
-		{
-			bIsClassViewerVisible = false;
-		}
-
 		ImVec2 ComboBoxSize;
 		bool bIsComboBoxVisible;
 		ImGui::BeginGroup();
@@ -576,7 +571,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			bool bFilterAvailableClasses = false;
 
 			// reset filter text and set focus when class viewer is triggered
-			if (!bIsClassViewerVisible)
+			if (ImGui::IsWindowAppearing())
 			{
 				if (TextFilter.IsActive())
 				{
@@ -587,7 +582,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 			ImGui::BeginGroup();
 			{
-				if (TextFilter.Draw(Context, "Filter", "Search", ClassViewerWidth, /*bSetFocus*/!bIsClassViewerVisible))
+				if (TextFilter.Draw(Context, "Filter", "Search", ClassViewerWidth, /*bSetFocus=*/ImGui::IsWindowAppearing()))
 				{
 					bFilterAvailableClasses = true;
 				}
@@ -624,7 +619,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 						if (bWasSelected || ((RowIndex == 0) && (LastSelectedClassIndex == INDEX_NONE)))
 						{
 							// scroll to item when popup is opened
-							if (!bIsClassViewerVisible)
+							if (ImGui::IsWindowAppearing())
 							{
 								ImGui::ScrollToItem();
 							}
@@ -646,10 +641,6 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 							Add_ListEntry(FilteredClassIndices[Index], Index);
 						}
 					}
-
-					// NOTE: ImGui::BeginListBox can return false on first attempt (rect not visible in the popup window)
-					// So this flag is set there, instead of using `ImGui::IsPopupOpen(ClassViewerPopupName)`
-					bIsClassViewerVisible = true;
 
 					ImGui::EndListBox();
 				}
