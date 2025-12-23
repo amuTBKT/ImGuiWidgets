@@ -31,13 +31,17 @@ namespace FImGui
 		}
 	}
 
-	// Get the current ImGui tick context
-	FORCEINLINE FImGuiTickContext* GetTickContext()
+	// Get ImGui tick context
+	FORCEINLINE FImGuiTickContext* GetTickContext(ImGuiContext* Context)
 	{
-		ImGuiContext* Context = ImGui::GetCurrentContext();
 		check(Context);
-
 		return (FImGuiTickContext*)Context->IO.UserData;
+	}
+
+	// Get the current ImGui tick context
+	FORCEINLINE FImGuiTickContext* GetCurrentTickContext()
+	{
+		return GetTickContext(ImGui::GetCurrentContext());
 	}
 
 	// Similar to `ImGui::ImageButton` but allows tinting the image depending on button state (inactive/active|hovered)
