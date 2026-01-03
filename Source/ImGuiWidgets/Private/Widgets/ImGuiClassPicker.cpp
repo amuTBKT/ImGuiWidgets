@@ -501,7 +501,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	auto Add_ClassViewer = [&](FSoftObjectPtr& InOutSoftClassPtr) -> ImVec2
 	{
 		// configuration
-		const float ClassViewerWidth = 256.f * GlobalScale;
+		const float ClassViewerWidth = 320.f * GlobalScale;
 		const char* ClassViewerPopupName = "ClassViewerPopup";
 		const float ClassViewerMaxRowCount = 10;
 		const float ClassViewerRowHeight = 18.f * GlobalScale;
