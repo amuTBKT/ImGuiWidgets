@@ -1166,7 +1166,7 @@ namespace ImGuiTextureVisualizer
 		{
 			const float Zoom = (ImGui::GetIO().MouseWheel > 0.f ? 1.1f : 0.9f);
 
-			ImVec2 RelativeMousePos = (Context->ImGuiContext->MouseLastValidPos - ImGui::GetItemRectMin());
+			ImVec2 RelativeMousePos = (Context->ImguiContext->MouseLastValidPos - ImGui::GetItemRectMin());
 			FVector2f ZoomPivot =
 			{
 				FMath::Clamp(RelativeMousePos.x, 0.f, ImGui::GetItemRectSize().x),
@@ -1239,7 +1239,7 @@ namespace ImGuiTextureVisualizer
 		};
 
 		{
-			ImVec2 RelativeMousePos = (Context->ImGuiContext->MouseLastValidPos - ImGui::GetItemRectMin());
+			ImVec2 RelativeMousePos = (Context->ImguiContext->MouseLastValidPos - ImGui::GetItemRectMin());
 			RelativeMousePos.x = FMath::Clamp(RelativeMousePos.x, 0.f, ImGui::GetItemRectSize().x);
 			RelativeMousePos.y = FMath::Clamp(RelativeMousePos.y, 0.f, ImGui::GetItemRectSize().y);
 

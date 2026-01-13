@@ -691,7 +691,7 @@ namespace ImGuiStatsVizualizer
 		static const char* HeaderButtonDragDropPayloadType = "DND_STATGROUP_BUTTON";
 
 		bool bDeleteIconHovered = false;
-		if (Context->ImGuiContext->DragDropActive && Context->ImGuiContext->DragDropPayload.IsDataType(HeaderButtonDragDropPayloadType))
+		if (Context->ImguiContext->DragDropActive && Context->ImguiContext->DragDropPayload.IsDataType(HeaderButtonDragDropPayloadType))
 		{
 			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 			const FImGuiImageBindingParams DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Delete"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);

@@ -24,10 +24,10 @@ namespace FImGui
 	// Required to have valid ImGui context across modules
 	FORCEINLINE void EnsureValidImGuiContext(FImGuiTickContext* Context)
 	{
-		check(Context->ImGuiContext);
-		if (ImGui::GetCurrentContext() != Context->ImGuiContext)
+		check(Context->ImguiContext);
+		if (ImGui::GetCurrentContext() != Context->ImguiContext)
 		{
-			ImGui::SetCurrentContext(Context->ImGuiContext);
+			ImGui::SetCurrentContext(Context->ImguiContext);
 		}
 	}
 
