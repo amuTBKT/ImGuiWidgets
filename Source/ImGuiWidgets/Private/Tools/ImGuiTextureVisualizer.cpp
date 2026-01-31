@@ -181,9 +181,28 @@ namespace ImGuiTextureVisualizer
 
 		FIntPoint LastSelectedCursorPosition;
 		TOptional<FUintVector4> LastSelectedPixelValue;
+		ERequestedZoomLevel LastSelectedZoomLevel = ERequestedZoomLevel::Fit;
 
-		void Reset()
+		void Reset(FAnsiString CurrentTextureName, FAnsiString NewTextureName)
 		{
+			struct FCachedParameters
+			{
+				double RangeMin = 0.;
+				double RangeValueMin = 0.;
+				double RangeMax = 1.;
+				double RangeValueMax = 1.;
+			};
+			static TMap<FAnsiString, FCachedParameters> CachedParameters;
+
+			if (!CurrentTextureName.IsEmpty())
+			{
+				auto& Params = CachedParameters.FindOrAdd(CurrentTextureName);
+				Params.RangeMin = RangeMin;
+				Params.RangeValueMin = RangeValueMin;
+				Params.RangeMax = RangeMax;
+				Params.RangeValueMax = RangeValueMax;
+			}
+
 			CurrentArraySlice = 0;
 			CurrentMip = 0;
 			bDisplayRedChannel = true;
@@ -194,18 +213,25 @@ namespace ImGuiTextureVisualizer
 			bDisplayStencil = false;
 			bSRGB = false;
 
-			// fit to new texture on reset
-			RequestedZoomLevel = ERequestedZoomLevel::Fit;
-
-			// reset range
-			RangeMin = 0.;
-			RangeValueMin = 0.;
-			RangeMax = 1.;
-			RangeValueMax = 1.;
-
 			TextureResourceOverride = nullptr;
 
 			LastSelectedPixelValue.Reset();
+
+			if (auto* Params = CachedParameters.Find(NewTextureName))
+			{
+				RangeMin = Params->RangeMin;
+				RangeValueMin = Params->RangeValueMin;
+				RangeMax = Params->RangeMax;
+				RangeValueMax = Params->RangeValueMax;
+			}
+			else
+			{
+				RangeMin = 0.;
+				RangeValueMin = 0.;
+				RangeMax = 1.;
+				RangeValueMax = 1.;
+			}
+			RequestedZoomLevel = LastSelectedZoomLevel;
 		}
 	};
 	static FTexturePreviewOptions TexturePreviewOptions;
@@ -826,11 +852,13 @@ namespace ImGuiTextureVisualizer
 			if (ImGui::Button("1:1"))
 			{
 				InOutTexturePreviewOptions.RequestedZoomLevel = FTexturePreviewOptions::ERequestedZoomLevel::OneToOne;
+				InOutTexturePreviewOptions.LastSelectedZoomLevel = InOutTexturePreviewOptions.RequestedZoomLevel;
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("Fit"))
 			{
 				InOutTexturePreviewOptions.RequestedZoomLevel = FTexturePreviewOptions::ERequestedZoomLevel::Fit;
+				InOutTexturePreviewOptions.LastSelectedZoomLevel = InOutTexturePreviewOptions.RequestedZoomLevel;
 			}
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(90.f * GlobalScale);
@@ -842,6 +870,7 @@ namespace ImGuiTextureVisualizer
 					if (ImGui::Selectable(*FAnsiString::Printf("%i%%", AvailableZoomLevels[Index])))
 					{
 						InOutTexturePreviewOptions.CanvasScale = (float)AvailableZoomLevels[Index] / 100.f;
+						InOutTexturePreviewOptions.LastSelectedZoomLevel = FTexturePreviewOptions::ERequestedZoomLevel::None;
 					}
 				}
 
@@ -1182,11 +1211,15 @@ namespace ImGuiTextureVisualizer
 			InOutTexturePreviewOptions.CanvasCenter -= ZoomPivot * (InOutTexturePreviewOptions.CanvasScale);
 
 			ConstrainedCanvasSize = ImVec2(InTextureInfo.SizeX, InTextureInfo.SizeY) * (InOutTexturePreviewOptions.CanvasScale);
+
+			InOutTexturePreviewOptions.LastSelectedZoomLevel = FTexturePreviewOptions::ERequestedZoomLevel::None;
 		}
 		if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.f))
 		{
 			InOutTexturePreviewOptions.CanvasCenter.X += ImGui::GetIO().MouseDelta.x;
 			InOutTexturePreviewOptions.CanvasCenter.Y += ImGui::GetIO().MouseDelta.y;
+
+			InOutTexturePreviewOptions.LastSelectedZoomLevel = FTexturePreviewOptions::ERequestedZoomLevel::None;
 		}
 
 		// clamp scrolling to widget borders
@@ -1322,6 +1355,8 @@ namespace ImGuiTextureVisualizer
 			static FAnsiString VisTextureName;
 			static bool bWasTextureOverrideValid = false;
 
+			FAnsiString PreviouslySelectedTextureName = VisTextureName;
+
 			bool bRequestNewTexture = false;
 			if (IsTextureOverrideValid())
 			{
@@ -1329,7 +1364,7 @@ namespace ImGuiTextureVisualizer
 				if (!VisTextureName.Equals(GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName))
 				{
 					VisTextureName = GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName;
-					TexturePreviewOptions.Reset();
+					TexturePreviewOptions.Reset(PreviouslySelectedTextureName, VisTextureName);
 
 					// NOTE: not resetting texture info here as the data might be coming from the Render thread
 				}
@@ -1350,7 +1385,7 @@ namespace ImGuiTextureVisualizer
 
 				GetTextureInfo(/*bOnRenderThread=*/false).Reset();
 				GetTextureInfo(/*bOnRenderThread=*/true).Reset();
-				TexturePreviewOptions.Reset();
+				TexturePreviewOptions.Reset(PreviouslySelectedTextureName, VisTextureName);
 			}
 
 			const FTextureInfo& TextureInfo = GetTextureInfo(/*bOnRenderThread=*/false);
