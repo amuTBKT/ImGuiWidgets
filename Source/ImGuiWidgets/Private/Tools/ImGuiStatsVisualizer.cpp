@@ -334,7 +334,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableSetColumnIndex(3);
 		if (ViewData.PoolAbbreviation.Contains(Region))
 		{
-			ImGui::TextUnformatted(TCHAR_TO_ANSI(*ViewData.PoolAbbreviation[Region]));
+			ImGui::TextUnformatted(TCHAR_TO_UTF8(*ViewData.PoolAbbreviation[Region]));
 		}
 		else
 		{
@@ -657,7 +657,7 @@ namespace ImGuiStatsVizualizer
 					GroupData = &StatGroups.AddDefaulted_GetRef();
 				}
 				GroupData->NameForCommand = SerializedData.StatNames[GroupIndex];
-				GroupData->DisplayName = TCHAR_TO_ANSI(*SerializedData.DisplayNames[GroupIndex]);
+				GroupData->DisplayName = TCHAR_TO_UTF8(*SerializedData.DisplayNames[GroupIndex]);
 				GroupData->Name = FName(SerializedData.StatGroupNames[GroupIndex]);
 				GroupData->bIsActive = false;
 			}
@@ -907,7 +907,7 @@ namespace ImGuiStatsVizualizer
 				{
 					if (!ViewData->RootFilter.IsEmpty())
 					{
-						ImGui::Text("Root filter is active. ROOT=%s", TCHAR_TO_ANSI(*ViewData->RootFilter));
+						ImGui::Text("Root filter is active. ROOT=%s", TCHAR_TO_UTF8(*ViewData->RootFilter));
 						
 						ImGui::Separator();
 					}

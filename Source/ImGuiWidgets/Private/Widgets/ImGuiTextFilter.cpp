@@ -23,6 +23,7 @@ void FImGuiTextFilter::Reset()
 
 	FilterStringBuffer.Reset();
 	FilterKeywordTokens.Reset();
+	FilterKeywordTokens_ANSI.Reset();
 	FilterStringBuffer_ANSI.Reset();
 	FilterStringBuffer_ANSI.GetData()[0] = '\0';
 
@@ -60,7 +61,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
 		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
 
-		if (FilterKeywordTokens.IsEmpty())
+		if (FilterKeywordTokens_ANSI.IsEmpty())
 		{
 			if (FImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f)))
 			{
@@ -99,17 +100,15 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 		{
 			bFilterChanged = true;
 
-			const ANSICHAR* Src = TextBuffer;
-			FilterStringBuffer.Reset();
-			while (*Src)
-			{
-				FilterStringBuffer.Add(CharCast<TCHAR>(*Src++));
-			}
+			FilterStringBuffer.SetNumUninitialized(FPlatformString::ConvertedLength<TCHAR>((const UTF8CHAR*)TextBuffer));
+			FPlatformString::Convert((TCHAR*)FilterStringBuffer.GetData(), FilterStringBuffer.Num(), (const UTF8CHAR*)TextBuffer, FCStringAnsi::Strlen(TextBuffer) + 1);
+
 			// patch ansi string buffer
-			FilterStringBuffer_ANSI.SetNumUnsafeInternal(FilterStringBuffer.Num());
+			FilterStringBuffer_ANSI.SetNumUnsafeInternal(FCStringAnsi::Strlen(TextBuffer));
 			FilterStringBuffer_ANSI.GetData()[FilterStringBuffer_ANSI.Num()] = '\0';
 
 			FilterKeywordTokens.Reset();
+			FilterKeywordTokens_ANSI.Reset();
 			if (FilterStringBuffer_ANSI.Num() > 0)
 			{
 				static const FAnsiStringView Delimiter = FAnsiStringView{ " " };
@@ -121,10 +120,14 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 					{
 						Token.TrimStartAndEndInline();
 
-						int16 StartPosition = (int16)std::distance(SourceStringView.GetData(), Token.GetData());
-						int16 CharCount = (int16)Token.Len();
-						if (CharCount > 0)
+						uint16 StartPosition_ANSI = (uint16)std::distance(SourceStringView.GetData(), Token.GetData());
+						uint16 CharCount_ANSI = (uint16)Token.Len();
+						if (CharCount_ANSI > 0)
 						{
+							FilterKeywordTokens_ANSI.Emplace(StartPosition_ANSI, CharCount_ANSI);
+
+							uint16 StartPosition = FPlatformString::ConvertedLength<TCHAR>((const UTF8CHAR*)SourceStringView.GetData(), StartPosition_ANSI);
+							uint16 CharCount = FPlatformString::ConvertedLength<TCHAR>((const UTF8CHAR*)SourceStringView.GetData() + StartPosition_ANSI, CharCount_ANSI);
 							FilterKeywordTokens.Emplace(StartPosition, CharCount);
 						}
 					},

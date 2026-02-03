@@ -109,8 +109,8 @@ namespace ClassPickerUtils
 				{
 					FClassData ClassData{};
 					ClassData.ClassPath = GetClassPathForAsset(AssetData);
-					ClassData.DisplayName = TCHAR_TO_ANSI(*AssetData.AssetName.ToString());
-					ClassData.ObjectPath = TCHAR_TO_ANSI(*ClassData.ClassPath.ToString());
+					ClassData.DisplayName = TCHAR_TO_UTF8(*AssetData.AssetName.ToString());
+					ClassData.ObjectPath = TCHAR_TO_UTF8(*ClassData.ClassPath.ToString());
 					ClassData.bIsAsset = true;
 
 					CacheAssetMetadata(ClassData, AssetData);
@@ -154,8 +154,8 @@ namespace ClassPickerUtils
 
 				FClassData ClassData{};
 				ClassData.ClassPath = FSoftClassPath(CurrentClass);
-				ClassData.DisplayName = TCHAR_TO_ANSI(*CurrentClass->GetName());
-				ClassData.ObjectPath = TCHAR_TO_ANSI(*ClassData.ClassPath.ToString());
+				ClassData.DisplayName = TCHAR_TO_UTF8(*CurrentClass->GetName());
+				ClassData.ObjectPath = TCHAR_TO_UTF8(*ClassData.ClassPath.ToString());
 				ClassData.bIsAsset = false;
 				ClassData.bIsAbstractClass = CurrentClass->HasAnyClassFlags(EClassFlags::CLASS_Abstract);
 				
@@ -279,7 +279,7 @@ namespace ClassPickerUtils
 				RevisionId++;
 
 				FSoftClassPath AssetClassPath = GetClassPathForAsset(AssetData);
-				FAnsiString AssetDisplayName = TCHAR_TO_ANSI(*AssetData.AssetName.ToString());
+				FAnsiString AssetDisplayName = TCHAR_TO_UTF8(*AssetData.AssetName.ToString());
 				
 				int32 InsertIndex = Algo::LowerBound(AvailableClasses, AssetDisplayName, [](const auto& A, const auto& B) { return A.DisplayName < B; });
 				bool bExists = (AvailableClasses.IsValidIndex(InsertIndex) && AvailableClasses[InsertIndex].ClassPath == AssetClassPath);
@@ -288,7 +288,7 @@ namespace ClassPickerUtils
 					FClassData ClassData{};
 					ClassData.ClassPath = AssetClassPath;
 					ClassData.DisplayName = AssetDisplayName;
-					ClassData.ObjectPath = TCHAR_TO_ANSI(*ClassData.ClassPath.ToString());
+					ClassData.ObjectPath = TCHAR_TO_UTF8(*ClassData.ClassPath.ToString());
 					ClassData.bIsAsset = true;
 
 					CacheAssetMetadata(ClassData, AssetData);
@@ -711,7 +711,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			{
 				ClassPickerUtils::SyncContentBrowserToAsset(InSoftClassPtr, BaseClassPath);
 			}
-			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InSoftClassPtr.GetAssetName()));
+			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_UTF8(*InSoftClassPtr.GetAssetName()));
 		}
 	};
 

@@ -170,9 +170,9 @@ public:
 	IMGUIWIDGETS_API bool Draw(FImGuiTickContext* Context, const char* Label, const char* HintText = nullptr, float WidgetWidth = 0.f, bool bSetFocus = false);
 	IMGUIWIDGETS_API void Reset();
 
-	bool IsActive()									const { return !FilterKeywordTokens.IsEmpty(); }
-	bool PassFilter(FStringView StringToCheck)		const { return PassFilterInternal(GetFilterString(), StringToCheck); }
-	bool PassFilter(FAnsiStringView StringToCheck)  const { return PassFilterInternal(GetFilterStringANSI(), StringToCheck); }
+	bool IsActive()									const { return !FilterKeywordTokens_ANSI.IsEmpty(); }
+	bool PassFilter(FStringView StringToCheck)		const { return PassFilterInternal(GetFilterString(), FilterKeywordTokens, StringToCheck); }
+	bool PassFilter(FAnsiStringView StringToCheck)  const { return PassFilterInternal(GetFilterStringANSI(), FilterKeywordTokens_ANSI, StringToCheck); }
 	FStringView GetFilterString()					const { return FStringView{ FilterStringBuffer.GetData(), FilterStringBuffer.Num() }; }
 	FAnsiStringView GetFilterStringANSI()			const { return FAnsiStringView{ FilterStringBuffer_ANSI.GetData(), FilterStringBuffer_ANSI.Num() }; }
 
@@ -203,16 +203,16 @@ public:
 
 private:
 	template <typename TStringViewType>
-	bool PassFilterInternal(TStringViewType SourceString, TStringViewType StringToCheck) const
+	bool PassFilterInternal(TStringViewType SourceString, const TArray<TPair<uint16, uint16>>& KeywordTokens, TStringViewType StringToCheck) const
 	{
 		if (!IsActive())
 		{
 			return true;
 		}
 
-		for (TPair<int16, int16> KeywordTokens : FilterKeywordTokens)
+		for (TPair<uint16, uint16> KeywordToken : KeywordTokens)
 		{
-			TStringViewType Keyword = SourceString.Mid(KeywordTokens.Key, KeywordTokens.Value);
+			TStringViewType Keyword = SourceString.Mid(KeywordToken.Key, KeywordToken.Value);
 			if ((Keyword.Len() > 1) && (Keyword[0] == typename TStringViewType::ElementType('!')))
 			{
 				if (StringToCheck.Contains(Keyword.RightChop(1), ESearchCase::IgnoreCase))
@@ -231,7 +231,8 @@ private:
 private:
 	TArray<TCHAR> FilterStringBuffer;
 	TArray<ANSICHAR> FilterStringBuffer_ANSI;
-	TArray<TPair<int16, int16>> FilterKeywordTokens;
+	TArray<TPair<uint16, uint16>> FilterKeywordTokens;
+	TArray<TPair<uint16, uint16>> FilterKeywordTokens_ANSI;
 	float SearchIconTint = 0.75f;
 	float ClearIconTint = 0.75f;
 };

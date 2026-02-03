@@ -24,10 +24,10 @@
 #include "Interfaces/IPluginManager.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 
-#ifdef TCHAR_TO_ANSI_PATH
-#error TCHAR_TO_ANSI_PATH already defined
+#ifdef TCHAR_TO_UTF8_PATH
+#error TCHAR_TO_UTF8_PATH already defined
 #endif
-#define TCHAR_TO_ANSI_PATH(path) (ANSICHAR*)StringCast<ANSICHAR, FName::StringBufferSize>(static_cast<const TCHAR*>(path)).Get()
+#define TCHAR_TO_UTF8_PATH(path) (ANSICHAR*)StringCast<UTF8CHAR, FName::StringBufferSize>(static_cast<const TCHAR*>(path)).Get()
 
 DECLARE_LLM_MEMORY_STAT(TEXT("ImGuiAssetPicker"), STAT_ImGuiAssetPickerLLM, STATGROUP_ImGui);
 LLM_DEFINE_TAG(ImGuiAssetPicker, TEXT("AssetPicker"), TEXT("ImGui"), GET_STATFNAME(STAT_ImGuiAssetPickerLLM));
@@ -535,7 +535,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			ImDrawList* DrawList = ImGui::GetWindowDrawList();
 			DrawList->AddRect(p0, p1, 0x80FFFFFF, 0.f, ImDrawFlags_None, 1.f);
 
-			ImGui::SetTooltip("%s", TCHAR_TO_ANSI_PATH(*InSoftAssetPtr.GetLongPackageName()));
+			ImGui::SetTooltip("%s", TCHAR_TO_UTF8_PATH(*InSoftAssetPtr.GetLongPackageName()));
 
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 			{
@@ -584,7 +584,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			{
 				AssetPickerUtils::SyncContentBrowserToAsset(FAssetData(InSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), InSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetClassPath.GetAssetPath()));
 			}
-			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_ANSI(*InSoftAssetPtr.GetAssetName()));
+			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_UTF8(*InSoftAssetPtr.GetAssetName()));
 		}
 	};
 
@@ -640,13 +640,13 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImGui::BeginGroup();
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-			if (ImGui::Button(TCHAR_TO_ANSI(*PreviewText), ImVec2(AssetViewerComboxBoxWidth, 0.f)))
+			if (ImGui::Button(TCHAR_TO_UTF8(*PreviewText), ImVec2(AssetViewerComboxBoxWidth, 0.f)))
 			{
 				ImGui::OpenPopup(AssetViewerPopupName);
 			}
 			if (!SelectedSoftAssetPtr.IsNull() && ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
 			{
-				ImGui::SetItemTooltip("%s", TCHAR_TO_ANSI_PATH(*SelectedSoftAssetPtr.GetLongPackageName()));
+				ImGui::SetItemTooltip("%s", TCHAR_TO_UTF8_PATH(*SelectedSoftAssetPtr.GetLongPackageName()));
 			}
 			ComboBoxSize = ImGui::GetItemRectSize();
 			bIsComboBoxVisible = ImGui::IsItemVisible();
@@ -726,8 +726,8 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 							ImGui::SameLine();
 							{
 								ImGui::BeginGroup();
-								ImGui::TextUnformatted(TCHAR_TO_ANSI(*AssetName));
-								ImGui::TextUnformatted(TCHAR_TO_ANSI_PATH(*AssetPath));
+								ImGui::TextUnformatted(TCHAR_TO_UTF8(*AssetName));
+								ImGui::TextUnformatted(TCHAR_TO_UTF8_PATH(*AssetPath));
 								ImGui::EndGroup();
 							}
 
@@ -1109,4 +1109,4 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 	ContainerRevisionId = AssetContainer.GetRevisionId();
 }
 
-#undef TCHAR_TO_ANSI_PATH
+#undef TCHAR_TO_UTF8_PATH

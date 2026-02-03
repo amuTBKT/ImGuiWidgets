@@ -346,7 +346,7 @@ namespace ImGuiMaterialStats
 		for (int32 WindowIndex = 0; WindowIndex < MaterialWindowStates.Num(); ++WindowIndex)
 		{
 			FMaterialWindowState& MaterialWindowState = MaterialWindowStates[WindowIndex];
-			FAnsiString TabName = MaterialWindowState.SelectedMaterial.IsValid() ? TCHAR_TO_ANSI(*MaterialWindowState.SelectedMaterial->GetName()) : "Untitled";
+			FAnsiString TabName = MaterialWindowState.SelectedMaterial.IsValid() ? TCHAR_TO_UTF8(*MaterialWindowState.SelectedMaterial->GetName()) : "Untitled";
 
 			if (MaterialWindowState.DockNodeId > 0)
 			{
@@ -498,7 +498,7 @@ namespace ImGuiMaterialStats
 					{
 						for (const auto& [VFName, ShaderIndices] : MaterialStats.ShaderVFLookup)
 						{
-							if (ImGui::BeginTabItem(TCHAR_TO_ANSI(*VFName)))
+							if (ImGui::BeginTabItem(TCHAR_TO_UTF8(*VFName)))
 							{
 								FImGuiNamedScope VF_Scope{ *VFName };
 
@@ -528,12 +528,12 @@ namespace ImGuiMaterialStats
 
 										ImGui::TableSetColumnIndex(0);
 										{
-											ImGui::TextUnformatted(TCHAR_TO_ANSI(*Shader.ShaderClassName));
+											ImGui::TextUnformatted(TCHAR_TO_UTF8(*Shader.ShaderClassName));
 										}
 
 										ImGui::TableSetColumnIndex(1);
 										{
-											ImGui::TextUnformatted(TCHAR_TO_ANSI(CrossCompiler::GetFrequencyName(Shader.ShaderType)));
+											ImGui::TextUnformatted(TCHAR_TO_UTF8(CrossCompiler::GetFrequencyName(Shader.ShaderType)));
 										}
 
 										ImGui::TableSetColumnIndex(2);

@@ -194,7 +194,7 @@ namespace ImGuiNiagaraProfiler
 		const FString& EmitterName = Emitter->GetUniqueEmitterName();
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-		if (ImGui::TreeNode(TCHAR_TO_ANSI(*EmitterName), "%s - %f", TCHAR_TO_ANSI(*EmitterName), EmitterStat.TotalTime))
+		if (ImGui::TreeNode(TCHAR_TO_UTF8(*EmitterName), "%s - %f", TCHAR_TO_UTF8(*EmitterName), EmitterStat.TotalTime))
 		{
 			FImGuiNamedScope Scope{ *EmitterName };
 
@@ -219,7 +219,7 @@ namespace ImGuiNiagaraProfiler
 					ImGui::TableSetColumnIndex(0);
 					{
 						FNameBuilder SimStageName{ Stat.StageName };
-						ImGui::TextUnformatted(TCHAR_TO_ANSI(*SimStageName));
+						ImGui::TextUnformatted(TCHAR_TO_UTF8(*SimStageName));
 					}
 
 					ImGui::TableSetColumnIndex(1);
@@ -253,7 +253,7 @@ namespace ImGuiNiagaraProfiler
 			ImGui::SetNextItemOpen(false, ImGuiCond_Once);
 		}
 
-		if (ImGui::CollapsingHeader(TCHAR_TO_ANSI(*SystemName)))
+		if (ImGui::CollapsingHeader(TCHAR_TO_UTF8(*SystemName)))
 		{
 			ImGui::SameLine(); ImGui::Text(" - %fms", SystemStat.TotalTime);
 			for (const auto& EmitterStat : SystemStat.EmitterStats)
@@ -287,7 +287,7 @@ namespace ImGuiNiagaraProfiler
 		}
 #endif
 
-		if (ImGui::BeginTabItem(TCHAR_TO_ANSI(*World->GetName())))
+		if (ImGui::BeginTabItem(TCHAR_TO_UTF8(*World->GetName())))
 		{
 			if (ImGui::BeginChild("ScrollingArea"))
 			{

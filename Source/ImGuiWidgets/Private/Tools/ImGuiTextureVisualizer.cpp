@@ -36,7 +36,7 @@ namespace ImGuiTextureVisualizer
 			TextureOverride = Texture;
 
 			ENQUEUE_RENDER_COMMAND(SetTextureOverrideName)(
-				[TextureName=FAnsiString(TCHAR_TO_ANSI(*Texture->GetName()))](FRHICommandListImmediate& RHICmdList)
+				[TextureName=FAnsiString(TCHAR_TO_UTF8(*Texture->GetName()))](FRHICommandListImmediate& RHICmdList)
 				{
 					TextureOverrideName = TextureName;
 				});
@@ -52,7 +52,7 @@ namespace ImGuiTextureVisualizer
 			TextureResourceOverride = TextureResource;
 
 			ENQUEUE_RENDER_COMMAND(SetTextureOverrideName)(
-				[TextureName = FAnsiString(TCHAR_TO_ANSI(*DisplayName))](FRHICommandListImmediate& RHICmdList)
+				[TextureName = FAnsiString(TCHAR_TO_UTF8(*DisplayName))](FRHICommandListImmediate& RHICmdList)
 				{
 					TextureOverrideName = TextureName;
 				});
@@ -62,7 +62,7 @@ namespace ImGuiTextureVisualizer
 	void SetTextureOverride_RenderThread(const FString& DisplayName, FRHITexture* TextureResource)
 	{
 		TextureRHIOverride = TextureResource;
-		TextureOverrideName = TCHAR_TO_ANSI(*DisplayName);
+		TextureOverrideName = TCHAR_TO_UTF8(*DisplayName);
 	}
 
 	void ClearTextureOverride_GameThread()
@@ -761,7 +761,7 @@ namespace ImGuiTextureVisualizer
 						FlushRenderingCommands();
 						for (const FString& Texture : ViewExtension->AvailableTextures)
 						{
-							FAnsiString TextureName = TCHAR_TO_ANSI(*Texture);
+							FAnsiString TextureName = TCHAR_TO_UTF8(*Texture);
 							if (!TextureName.IsEmpty())
 							{
 								AvailableTextures.AddUnique(MoveTemp(TextureName));
@@ -1435,7 +1435,7 @@ namespace ImGuiTextureVisualizer
 
 				if (TextureInfo.SizeZ > 0)
 				{
-					FAnsiString FormatName = TCHAR_TO_ANSI(GPixelFormats[TextureInfo.Format].Name);
+					FAnsiString FormatName = TCHAR_TO_UTF8(GPixelFormats[TextureInfo.Format].Name);
 					ImGui::Text("%s - %ix%ix%i %i mips - %s , Hovered Pixel - %i, %i (%f, %f)",
 						*VisTextureName, TextureInfo.SizeX, TextureInfo.SizeY, TextureInfo.SizeZ, TextureInfo.NumMips, *FormatName,
 						HoveredTexCoordX,
@@ -1445,7 +1445,7 @@ namespace ImGuiTextureVisualizer
 				}
 				else
 				{
-					FAnsiString FormatName = TCHAR_TO_ANSI(GPixelFormats[TextureInfo.Format].Name);
+					FAnsiString FormatName = TCHAR_TO_UTF8(GPixelFormats[TextureInfo.Format].Name);
 					ImGui::Text("%s - %ix%i %i mips - %s , Hovered Pixel - %i, %i (%f, %f)",
 						*VisTextureName, TextureInfo.SizeX, TextureInfo.SizeY, TextureInfo.NumMips, *FormatName,
 						HoveredTexCoordX,
