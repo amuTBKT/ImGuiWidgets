@@ -602,7 +602,7 @@ namespace ImGuiTextureVisualizer
 		}
 
 		FTexturePreviewUserData PreviewParams = *(FTexturePreviewUserData*)UserData;
-		
+
 		FRHITexture* TextureToDisplay = GetTextureToDisplay(PreviewParams.Options);
 		if (!TextureToDisplay)
 		{
@@ -745,6 +745,7 @@ namespace ImGuiTextureVisualizer
 		ImGui::SetNextWindowSize(ImVec2(450.f * GlobalScale, 200.f * GlobalScale), ImGuiCond_Always);
 		const bool bShowTextureList = ImGui::BeginCombo("##TextureList", InOutSelectedTextureName.IsEmpty() ? "Select a Texture..." : *InOutSelectedTextureName);
 		const ImVec2 ComboBoxSize = ImGui::GetItemRectSize();
+		const bool bIsComboxBoxHovered = ImGui::IsItemHovered();
 		if (bShowTextureList)
 		{
 			if (ImGui::BeginChild("TextureWidgetArea", ImGui::GetContentRegionAvail(), ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
@@ -801,6 +802,41 @@ namespace ImGuiTextureVisualizer
 			ImGui::EndChild();
 
 			ImGui::EndCombo();
+		}
+		else if (ImGui::IsItemHovered() && FMath::Abs(ImGui::GetIO().MouseWheel) > KINDA_SMALL_NUMBER)
+		{
+			const float ScrollInput = ImGui::GetIO().MouseWheel > 0.f ? -1.f : 1.f;
+
+			for (int32 TextureIndex = 0; TextureIndex < AvailableTextures.Num(); ++TextureIndex)
+			{
+				const bool bIsSelected = AvailableTextures[TextureIndex].Equals(PreviouslySelectedTextureName);
+				if (bIsSelected)
+				{
+					if (ImGui::GetIO().MouseWheel < 0.f)
+					{
+						while (++TextureIndex < AvailableTextures.Num())
+						{
+							if (SearchFilter.PassFilter(AvailableTextures[TextureIndex]))
+							{
+								InOutSelectedTextureName = AvailableTextures[TextureIndex];
+								break;
+							}
+						}
+					}
+					else
+					{
+						while (--TextureIndex >= 0)
+						{
+							if (SearchFilter.PassFilter(AvailableTextures[TextureIndex]))
+							{
+								InOutSelectedTextureName = AvailableTextures[TextureIndex];
+								break;
+							}
+						}
+					}
+					break;
+				}
+			}
 		}
 
 		ImGui::EndDisabled();
