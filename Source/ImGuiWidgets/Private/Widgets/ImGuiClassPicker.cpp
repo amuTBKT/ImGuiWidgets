@@ -504,7 +504,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		const float ClassViewerWidth = 320.f * GlobalScale;
 		const char* ClassViewerPopupName = "ClassViewerPopup";
 		const float ClassViewerMaxRowCount = 10;
-		const float ClassViewerRowHeight = 18.f * GlobalScale;
+		const float ClassViewerRowHeight = ImGui::GetFontSize();
 		
 		const float ClassViewerRowHeightWithSpacing = ClassViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale;
 		const float ClassViewerDesiredHeight = FMath::Min(ClassViewerMaxRowCount, FilteredClassIndices.Num() + 1) * ClassViewerRowHeightWithSpacing;

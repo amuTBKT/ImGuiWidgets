@@ -607,7 +607,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		// configuration
 		const float AssetViewerWidth = 400.f * GlobalScale;
 		const float AssetViewerMaxRowCount = 10;
-		const float AssetViewerRowHeight = 36.f * GlobalScale;
+		const float AssetViewerRowHeight = ImGui::GetFontSize() * 2.f + ImGui::GetStyle().ItemSpacing.y * 1.5f * GlobalScale;
 		const char* AssetViewerPopupName = "AssetViewerPopup";
 
 		const float AssetViewerRowHeightWithSpacing = (AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale) * 1.1f;
