@@ -63,12 +63,10 @@ namespace ImGuiTextureVisualizer
 				{
 					AvailableTextures.Add(Texture->Name);
 
-					if (FStringView(Texture->Name) != DisplayedTextureName)
+					if (!DisplayedTextureName.IsEmpty() && FStringView(Texture->Name) == DisplayedTextureName)
 					{
-						return;
+						Results.AddUnique(Texture);
 					}
-
-					Results.AddUnique(Texture);
 				});
 
 			if (!Results.IsEmpty() && (Results[0]->HasBeenProduced() || Results[0]->IsExternal()))
