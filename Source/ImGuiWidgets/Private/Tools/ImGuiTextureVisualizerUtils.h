@@ -294,19 +294,19 @@ namespace ImGuiTextureVisualizer
 				FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					ValueAsString += FAnsiString::Printf("(R)%i ", Value.X, Value.X);
+					ValueAsString += FAnsiString::Printf("(R)%i ", Value.X);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					ValueAsString += FAnsiString::Printf("(G)%i ", Value.Y, Value.Y);
+					ValueAsString += FAnsiString::Printf("(G)%i ", Value.Y);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					ValueAsString += FAnsiString::Printf("(B)%i ", Value.Z, Value.Z);
+					ValueAsString += FAnsiString::Printf("(B)%i ", Value.Z);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					ValueAsString += FAnsiString::Printf("(A)%i ", Value.W, Value.W);
+					ValueAsString += FAnsiString::Printf("(A)%i ", Value.W);
 				}
 			}
 			else if (IsInteger(Format))
@@ -314,19 +314,19 @@ namespace ImGuiTextureVisualizer
 				FUintVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FUintVector4));
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					ValueAsString += FAnsiString::Printf("(R)%i ", Value.X, Value.X);
+					ValueAsString += FAnsiString::Printf("(R)%u ", Value.X);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					ValueAsString += FAnsiString::Printf("(G)%i ", Value.Y, Value.Y);
+					ValueAsString += FAnsiString::Printf("(G)%u ", Value.Y);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					ValueAsString += FAnsiString::Printf("(B)%i ", Value.Z, Value.Z);
+					ValueAsString += FAnsiString::Printf("(B)%u ", Value.Z);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					ValueAsString += FAnsiString::Printf("(A)%i ", Value.W, Value.W);
+					ValueAsString += FAnsiString::Printf("(A)%u ", Value.W);
 				}
 			}
 			else
