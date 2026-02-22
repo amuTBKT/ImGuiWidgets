@@ -126,8 +126,9 @@ private:
 	FImGuiTextFilter TextFilter = FImGuiTextFilter::MakeWidget(64u);
 
 	TArray<int32> FilteredAssetIndices;
-	uint16 PackedAssetPathFilter : 7 = 0;
-	uint16 bIsAssetTypeValid	 : 1 = true;
+	uint32 PackedAssetPathFilter : 7 = 0;
+	uint32 bIsAssetTypeValid	 : 1 = true;
+	uint32 AssetViewerMinSizeFactor : 8 = 5; 
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedAssetIndex = INDEX_NONE;
 	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;

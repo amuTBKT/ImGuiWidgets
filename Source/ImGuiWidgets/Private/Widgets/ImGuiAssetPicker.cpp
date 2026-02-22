@@ -606,12 +606,12 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	{
 		// configuration
 		const float AssetViewerWidth = 400.f * GlobalScale;
-		const float AssetViewerMaxRowCount = 10;
+		const float AssetViewerMaxRowsVisible = 8;
 		const float AssetViewerRowHeight = ImGui::GetFontSize() * 2.f + ImGui::GetStyle().ItemSpacing.y * 1.5f * GlobalScale;
 		const char* AssetViewerPopupName = "AssetViewerPopup";
 
-		const float AssetViewerRowHeightWithSpacing = (AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale) * 1.1f;
-		const float AssetViewerDesiredHeight = FMath::Min(AssetViewerMaxRowCount, FilteredAssetIndices.Num() + 1) * AssetViewerRowHeightWithSpacing;
+		const float AssetViewerRowHeightWithSpacing = (AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale);
+		const float AssetViewerDesiredHeight = FMath::Min(AssetViewerMaxRowsVisible, FilteredAssetIndices.Num()) * AssetViewerRowHeightWithSpacing + AssetViewerRowHeightWithSpacing * 1.5f;
 		const float AssetViewerComboxBoxWidth = FMath::Clamp(256.f * GlobalScale, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - (bDrawCompactWidget ? 75.f : 32.f) * GlobalScale);
 		const int32 PreviewTextMaxLength = FMath::Clamp(FMath::CeilToInt(1.25f * AssetViewerComboxBoxWidth / ImGui::GetFontSize()) - 1, 4, 32);
 
@@ -621,7 +621,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		const float AvailableSpaceBelow = (MonitorDisplaySize - ImGui::GetCursorScreenPos().y);
 		float AssetViewerPopupHeight = ((AvailableSpaceBelow > AssetViewerDesiredHeight) ? AvailableSpaceBelow : AvailableSpaceAbove) * 0.8f;
 		AssetViewerPopupHeight = FMath::Min(AssetViewerPopupHeight, AssetViewerDesiredHeight);
-		float AssetViewerPopupHeightMin = (AssetViewerRowHeightWithSpacing * 4.f);
+		float AssetViewerPopupHeightMin = ((float)AssetViewerMinSizeFactor * AssetViewerRowHeightWithSpacing) + ImGui::GetStyle().WindowPadding.y * 2.f;
 
 		// TODO: `ImGui::RenderTextEllipsis` does something similar
 		FString PreviewText = !InOutSoftAssetPtr.IsNull() ? InOutSoftAssetPtr.GetAssetName() : FString(TEXT("None"));
@@ -824,6 +824,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				}
 			}
 			ImGui::EndGroup();
+			AssetViewerMinSizeFactor = FMath::DivideAndRoundUp(ImGui::GetItemRectSize().y, AssetViewerRowHeightWithSpacing);
 
 			if (bFilterAvailableAssets)
 			{
