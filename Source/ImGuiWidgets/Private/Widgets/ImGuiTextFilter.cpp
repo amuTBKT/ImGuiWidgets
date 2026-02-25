@@ -55,19 +55,21 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 
 	ImGui::BeginGroup();
 	{
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
+
 		// blend button with input text widget
 		ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
 		ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.f, 0.f));
-
 		if (FilterKeywordTokens_ANSI.IsEmpty())
 		{
+			ImGui::PushItemFlag(ImGuiItemFlags_NoNav, true);
 			if (FImGui::ImageButton("Search", SearchIcon, ImVec4(0, 0, 0, 0), ImVec4(SearchIconTint, SearchIconTint, SearchIconTint, 1.f)))
 			{
 				// set focus to input text
 				bSetFocus = true;
 			}
+			ImGui::PopItemFlag();
 		}
 		else
 		{
@@ -81,6 +83,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 			}
 			ClearIconTint = ImGui::IsItemHovered() ? 1.f : 0.75f;
 		}
+		ImGui::PopStyleColor(3);
 
 		ImGui::SameLine();
 
@@ -95,7 +98,9 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 		}
 
 		char* TextBuffer = FilterStringBuffer_ANSI.GetData();
+		ImGui::PushStyleColor(ImGuiCol_NavCursor, 0); //not ideal but NavCursor has become very annoying now (shows even when using `ImGui::SetKeyboardFocusHere`)
 		const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("##Filter", HintText, TextBuffer, MaxLength) : ImGui::InputText("##Filter", TextBuffer, MaxLength);
+		ImGui::PopStyleColor();
 		if (bInputTextChanged)
 		{
 			bFilterChanged = true;
@@ -138,7 +143,6 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 		SearchIconTint = bSearchBoxHasFocus ? 1.f : 0.75f;
 
 		ImGui::PopStyleVar(1);
-		ImGui::PopStyleColor(3);
 	}
 	ImGui::EndGroup();
 
