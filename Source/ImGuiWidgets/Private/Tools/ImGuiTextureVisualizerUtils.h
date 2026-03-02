@@ -352,6 +352,112 @@ namespace ImGuiTextureVisualizer
 
 			return ValueAsString;
 		}
+
+		template <typename TColorFormat>
+		void DrawPixelColorComponentWidget(const TColorFormat& ColorValue, int32 ComponentIndex, const char* LabelFmt, const char* ClipboardFmt, ImU32 MarkerColor)
+		{
+			char Buffer[128];
+			sprintf_s(Buffer, sizeof(Buffer), LabelFmt, ColorValue[ComponentIndex]);
+			if (ImGui::Button(Buffer))
+			{
+				sprintf_s(Buffer, sizeof(Buffer), ClipboardFmt, ColorValue[ComponentIndex]);
+				ImGui::SetClipboardText(Buffer);
+			}
+			ImGui::SetItemTooltip("Copy to clipboard");
+			ImGui::RenderColorComponentMarker({ ImGui::GetItemRectMin(), ImGui::GetItemRectMax() }, MarkerColor, ImGui::GetStyle().FrameRounding);
+		}
+
+		void DrawPixelValueWidget(const uint8* RawValue, EPixelFormat Format, bool bReadAsStencil)
+		{
+			const EPixelFormatChannelFlags ValidTextureChannels = GetValidChannelsForFormat(Format);
+
+			ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetColorU32(ImGuiCol_FrameBg));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImGui::GetColorU32(ImGuiCol_FrameBgHovered));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImGui::GetColorU32(ImGuiCol_FrameBgActive));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8.f, ImGui::GetStyle().FramePadding.y));
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4.f, ImGui::GetStyle().ItemSpacing.y));
+
+			ImGui::BeginGroup();
+			ImGui::GetCurrentWindow()->DC.LayoutType = ImGuiLayoutType_Horizontal;
+			if (IsStencilFormat(Format))
+			{
+				if (bReadAsStencil)
+				{
+					FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
+					DrawPixelColorComponentWidget(Value, 0, "%i##STENCIL", "%i", 0xFFFFFFFF);
+				}
+				else
+				{
+					FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
+					DrawPixelColorComponentWidget(Value, 0, "%.7f##DEPTH", "%.7f", 0xFFFFFFFF);
+				}
+			}
+			else if (IsSignedIntegerFormat(Format))
+			{
+				FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
+				{
+					DrawPixelColorComponentWidget(Value, 0, "%i##RED", "%i", 0xFF0000FF);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
+				{
+					DrawPixelColorComponentWidget(Value, 1, "%i##GREEN", "%i", 0xFF00FF00);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
+				{
+					DrawPixelColorComponentWidget(Value, 2, "%i##BLUE", "%i", 0xFFFF0000);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
+				{
+					DrawPixelColorComponentWidget(Value, 3, "%i##ALPHA", "%i", 0xFFFFFFFF);
+				}
+			}
+			else if (IsInteger(Format))
+			{
+				FUintVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FUintVector4));
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
+				{
+					DrawPixelColorComponentWidget(Value, 0, "%u##RED", "%u", 0xFF0000FF);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
+				{
+					DrawPixelColorComponentWidget(Value, 1, "%u##GREEN", "%u", 0xFF00FF00);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
+				{
+					DrawPixelColorComponentWidget(Value, 2, "%u##BLUE", "%u", 0xFFFF0000);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
+				{
+					DrawPixelColorComponentWidget(Value, 3, "%u##ALPHA", "%u", 0xFFFFFFFF);
+				}
+			}
+			else
+			{
+				FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
+				{
+					DrawPixelColorComponentWidget(Value, 0, "%.5f##RED", "%.5f", 0xFF0000FF);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
+				{
+					DrawPixelColorComponentWidget(Value, 1, "%.5f##GREEN", "%.5f", 0xFF00FF00);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
+				{
+					DrawPixelColorComponentWidget(Value, 2, "%.5f##BLUE", "%.5f", 0xFFFF0000);
+				}
+				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
+				{
+					DrawPixelColorComponentWidget(Value, 3, "%.5f##ALPHA", "%.5f", 0xFFFFFFFF);
+				}
+			}
+			ImGui::NewLine();
+			ImGui::EndGroup();
+
+			ImGui::PopStyleVar(2);
+			ImGui::PopStyleColor(3);
+		}
 	}
 
 	ImVec2 ConstrainCanvasToAspectRatio(int32 SizeX, int32 SizeY, ImVec2 CanvasSize)

@@ -925,12 +925,16 @@ namespace ImGuiTextureVisualizer
 			{
 				InOutTexturePreviewOptions.bDisplayDepth = true;
 				InOutTexturePreviewOptions.bDisplayStencil = false;
+
+				InOutTexturePreviewOptions.LastSelectedPixelValue.Reset();
 			}
 			ImGui::SameLine();
 			if (ImGui::RadioButton("Stencil", InOutTexturePreviewOptions.bDisplayStencil))
 			{
 				InOutTexturePreviewOptions.bDisplayStencil = true;
 				InOutTexturePreviewOptions.bDisplayDepth = false;
+
+				InOutTexturePreviewOptions.LastSelectedPixelValue.Reset();
 			}
 		}
 		else
@@ -1501,12 +1505,11 @@ namespace ImGuiTextureVisualizer
 					CursorPosX = FMath::Max(CursorPosX, ImGui::GetCursorPosX() / ImGui::GetStyle().FontScaleMain);
 					ImGui::SetCursorPosX(CursorPosX * ImGui::GetStyle().FontScaleMain);
 
-					ImGui::SameLine();
-					FAnsiString PixelValueAsString = PixelFormatUtils::GetPixelValueAsStringInline((uint8*)&TexturePreviewOptions.LastSelectedPixelValue.GetValue(), TextureInfo.Format, TexturePreviewOptions.bDisplayStencil);
-					ImGui::InputText("##PixelValue", (ANSICHAR*)*PixelValueAsString, PixelValueAsString.Len() + 1, ImGuiInputTextFlags_ReadOnly);
+					PixelFormatUtils::DrawPixelValueWidget((uint8*)&TexturePreviewOptions.LastSelectedPixelValue.GetValue(), TextureInfo.Format, TexturePreviewOptions.bDisplayStencil);
 				}
 				else
 				{
+					ImGui::AlignTextToFramePadding();
 					ImGui::TextUnformatted("Right click to inspect pixel");
 				}
 			}
