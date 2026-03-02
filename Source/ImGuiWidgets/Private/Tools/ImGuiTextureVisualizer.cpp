@@ -1322,8 +1322,6 @@ namespace ImGuiTextureVisualizer
 
 			if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.f))
 			{
-				InOutTexturePreviewOptions.LastSelectedPixelValue = InTextureInfo.SelectedPixelValue;
-
 				CursorPos.X = FMath::Clamp(CursorPos.X, 0, InTextureInfo.GetSizeX(0) - 1);
 				CursorPos.Y = FMath::Clamp(CursorPos.Y, 0, InTextureInfo.GetSizeY(0) - 1);
 
@@ -1332,7 +1330,13 @@ namespace ImGuiTextureVisualizer
 				const int32 HoveredTexCoordX = InOutTexturePreviewOptions.TextureInspectorCursorPosition.X >> InOutTexturePreviewOptions.CurrentMip;
 				const int32 HoveredTexCoordY = InOutTexturePreviewOptions.TextureInspectorCursorPosition.Y >> InOutTexturePreviewOptions.CurrentMip;
 
-				InOutTexturePreviewOptions.LastSelectedCursorPosition = FIntPoint(HoveredTexCoordX, HoveredTexCoordY);
+				// wait for a few frames before showing the readback data
+				const bool bHasPotentiallyValidData = (ImGui::GetIO().MouseDownDuration[ImGuiMouseButton_Right] >= 0.1f);
+				if (bHasPotentiallyValidData)
+				{
+					InOutTexturePreviewOptions.LastSelectedPixelValue = InTextureInfo.SelectedPixelValue;
+					InOutTexturePreviewOptions.LastSelectedCursorPosition = FIntPoint(HoveredTexCoordX, HoveredTexCoordY);
+				}
 
 				const float TextureInspectorSize = 144.f;
 				const float TextureInspectorInfoWidgetSize = 200.f;
@@ -1359,6 +1363,7 @@ namespace ImGuiTextureVisualizer
 				InOutTexturePreviewOptions.TextureInspectorRect.Z = AbsoluteMousePos.x + TextureInspectorOffset.x + TextureInspectorSize;
 				InOutTexturePreviewOptions.TextureInspectorRect.W = AbsoluteMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
 
+				// not checking `bHasPotentiallyValidData` here as the delay is very noticeable
 				ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
 				ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
 				if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoInputs))
