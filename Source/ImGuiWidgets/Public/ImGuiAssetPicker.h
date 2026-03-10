@@ -12,13 +12,42 @@ class FImGuiAssetPicker
 public:
 	using FFilter = TVariant<FImGuiAssetTagFilter, FImGuiAllowedClassFilter, FImGuiDisallowedClassFilter>;
 
-	IMGUIWIDGETS_API static FImGuiAssetPicker MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters = {});
+	[[nodiscard]] IMGUIWIDGETS_API static FImGuiAssetPicker MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters = {});
 
 	template <typename TImGuiFilterType>
-	FORCEINLINE FImGuiAssetPicker& AddFilter(TImGuiFilterType Filter)
+	[[nodiscard]] FORCEINLINE FImGuiAssetPicker& AddFilter(TImGuiFilterType Filter)
 	{
 		OptionalFilters.Add(FFilter(TInPlaceType<TImGuiFilterType>(), MoveTemp(Filter)));
 		return *this;
+	}
+
+	template <typename TImGuiFilterType>
+	void DisableFilter(TImGuiFilterType Filter)
+	{
+		for (int32 FilterIndex = 0; FilterIndex < OptionalFilters.Num(); ++FilterIndex)
+		{
+			const TImGuiFilterType* ExistingFilter = OptionalFilters[FilterIndex].TryGet<TImGuiFilterType>();
+			if (ExistingFilter && *ExistingFilter == Filter)
+			{
+				OptionalFilters.RemoveAt(FilterIndex);
+				ContainerRevisionId = UINT32_MAX;
+				break;
+			}
+		}
+	}
+	template <typename TImGuiFilterType>
+	void EnableFilter(TImGuiFilterType Filter)
+	{
+		for (int32 FilterIndex = 0; FilterIndex < OptionalFilters.Num(); ++FilterIndex)
+		{
+			const TImGuiFilterType* ExistingFilter = OptionalFilters[FilterIndex].TryGet<TImGuiFilterType>();
+			if (ExistingFilter && *ExistingFilter == Filter)
+			{
+				return;
+			}
+		}
+		OptionalFilters.Add(FFilter(TInPlaceType<TImGuiFilterType>(), MoveTemp(Filter)));
+		ContainerRevisionId = UINT32_MAX;
 	}
 
 	template <typename TAssetType>

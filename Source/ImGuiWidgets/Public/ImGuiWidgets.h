@@ -244,21 +244,30 @@ struct FImGuiAssetTagFilter
 {
 	FName TagName = NAME_None;
 	FString ExpectedValue;
+
+	bool operator==(const FImGuiAssetTagFilter& Other) const { return Other.TagName == TagName && Other.ExpectedValue == ExpectedValue; }
 };
 struct FImGuiAllowedClassFilter
 {
 	FSoftClassPath ClassPath;
+
+	bool operator==(const FImGuiAllowedClassFilter& Other) const { return Other.ClassPath == ClassPath; }
 };
 struct FImGuiDisallowedClassFilter
 {
 	FSoftClassPath ClassPath;
+
+	bool operator==(const FImGuiDisallowedClassFilter& Other) const { return Other.ClassPath == ClassPath; }
 };
 struct FImGuiRequiredInterfaceFilter
 {
 	FSoftClassPath ClassPath;
+
+	bool operator==(const FImGuiRequiredInterfaceFilter& Other) const { return Other.ClassPath == ClassPath; }
 };
 struct FImGuiDisallowAbstractClassFilter
 {
+	bool operator==(const FImGuiDisallowAbstractClassFilter&) const { return true; }
 };
 
 namespace FImGui
