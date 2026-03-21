@@ -684,7 +684,11 @@ namespace ImGuiTextureVisualizer
 			FMath::RoundToFloat(DrawRect.Min.x), FMath::RoundToFloat(DrawRect.Min.y),
 			FMath::RoundToFloat(DrawRect.Max.x), FMath::RoundToFloat(DrawRect.Max.y));
 		RHICmdList.SetViewport(ViewportRect.Min.x, ViewportRect.Min.y, 0.f, ViewportRect.Max.x, ViewportRect.Max.y, 1.f);
-		RHICmdList.SetScissorRect(true, ViewportRect.Min.x + PreviewParams.ClipRectMin.x, ViewportRect.Min.y + PreviewParams.ClipRectMin.y, ViewportRect.Min.x + PreviewParams.ClipRectMax.x, ViewportRect.Min.y + PreviewParams.ClipRectMax.y);
+		RHICmdList.SetScissorRect(true, 
+			ViewportRect.Min.x + PreviewParams.ClipRectMin.x,
+			ViewportRect.Min.y + PreviewParams.ClipRectMin.y,
+			FMath::Min(ViewportRect.Min.x + PreviewParams.ClipRectMax.x, ViewportRect.Max.x),
+			FMath::Min(ViewportRect.Min.y + PreviewParams.ClipRectMax.y, ViewportRect.Max.y));
 
 		UE::Renderer::PostProcess::DrawRectangle(
 			RHICmdList,
@@ -1364,7 +1368,7 @@ namespace ImGuiTextureVisualizer
 				InOutTexturePreviewOptions.TextureInspectorRect.W = AbsoluteMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
 
 				// not checking `bHasPotentiallyValidData` here as the delay is very noticeable
-				ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y), ImGuiCond_Always);
+				ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y - 1.f), ImGuiCond_Always);
 				ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
 				if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoInputs))
 				{
