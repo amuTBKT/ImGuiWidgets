@@ -56,6 +56,11 @@ namespace ImGuiTextureVisualizer
 		virtual void PreRenderView_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView) override {}
 		virtual void PostRenderViewFamily_RenderThread(FRDGBuilder& GraphBuilder, FSceneViewFamily& InViewFamily) override
 		{
+			if (InViewFamily.EngineShowFlags.HitProxies)
+			{
+				return;
+			}
+
 			TArray<FRDGTextureRef> Results;
 
 			auto& Textures = PrivateAccess::Textures(GraphBuilder);
