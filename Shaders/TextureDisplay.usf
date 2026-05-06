@@ -38,6 +38,7 @@ float4 RunPixelShader(in int2 PixelCoord, in float2 TextureUV)
 #endif
 
 	OutColor = TextureColor;
+	OutColor = (OutColor - RangeMin_InvRangeSize.x) * RangeMin_InvRangeSize.y;
 
 	if (!(bShowDepth || bShowStencil))
 	{
@@ -59,8 +60,6 @@ float4 RunPixelShader(in int2 PixelCoord, in float2 TextureUV)
 			OutColor.a = 0.f;
 		}
 	}
-
-	OutColor = (OutColor - RangeMin_InvRangeSize.x) * RangeMin_InvRangeSize.y;
 
 	// source texture is SRGB, need to handle the conversion inside shader
 	if (bsRGBMode)
