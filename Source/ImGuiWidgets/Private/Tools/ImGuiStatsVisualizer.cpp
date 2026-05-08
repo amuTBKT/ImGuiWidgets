@@ -767,6 +767,12 @@ namespace ImGuiStatsVizualizer
 
 			FImGuiNamedScope StatGroupScope{ GroupName };
 
+			ImGui::SameLine();
+			if ((ImGui::GetCursorPosX() + ImGui::CalcTextSize(GroupName).x + ImGui::GetStyle().FramePadding.x * 2.f) >= ImGui::GetWindowWidth())
+			{
+				ImGui::NewLine(); //<br>
+			}
+
 			const bool bApplyStyle = GroupData.bIsActive;
 			if (bApplyStyle)
 			{
@@ -774,18 +780,16 @@ namespace ImGuiStatsVizualizer
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.7f, 0.7f));
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
 			}
-
-			ImGui::SameLine();
-			if ((ImGui::GetCursorPosX() + ImGui::CalcTextSize(GroupName).x + ImGui::GetStyle().FramePadding.x * 2.f) >= ImGui::GetWindowWidth())
-			{
-				ImGui::NewLine(); //<br>
-			}
-
 			if (ImGui::Button(GroupName))
 			{
 				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *GroupData.NameForCommand);
 				GEngine->Exec(nullptr, *StatCommand);
 			}
+			if (bApplyStyle)
+			{
+				ImGui::PopStyleColor(3);
+			}
+
 			if (ImGui::BeginPopupContextItem("Customization"))
 			{
 				static char NameBuffer[256] = { '0' };
@@ -809,12 +813,7 @@ namespace ImGuiStatsVizualizer
 				}
 
 				ImGui::EndPopup();
-			}
-
-			if (bApplyStyle)
-			{
-				ImGui::PopStyleColor(3);
-			}
+			}	
 
 			// disable at the end, we'll re-enable when stat group is encountered when displaying..
 			GroupData.bIsActive = false;

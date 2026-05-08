@@ -287,7 +287,14 @@ namespace ImGuiNiagaraProfiler
 		}
 #endif
 
-		if (ImGui::BeginTabItem(TCHAR_TO_UTF8(*World->GetName())))
+		FString WorldName = World->GetName();
+		const int32 PIEInstanceId = World->GetOutermost()->GetPIEInstanceID();
+		if (PIEInstanceId != INDEX_NONE)
+		{
+			WorldName += FString::Printf(TEXT(" - PIE:%i"), PIEInstanceId);
+		}
+
+		if (ImGui::BeginTabItem(TCHAR_TO_UTF8(*WorldName)))
 		{
 			if (ImGui::BeginChild("ScrollingArea"))
 			{
@@ -372,8 +379,10 @@ namespace ImGuiNiagaraProfiler
 			{
 				if ((WorldStatData.Num() > 0) && ImGui::BeginTabBar("Stats"))
 				{
+					int32 WorldIndex = 0;
 					for (const auto& [World, WorldStats] : WorldStatData)
 					{
+						FImGuiNamedScope WorldScope{ WorldIndex++ };
 						DisplayWorldStats(World.Get(), WorldStats);
 					}
 					ImGui::EndTabBar();

@@ -98,9 +98,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 		}
 
 		char* TextBuffer = FilterStringBuffer_ANSI.GetData();
-		ImGui::PushStyleColor(ImGuiCol_NavCursor, 0); //not ideal but NavCursor has become very annoying now (shows even when using `ImGui::SetKeyboardFocusHere`)
 		const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("##Filter", HintText, TextBuffer, MaxLength) : ImGui::InputText("##Filter", TextBuffer, MaxLength);
-		ImGui::PopStyleColor();
 		if (bInputTextChanged)
 		{
 			bFilterChanged = true;
