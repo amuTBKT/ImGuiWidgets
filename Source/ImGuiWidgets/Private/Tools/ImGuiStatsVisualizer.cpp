@@ -527,42 +527,37 @@ namespace ImGuiStatsVizualizer
 			if (!bCullNextSection && ImGui::CollapsingHeader(*StatGroupData->DisplayName, ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-				char ScratchTableIdBuffer[128];
+
+				const bool bHasHierarchy = StatGroup.HierAggregate.Num() > 0;
+				const bool bHasFlat = StatGroup.FlatAggregate.Num() > 0;
 
 				// Render cycles.
+				if (bHasHierarchy || bHasFlat)
 				{
-					const bool bHasHierarchy = !!StatGroup.HierAggregate.Num();
-					const bool bHasFlat = !!StatGroup.FlatAggregate.Num();
-
-					if (bHasHierarchy || bHasFlat)
+					if (ImGui::BeginTable("CycleStats", GetCycleStatsColumnCount(), TableFlags))
 					{
-						sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_CycleStats", *StatGroupData->DisplayName);
-						if (ImGui::BeginTable(ScratchTableIdBuffer, GetCycleStatsColumnCount(), TableFlags))
+						RenderGroupedHeadings(bHasHierarchy);
+
+						if (bHasHierarchy)
 						{
-							RenderGroupedHeadings(bHasHierarchy);
-
-							if (bHasHierarchy)
-							{
-								const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.HierAggregate, ViewData, RenderFlatCycle);							
-								bCullNextSection = LastRowDisplayed < StatGroup.HierAggregate.Num();
-							}
-						
-							if (!bCullNextSection && bHasFlat)
-							{
-								const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.FlatAggregate, ViewData, RenderFlatCycle);
-								bCullNextSection = LastRowDisplayed < StatGroup.FlatAggregate.Num();
-							}
-
-							ImGui::EndTable();
+							const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.HierAggregate, ViewData, RenderFlatCycle);							
+							bCullNextSection = LastRowDisplayed < StatGroup.HierAggregate.Num();
 						}
+						
+						if (!bCullNextSection && bHasFlat)
+						{
+							const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.FlatAggregate, ViewData, RenderFlatCycle);
+							bCullNextSection = LastRowDisplayed < StatGroup.FlatAggregate.Num();
+						}
+
+						ImGui::EndTable();
 					}
 				}
 
 				// Render memory counters.
 				if (!bCullNextSection && StatGroup.MemoryAggregate.Num())
 				{
-					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_MemoryStats", *StatGroupData->DisplayName);
-					if (ImGui::BeginTable(ScratchTableIdBuffer, GetMemoryStatsColumnCount(), TableFlags))
+					if (ImGui::BeginTable("MemoryStats", GetMemoryStatsColumnCount(), TableFlags))
 					{
 						RenderMemoryHeadings();
 
@@ -576,8 +571,7 @@ namespace ImGuiStatsVizualizer
 				// Render remaining counters.
 				if (!bCullNextSection && StatGroup.CountersAggregate.Num())
 				{
-					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_CounterStats", *StatGroupData->DisplayName);
-					if (ImGui::BeginTable(ScratchTableIdBuffer, GetCounterStatsColumnCount(), TableFlags))
+					if (ImGui::BeginTable("CounterStats", GetCounterStatsColumnCount(), TableFlags))
 					{
 						RenderCounterHeadings();
 
@@ -604,8 +598,7 @@ namespace ImGuiStatsVizualizer
 						}
 					}
 
-					sprintf_s(ScratchTableIdBuffer, sizeof(ScratchTableIdBuffer), "%s_GpuStats", *StatGroupData->DisplayName);
-					if (ImGui::BeginTable(ScratchTableIdBuffer, GetCounterStatsColumnCount(), TableFlags))
+					if (ImGui::BeginTable("GpuStats", GetCounterStatsColumnCount(), TableFlags))
 					{
 						RenderGpuStatHeadings();
 
