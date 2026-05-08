@@ -98,7 +98,9 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 		}
 
 		char* TextBuffer = FilterStringBuffer_ANSI.GetData();
+		ImGui::PushStyleColor(ImGuiCol_NavCursor, 0); //not ideal but NavCursor has become very annoying now (shows even when using `ImGui::SetKeyboardFocusHere`) after ImGui commit: 1566c96ccd5faa7fddf34329687ac16796bebabc
 		const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("##Filter", HintText, TextBuffer, MaxLength) : ImGui::InputText("##Filter", TextBuffer, MaxLength);
+		ImGui::PopStyleColor();
 		if (bInputTextChanged)
 		{
 			bFilterChanged = true;
@@ -137,7 +139,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 					ParseOptions);
 			}
 		}
-		bSearchBoxHasFocus = ImGui::IsItemActive();
+		bSearchBoxHasFocus = ImGui::IsItemActive() || (Context->ImguiContext->NavId == ImGui::GetItemID()); //account for nav focus as NavCursor is disabled
 		SearchIconTint = bSearchBoxHasFocus ? 1.f : 0.75f;
 
 		ImGui::PopStyleVar(1);
