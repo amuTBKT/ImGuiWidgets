@@ -757,7 +757,7 @@ namespace ImGuiTextureVisualizer
 				// section pinned at the top (doesn't scroll)
 				if (ImGui::BeginChild("FilteringArea", ImVec2(ImGui::GetContentRegionAvail().x, 0.f), ImGuiChildFlags_AutoResizeY|ImGuiChildFlags_NavFlattened, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse))
 				{
-					SearchFilter.Draw(Context, "##Filter", "Search Textures", ImGui::GetContentRegionAvail().x, ImGui::IsWindowAppearing());
+					SearchFilter.Draw(Context, "##Filter", "Search Textures", ImGui::GetContentRegionAvail().x, ImGui::IsWindowAppearing(), /*bActivateOnNavFocus=*/true);
 
 					if (ImGui::IsWindowAppearing())
 					{
@@ -776,7 +776,7 @@ namespace ImGuiTextureVisualizer
 				}
 				ImGui::EndChild();
 
-				if (ImGui::BeginListBox("ListView", ImGui::GetContentRegionAvail()))
+				if (ImGui::BeginChild("ListView", ImGui::GetContentRegionAvail(), ImGuiChildFlags_FrameStyle|ImGuiChildFlags_NavFlattened))
 				{
 					for (const auto& TextureName : AvailableTextures)
 					{
@@ -800,8 +800,8 @@ namespace ImGuiTextureVisualizer
 							ImGui::SetItemDefaultFocus();
 						}
 					}
-					ImGui::EndListBox();
 				}
+				ImGui::EndChild();
 			}
 			ImGui::EndChild();
 

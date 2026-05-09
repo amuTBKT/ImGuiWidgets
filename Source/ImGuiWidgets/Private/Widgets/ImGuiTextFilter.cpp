@@ -5,6 +5,27 @@
 #include "ImGuiSubsystem.h"
 #include "String/ParseTokens.h"
 
+namespace ImGuiTextureFilter_Private
+{
+	void AutoActivateNextItem(const char* ItemLabel)
+	{
+		const ImGuiID ItemId = ImGui::GetCurrentWindow()->GetID(ItemLabel);
+		ImGui::PushID(ItemId);
+
+		const ImGuiID StorageId = ImGui::GetCurrentWindow()->GetID("AutoActivate");
+		const bool bHadFocus = ImGui::GetStateStorage()->GetBool(StorageId);
+		const bool bHasFocus = (ImGui::GetFocusID() == ItemId);
+
+		if (bHasFocus && !bHadFocus)
+		{
+			ImGui::SetKeyboardFocusHere();
+		}
+
+		ImGui::GetStateStorage()->SetBool(StorageId, bHasFocus);
+		ImGui::PopID();
+	}
+}
+
 FImGuiTextFilter FImGuiTextFilter::MakeWidget(uint32 MaxLength)
 {
 	FImGuiTextFilter Widget = {};
@@ -31,7 +52,7 @@ void FImGuiTextFilter::Reset()
 	ClearIconTint = 0.75f;
 }
 
-bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const char* HintText, float WidgetWidth, bool bSetFocus)
+bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const char* HintText, float WidgetWidth, bool bSetFocus, bool bActivateOnNavFocus)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("TextFilter::Draw"), STAT_ImGuiTextFilter_Draw, STATGROUP_ImGui);
 
@@ -97,6 +118,10 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 			ImGui::SetKeyboardFocusHere();
 		}
 
+		if (bActivateOnNavFocus)
+		{
+			ImGuiTextureFilter_Private::AutoActivateNextItem("##Filter");
+		}
 		char* TextBuffer = FilterStringBuffer_ANSI.GetData();
 		ImGui::PushStyleColor(ImGuiCol_NavCursor, 0); //not ideal but NavCursor has become very annoying now (shows even when using `ImGui::SetKeyboardFocusHere`) after ImGui commit: 1566c96ccd5faa7fddf34329687ac16796bebabc
 		const bool bInputTextChanged = HintText ? ImGui::InputTextWithHint("##Filter", HintText, TextBuffer, MaxLength) : ImGui::InputText("##Filter", TextBuffer, MaxLength);
