@@ -81,80 +81,244 @@ namespace ImGuiStatsVizualizer
 		return bIsSelected;
 	}
 
-	// headings
-	FORCEINLINE static int32 GetCycleStatsColumnCount()
+	enum class EStatSortMode
+	{
+		Name,
+		Avg,
+		Max,
+		Min,
+		CallCount,
+		IncAvg,
+		IncMax,
+		ExcAvg,
+		ExcMax,
+	};
+
+	FORCEINLINE static int32 CycleStats_GetColumnCount()
 	{
 		return 7;
 	}
-	FORCEINLINE static int32 GetMemoryStatsColumnCount()
+	FORCEINLINE static void CycleStats_SetupTableColumns(const bool bIsHierarchy)
 	{
-		return 5;
-	}
-	FORCEINLINE static int32 GetCounterStatsColumnCount()
-	{
-		return 4;
-	}
-
-	FORCEINLINE static void RenderGroupedHeadings(const bool bIsHierarchy)
-	{
-		// The heading looks like:
-		// Stat [32chars]	CallCount [8chars]	IncAvg [8chars]	IncMax [8chars]	ExcAvg [8chars]	ExcMax [8chars]
-
 		static const char* CaptionFlat = "Cycle counters (flat)";
 		static const char* CaptionHier = "Cycle counters (hierarchy)";
 
 		ImGui::TableSetupColumn(bIsHierarchy ? CaptionHier : CaptionFlat, ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
-		ImGui::TableSetupColumn("CallCount", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("InclusiveAvg", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("InclusiveMax", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("ExclusiveAvg", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("ExclusiveMax", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("CallCount", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("InclusiveAvg", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("InclusiveMax", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("ExclusiveAvg", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("ExclusiveMax", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
+
+		ensure(ImGui::TableGetColumnCount() == CycleStats_GetColumnCount());
+	}
+	FORCEINLINE static EStatSortMode CycleStats_GetSortMode(const ImGuiTableColumnSortSpecs& SortSpec)
+	{
+		static constexpr EStatSortMode SortModes[] =
+		{
+			EStatSortMode::Name,
+			EStatSortMode::CallCount,
+			EStatSortMode::IncAvg,
+			EStatSortMode::IncMax,
+			EStatSortMode::ExcAvg,
+			EStatSortMode::ExcMax
+		};
+		if (ensure(SortSpec.ColumnIndex < UE_ARRAY_COUNT(SortModes)))
+		{
+			return SortModes[SortSpec.ColumnIndex];
+		}
+		return SortModes[0];
 	}
 
-	FORCEINLINE static void RenderMemoryHeadings()
+	FORCEINLINE static int32 CounterStats_GetColumnCount()
 	{
-		// The heading looks like:
-		// Stat [32chars]	MemUsed [8chars]	PhysMem [8chars]
+		return 4;
+	}
+	FORCEINLINE static void CounterStats_SetupTableColumns()
+	{
+		ImGui::TableSetupColumn("Counters", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
+		ImGui::TableSetupColumn("Average", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("Max", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("Min", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
+		ImGui::TableHeadersRow();
 
+		ensure(ImGui::TableGetColumnCount() == CounterStats_GetColumnCount());
+	}
+	FORCEINLINE static EStatSortMode CounterStats_GetSortMode(const ImGuiTableColumnSortSpecs& SortSpec)
+	{
+		static constexpr EStatSortMode SortModes[] =
+		{
+			EStatSortMode::Name,
+			EStatSortMode::Avg,
+			EStatSortMode::Max,
+			EStatSortMode::Min,
+		};
+		if (ensure(SortSpec.ColumnIndex < UE_ARRAY_COUNT(SortModes)))
+		{
+			return SortModes[SortSpec.ColumnIndex];
+		}
+		return SortModes[0];
+	}
+
+	FORCEINLINE static int32 MemoryStats_GetColumnCount()
+	{
+		return 5;
+	}
+	FORCEINLINE static void MemoryStats_SetupTableColumns()
+	{
 		ImGui::TableSetupColumn("Memory Counters", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
-		ImGui::TableSetupColumn("UsedMax", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("Mem%", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("MemPool", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("Pool Capacity", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("UsedMax", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("Mem%", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("MemPool", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoSort);
+		ImGui::TableSetupColumn("Pool Capacity", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoSort);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
-	}
 
-	FORCEINLINE static void RenderCounterHeadings()
+		ensure(ImGui::TableGetColumnCount() == MemoryStats_GetColumnCount());
+	}
+	FORCEINLINE static EStatSortMode MemoryStats_GetSortMode(const ImGuiTableColumnSortSpecs& SortSpec)
 	{
-		// The heading looks like:
-		// Stat [32chars]	Value [8chars]	Average [8chars]
-
-		ImGui::TableSetupColumn("Counters", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
-		ImGui::TableSetupColumn("Average", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("Max", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("Min", ImGuiTableColumnFlags_WidthStretch);
-		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
-		ImGui::TableHeadersRow();
+		static constexpr EStatSortMode SortModes[] =
+		{
+			EStatSortMode::Name,
+			EStatSortMode::Max,
+		};
+		if (ensure(SortSpec.ColumnIndex < UE_ARRAY_COUNT(SortModes)))
+		{
+			return SortModes[SortSpec.ColumnIndex];
+		}
+		return SortModes[0];
 	}
 
-	FORCEINLINE static void RenderGpuStatHeadings()
+	FORCEINLINE static int32 GpuStats_GetColumnCount()
 	{
-		// The heading looks like:
-		// Stat [32chars]	Value [8chars]	Average [8chars]
-
+		return 4;
+	}
+	FORCEINLINE static void GpuStats_SetupTableColumns()
+	{
 		ImGui::TableSetupColumn("Counters", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
-		ImGui::TableSetupColumn("Average", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("Max", ImGuiTableColumnFlags_WidthFixed);
-		ImGui::TableSetupColumn("Min", ImGuiTableColumnFlags_WidthStretch);
+		ImGui::TableSetupColumn("Average", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("Max", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_PreferSortDescending);
+		ImGui::TableSetupColumn("Min", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_PreferSortDescending);
 		ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 		ImGui::TableHeadersRow();
+
+		ensure(ImGui::TableGetColumnCount() == GpuStats_GetColumnCount());
+	}
+	FORCEINLINE static EStatSortMode GpuStats_GetSortMode(const ImGuiTableColumnSortSpecs& SortSpec)
+	{
+		static constexpr EStatSortMode SortModes[] =
+		{
+			EStatSortMode::Name,
+			EStatSortMode::Avg,
+			EStatSortMode::Max,
+			EStatSortMode::Min,
+		};
+		if (ensure(SortSpec.ColumnIndex < UE_ARRAY_COUNT(SortModes)))
+		{
+			return SortModes[SortSpec.ColumnIndex];
+		}
+		return SortModes[0];
 	}
 
-	// body
+	static bool FilterStats(const TArray<FComplexStatMessage>& Stats, TArray<const FComplexStatMessage*>& OutFilteredStats)
+	{
+		OutFilteredStats.Reset();
+
+		for (const auto& Stat : Stats)
+		{
+			const char* StatDescription = GetStatDescription(Stat);
+			if (StatFilter.PassFilter(StatDescription))
+			{
+				OutFilteredStats.Add(&Stat);
+			}
+		}
+
+		return !OutFilteredStats.IsEmpty();
+	}
+
+	static bool CompareStat(const FComplexStatMessage& LHS, const FComplexStatMessage& RHS, EStatSortMode Mode, bool bAscending)
+	{
+		switch (Mode)
+		{
+		default: [[fallthrough]];
+		case EStatSortMode::Name:
+		{
+			const char* StrA = GetStatDescription(LHS);
+			const char* StrB = GetStatDescription(RHS);
+			const bool bComparison = FCStringAnsi::Strcmp(StrA, StrB) < 0;
+			return bAscending ? bComparison : !bComparison;
+		}
+		case EStatSortMode::Avg:
+		{
+			const double StatA = (LHS.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double) ?
+				LHS.GetValue_double(EComplexStatField::IncAve) : double(LHS.GetValue_int64(EComplexStatField::IncAve));
+			const double StatB = (RHS.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double) ?
+				RHS.GetValue_double(EComplexStatField::IncAve) : double(RHS.GetValue_int64(EComplexStatField::IncAve));
+			const bool bComparison = StatA < StatB;
+			return bAscending ? bComparison : !bComparison;
+		}
+		case EStatSortMode::Max:
+		{
+			const double StatA = (LHS.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double) ?
+				LHS.GetValue_double(EComplexStatField::IncMax) : double(LHS.GetValue_int64(EComplexStatField::IncMax));
+			const double StatB = (RHS.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double) ?
+				RHS.GetValue_double(EComplexStatField::IncMax) : double(RHS.GetValue_int64(EComplexStatField::IncMax));
+			const bool bComparison = StatA < StatB;
+			return bAscending ? bComparison : !bComparison;
+		}
+		case EStatSortMode::Min:
+		{
+			const double StatA = (LHS.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double) ?
+				LHS.GetValue_double(EComplexStatField::IncMin) : double(LHS.GetValue_int64(EComplexStatField::IncMin));
+			const double StatB = (RHS.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double) ?
+				RHS.GetValue_double(EComplexStatField::IncMin) : double(RHS.GetValue_int64(EComplexStatField::IncMin));
+			const bool bComparison = StatA < StatB;
+			return bAscending ? bComparison : !bComparison;
+		}
+		case EStatSortMode::CallCount:
+		{
+			const double StatA = LHS.GetValue_CallCount(EComplexStatField::IncAve);
+			const double StatB = RHS.GetValue_CallCount(EComplexStatField::IncAve);
+			const bool bComparison = StatA < StatB;
+			return bAscending ? bComparison : !bComparison;
+		}
+		case EStatSortMode::IncAvg:
+		{
+			const int64 StatA = LHS.GetValue_Duration(EComplexStatField::IncAve);
+			const int64 StatB = RHS.GetValue_Duration(EComplexStatField::IncAve);
+			const bool bComparison = StatA < StatB;
+			return bAscending ? bComparison : !bComparison;
+
+		}
+		case EStatSortMode::IncMax:
+		{
+			const int64 StatA = LHS.GetValue_Duration(EComplexStatField::IncMax);
+			const int64 StatB = RHS.GetValue_Duration(EComplexStatField::IncMax);
+			const bool bComparison = StatA < StatB;
+			return bAscending ? bComparison : !bComparison;
+		}
+		case EStatSortMode::ExcAvg:
+		{
+			const int64 StatA = LHS.GetValue_Duration(EComplexStatField::ExcAve);
+			const int64 StatB = RHS.GetValue_Duration(EComplexStatField::ExcAve);
+			const bool bComparison = StatA < StatB;
+			return bAscending ? bComparison : !bComparison;
+		}
+		case EStatSortMode::ExcMax:
+		{
+			const int64 StatA = LHS.GetValue_Duration(EComplexStatField::ExcMax);
+			const int64 StatB = RHS.GetValue_Duration(EComplexStatField::ExcMax);
+			const bool bComparison = StatA < StatB;
+			return bAscending ? bComparison : !bComparison;
+		}
+		}
+	}
+
 	static void RenderCycle(const FComplexStatMessage& Item, const bool bStackStat)
 	{
 		check(Item.NameAndInfo.GetFlag(EStatMetaFlags::IsCycle));
@@ -167,12 +331,7 @@ namespace ImGuiStatsVizualizer
 
 			const FName RawStatName = Item.NameAndInfo.GetRawName();
 
-			if (!StatFilter.PassFilter(StatDescription))
-			{
-				return;
-			}
-
-			ImGui::TableNextRow(ImGuiTableRowFlags_None);
+			ImGui::TableNextRow();
 		
 			ImGui::TableSetColumnIndex(0);
 			{
@@ -221,7 +380,6 @@ namespace ImGuiStatsVizualizer
 
 #if WITH_EDITOR
 				static TMap<FName, TWeakObjectPtr<UObject>> LinkedAsset;
-									
 				if (!LinkedAsset.Find(RawStatName))
 				{
 					FString AssetPath = Item.GetShortName().GetPlainNameString();
@@ -296,12 +454,7 @@ namespace ImGuiStatsVizualizer
 	{
 		const char* StatDescription = GetStatDescription(Item);
 
-		if (!StatFilter.PassFilter(StatDescription))
-		{
-			return;
-		}
-
-		ImGui::TableNextRow(ImGuiTableRowFlags_None);
+		ImGui::TableNextRow();
 
 		FPlatformMemory::EMemoryCounterRegion Region = FPlatformMemory::EMemoryCounterRegion(Item.NameAndInfo.GetField<EMemoryRegion>());
 		// At this moment we only have memory stats that are marked as non frame stats, so can't be cleared every frame.
@@ -313,9 +466,6 @@ namespace ImGuiStatsVizualizer
 		{
 			AddSelectableRow(StatDescription, Item.NameAndInfo.GetRawName());
 		}
-
-		// always use MB for easier comparisons
-		const bool bAutoType = false;
 
 		// Now append the max value of the stat
 		ImGui::TableSetColumnIndex(1);
@@ -364,12 +514,7 @@ namespace ImGuiStatsVizualizer
 
 		const char* StatDescription = GetStatDescription(Item);
 
-		if (!StatFilter.PassFilter(StatDescription))
-		{
-			return;
-		}
-
-		ImGui::TableNextRow(ImGuiTableRowFlags_None);
+		ImGui::TableNextRow();
 
 		const bool bDisplayAll = Item.NameAndInfo.GetFlag(EStatMetaFlags::ShouldClearEveryFrame);
 	
@@ -432,66 +577,20 @@ namespace ImGuiStatsVizualizer
 	}
 
 	template <typename T>
-	static int32 RenderArrayOfStats(const TArray<FComplexStatMessage>& Aggregates, const FGameThreadStatsData& ViewData, const T& FunctionToCall)
+	static int32 RenderArrayOfStats(const TArray<const FComplexStatMessage*>& Stats, const FGameThreadStatsData& ViewData, const T& FunctionToCall)
 	{
 		int32 RowIndex = 0;
-
-		// Render all counters.
-		if (!StatFilter.IsActive()) // TODO: clipping doesn't work with JIT filtering
-		{        
-			ImGuiListClipper clipper;
-			clipper.Begin(Aggregates.Num());
-			while (clipper.Step())
-			{
-				for (RowIndex = clipper.DisplayStart; RowIndex < clipper.DisplayEnd; RowIndex++)
-				{
-					FunctionToCall(ViewData, Aggregates[RowIndex]);
-				}
-			}
-		}
-		else
+		ImGuiListClipper clipper;
+		clipper.Begin(Stats.Num());
+		while (clipper.Step())
 		{
-			for (RowIndex = 0; RowIndex < Aggregates.Num(); ++RowIndex)
+			for (RowIndex = clipper.DisplayStart; RowIndex < clipper.DisplayEnd; RowIndex++)
 			{
-				FunctionToCall(ViewData, Aggregates[RowIndex]);
+				FunctionToCall(ViewData, *Stats[RowIndex]);
 			}
 		}
-
 		return RowIndex;
 	}
-
-#if RHI_NEW_GPU_PROFILER
-	template <typename T>
-	static int32 RenderArrayOfGpuStats(TArray<const FComplexStatMessage*>&& StatMessages, const FGameThreadStatsData& ViewData, const T& FunctionToCall)
-	{
-		using EType = UE::RHI::GPUProfiler::FGPUStat::EType;
-
-		int32 RowIndex = 0;
-
-		// Render all counters.
-		if (!StatFilter.IsActive()) // TODO: clipping doesn't work with JIT filtering
-		{
-			ImGuiListClipper clipper;
-			clipper.Begin(StatMessages.Num());
-			while (clipper.Step())
-			{
-				for (RowIndex = clipper.DisplayStart; RowIndex < clipper.DisplayEnd; RowIndex++)
-				{
-					FunctionToCall(ViewData, *StatMessages[RowIndex]);
-				}
-			}
-		}
-		else
-		{
-			for (RowIndex = 0; RowIndex < StatMessages.Num(); ++RowIndex)
-			{
-				FunctionToCall(ViewData, *StatMessages[RowIndex]);
-			}
-		}
-
-		return RowIndex;
-	}
-#endif //#if RHI_NEW_GPU_PROFILER
 
 	FORCEINLINE static void RenderFlatCycle(const FGameThreadStatsData& ViewData, const FComplexStatMessage& Item)
 	{
@@ -526,84 +625,112 @@ namespace ImGuiStatsVizualizer
 
 			if (!bCullNextSection && ImGui::CollapsingHeader(*StatGroupData->DisplayName, ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable;
 
-				const bool bHasHierarchy = StatGroup.HierAggregate.Num() > 0;
-				const bool bHasFlat = StatGroup.FlatAggregate.Num() > 0;
+				const bool bHasHierarchy = false;// StatGroup.HierAggregate.Num() > 0; //NOTE: hierarchy view not supported atm
+				const bool bHasFlat = StatGroup.FlatAggregate.Num() > 0 && !bHasHierarchy;
 
-				// Render cycles.
-				if (/*bHasHierarchy || */bHasFlat) //NOTE: hierarchy view not supported atm
+				TArray<const FComplexStatMessage*> FilteredStats;
+
+				// display cycle stats
+				if (bHasFlat)
 				{
-					if (ImGui::BeginTable("CycleStats", GetCycleStatsColumnCount(), TableFlags))
+					if (FilterStats(StatGroup.FlatAggregate, FilteredStats) && ImGui::BeginTable("CycleStats", CycleStats_GetColumnCount(), TableFlags))
 					{
-						RenderGroupedHeadings(bHasHierarchy);
+						CycleStats_SetupTableColumns(bHasHierarchy);
 
-						if (bHasHierarchy)
+						if (ImGuiTableSortSpecs* SortSpecs = ImGui::TableGetSortSpecs())
 						{
-							const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.HierAggregate, ViewData, RenderFlatCycle);							
-							bCullNextSection = LastRowDisplayed < StatGroup.HierAggregate.Num();
+							FilteredStats.Sort([&](const auto StatA, const auto StatB)
+								{
+									return CompareStat(StatA, StatB, CycleStats_GetSortMode(SortSpecs->Specs[0]), SortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Ascending);
+								});
 						}
-						
-						if (!bCullNextSection && bHasFlat)
-						{
-							const int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.FlatAggregate, ViewData, RenderFlatCycle);
-							bCullNextSection = LastRowDisplayed < StatGroup.FlatAggregate.Num();
-						}
+
+						const int32 LastRowDisplayed = RenderArrayOfStats(FilteredStats, ViewData, RenderFlatCycle);
+						bCullNextSection = LastRowDisplayed < FilteredStats.Num();
 
 						ImGui::EndTable();
 					}
 				}
 
-				// Render memory counters.
-				if (!bCullNextSection && StatGroup.MemoryAggregate.Num())
-				{
-					if (ImGui::BeginTable("MemoryStats", GetMemoryStatsColumnCount(), TableFlags))
-					{
-						RenderMemoryHeadings();
-
-						int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.MemoryAggregate, ViewData, RenderMemoryCounter);
-						bCullNextSection = LastRowDisplayed < StatGroup.MemoryAggregate.Num();
-
-						ImGui::EndTable();
-					}
-				}
-
-				// Render counters.
+				// display counter stats
 				if (!bCullNextSection && StatGroup.CountersAggregate.Num())
 				{
-					if (ImGui::BeginTable("CounterStats", GetCounterStatsColumnCount(), TableFlags))
+					if (FilterStats(StatGroup.CountersAggregate, FilteredStats) && ImGui::BeginTable("CounterStats", CounterStats_GetColumnCount(), TableFlags))
 					{
-						RenderCounterHeadings();
+						CounterStats_SetupTableColumns();
+						
+						if (ImGuiTableSortSpecs* SortSpecs = ImGui::TableGetSortSpecs())
+						{
+							FilteredStats.Sort([&](const auto StatA, const auto StatB)
+								{
+									return CompareStat(StatA, StatB, CounterStats_GetSortMode(SortSpecs->Specs[0]), SortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Ascending);
+								});
+						}
 
-						int32 LastRowDisplayed = RenderArrayOfStats(StatGroup.CountersAggregate, ViewData, RenderCounter);
-						bCullNextSection = LastRowDisplayed < StatGroup.CountersAggregate.Num();
-					
+						int32 LastRowDisplayed = RenderArrayOfStats(FilteredStats, ViewData, RenderCounter);
+						bCullNextSection = LastRowDisplayed < FilteredStats.Num();
+
 						ImGui::EndTable();
 					}
 				}
 
-#if RHI_NEW_GPU_PROFILER
+				// display memory stats
+				if (!bCullNextSection && StatGroup.MemoryAggregate.Num())
+				{
+					if (FilterStats(StatGroup.MemoryAggregate, FilteredStats) && ImGui::BeginTable("MemoryStats", MemoryStats_GetColumnCount(), TableFlags))
+					{
+						MemoryStats_SetupTableColumns();
+
+						if (ImGuiTableSortSpecs* SortSpecs = ImGui::TableGetSortSpecs())
+						{
+							FilteredStats.Sort([&](const auto StatA, const auto StatB)
+								{
+									return CompareStat(StatA, StatB, MemoryStats_GetSortMode(SortSpecs->Specs[0]), SortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Ascending);
+								});
+						}
+
+						int32 LastRowDisplayed = RenderArrayOfStats(FilteredStats, ViewData, RenderMemoryCounter);
+						bCullNextSection = LastRowDisplayed < FilteredStats.Num();
+
+						ImGui::EndTable();
+					}
+				}
+
+#if RHI_NEW_GPU_PROFILER && 0 // TODO: code not tested with the new gpu profiler
+				// display gpu stats
 				if (!bCullNextSection && StatGroup.GpuStatsAggregate.Num())
 				{
-					TArray<const FComplexStatMessage*> FilteredStats;
-					FilteredStats.Reserve(StatGroup.GpuStatsAggregate.Num());
-					for (const FComplexStatMessage& Message : StatGroup.GpuStatsAggregate)
+					FilteredStats.Reset();
+					for (const FComplexStatMessage& Stat : StatGroup.GpuStatsAggregate)
 					{
 						using EType = UE::RHI::GPUProfiler::FGPUStat::EType;
-						const FName ShortName = Message.GetShortName();
+						const FName ShortName = Stat.GetShortName();
 						const int32 Number = ShortName.GetNumber();
 						if ((EType)Number == EType::Busy)
 						{
-							FilteredStats.Add(&Message);
+							if (StatFilter.PassFilter(GetStatDescription(Stat)))
+							{
+								FilteredStats.Add(&Stat);
+							}
 						}
 					}
 
-					if (ImGui::BeginTable("GpuStats", GetCounterStatsColumnCount(), TableFlags))
+					if (!FilteredStats.IsEmpty() && ImGui::BeginTable("GpuStats", GetCounterStatsColumnCount(), TableFlags))
 					{
-						RenderGpuStatHeadings();
+						GpuStats_SetupTableColumns();
 
-						int32 LastRowDisplayed = RenderArrayOfGpuStats(MoveTemp(FilteredStats), ViewData, RenderCounter);
-						bCullNextSection = LastRowDisplayed < StatGroup.CountersAggregate.Num();
+						if (ImGuiTableSortSpecs* SortSpecs = ImGui::TableGetSortSpecs())
+						{
+							FilteredStats.Sort([&](const auto StatA, const auto StatB)
+								{
+									return CompareStat(StatA, StatB, GpuStats_GetSortMode(SortSpecs->Specs[0]), SortSpecs->Specs[0].SortDirection == ImGuiSortDirection_Ascending);
+								});
+						}
+
+						int32 LastRowDisplayed = RenderArrayOfStats(FilteredStats, ViewData, RenderCounter);
+						bCullNextSection = LastRowDisplayed < SortedStatIndices.Num();
 
 						ImGui::EndTable();
 					}
