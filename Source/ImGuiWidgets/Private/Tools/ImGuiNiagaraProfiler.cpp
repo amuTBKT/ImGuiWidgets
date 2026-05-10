@@ -377,6 +377,14 @@ namespace ImGuiNiagaraProfiler
 			NiagaraGPUProfilerListener->SetEnabled(bIsCapturing);
 			if (bIsCapturing)
 			{
+				for (auto Itr = WorldStatData.CreateIterator(); Itr; ++Itr)
+				{
+					if (!Itr.Key().IsValid())
+					{
+						Itr.RemoveCurrent();
+					}
+				}
+
 				if ((WorldStatData.Num() > 0) && ImGui::BeginTabBar("Stats"))
 				{
 					int32 WorldIndex = 0;
