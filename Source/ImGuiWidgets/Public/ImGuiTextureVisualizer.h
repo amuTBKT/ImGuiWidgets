@@ -17,7 +17,7 @@ namespace ImGuiTextureVisualizer
 	IMGUIWIDGETS_API void SetTextureOverride_GameThread(const FString& DisplayName, const FTextureResource* TextureResource);
 
 	// display the specified texture rhi resource, stored as ref counted pointer
-	IMGUIWIDGETS_API void SetTextureOverride_RenderThread(const FString& DisplayName, FRHITexture* TextureResource);
+	IMGUIWIDGETS_API void SetTextureOverride_RenderThread(const FString& DisplayName, FRHITexture* Texture);
 
 	// reset override
 	IMGUIWIDGETS_API void ClearTextureOverride_GameThread();

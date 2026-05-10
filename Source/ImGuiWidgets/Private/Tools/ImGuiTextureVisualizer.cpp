@@ -59,9 +59,9 @@ namespace ImGuiTextureVisualizer
 		}
 	}
 
-	void SetTextureOverride_RenderThread(const FString& DisplayName, FRHITexture* TextureResource)
+	void SetTextureOverride_RenderThread(const FString& DisplayName, FRHITexture* Texture)
 	{
-		TextureRHIOverride = TextureResource;
+		TextureRHIOverride = Texture;
 		TextureOverrideName = TCHAR_TO_UTF8(*DisplayName);
 	}
 
