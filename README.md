@@ -7,8 +7,17 @@ A collection of tools and widgets using [ImGui](https://github.com/amuTBKT/ImGui
   or download zip and extract under Project/Plugins folder.
 * Enable the plugin in your uproject.
 
+Widgets
+- [Asset Picker](#asset-picker)
+- [Class Picker](#class-picker)
 
-## Texture Visualizer
+Tools
+- [Texture Visualizer](#texture-visualizer)
+- [Material Stats](#material-stats)
+- [Stats Visualizer](#stats-visualizer)
+- [Niagara GPU Profiler](#niagara-gpu-profiler)
+
+### Texture Visualizer
 Tool for inspecting render graph textures. Very much inspired and based on RenderDoc's texture viewer.<br>
 ![TextureVisualizer](Gallery/tool_texture_visualizer.png)
 Texture visualizer allows setting texture from code which can be useful to view textures not accessible through render graph.
@@ -26,24 +35,17 @@ ImGuiTextureVisualizer::SetTextureOverride_RenderThread("MyTexture", TextureRHI)
 
 ```
 
-
-## Material Stats
+### Material Stats
 Tool for inspecting UMaterial shader stats. Allows viewing shader code for every vertex factory + compute/pixel shader combinations.<br>
 ![MaterialStats](Gallery/tool_material_stats.png)
 
-
-## Stats Visualizer
+### Stats Visualizer
 Alternative to Unreal's `stat` command. Shows the stats in a separate window with filtering support.<br>
 ![StatsVisualier](Gallery/tool_stats_visualizer.png)
 
-
-## Niagara GPU profiler
+### Niagara GPU profiler
 Tool for displaying Niagara simulation stage duration. Useful when optimizing simulation stages.<br>
 ![NiagaraProfiler](Gallery/tool_niagara_profiler.png)
-
-
-## Widgets
-List of ImGui widgets.
 
 ### Asset picker
 `SAssetPicker` widget for ImGui.<br>
