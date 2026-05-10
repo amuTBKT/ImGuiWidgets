@@ -1,4 +1,4 @@
-// Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
+// Copyright 2026 Amit Kumar Mehar. All Rights Reserved.
 
 #include "Misc/Build.h"
 
@@ -532,7 +532,7 @@ namespace ImGuiStatsVizualizer
 				const bool bHasFlat = StatGroup.FlatAggregate.Num() > 0;
 
 				// Render cycles.
-				if (bHasHierarchy || bHasFlat)
+				if (/*bHasHierarchy || */bHasFlat) //NOTE: hierarchy view not supported atm
 				{
 					if (ImGui::BeginTable("CycleStats", GetCycleStatsColumnCount(), TableFlags))
 					{
@@ -568,7 +568,7 @@ namespace ImGuiStatsVizualizer
 					}
 				}
 
-				// Render remaining counters.
+				// Render counters.
 				if (!bCullNextSection && StatGroup.CountersAggregate.Num())
 				{
 					if (ImGui::BeginTable("CounterStats", GetCounterStatsColumnCount(), TableFlags))

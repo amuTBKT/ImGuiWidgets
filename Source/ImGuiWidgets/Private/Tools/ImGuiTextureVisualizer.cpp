@@ -1,4 +1,4 @@
-// Copyright 2025 Amit Kumar Mehar. All Rights Reserved.
+// Copyright 2026 Amit Kumar Mehar. All Rights Reserved.
 
 #include "ImGuiTextureVisualizer.h"
 
