@@ -38,6 +38,8 @@ namespace ImGuiStatsVizualizer
 	static FImGuiTextFilter StatFilter = FImGuiTextFilter::MakeWidget(64u);
 	static FImGuiImageBindingParams EditAssetIcon;
 	static FImGuiImageBindingParams BrowseAssetIcon;
+	static FImGuiImageBindingParams DeleteIcon;
+	static FImGuiImageBindingParams SaveIcon;
 
 	FORCEINLINE static const char* GetStatDescription(const FComplexStatMessage& Stat)
 	{
@@ -88,10 +90,10 @@ namespace ImGuiStatsVizualizer
 		Max,
 		Min,
 		CallCount,
-		IncAvg,
-		IncMax,
-		ExcAvg,
-		ExcMax,
+		InclusiveAvg,
+		InclusiveMax,
+		ExclusiveAvg,
+		ExclusiveMax,
 	};
 
 	FORCEINLINE static int32 CycleStats_GetColumnCount()
@@ -121,10 +123,10 @@ namespace ImGuiStatsVizualizer
 		{
 			EStatSortMode::Name,
 			EStatSortMode::CallCount,
-			EStatSortMode::IncAvg,
-			EStatSortMode::IncMax,
-			EStatSortMode::ExcAvg,
-			EStatSortMode::ExcMax
+			EStatSortMode::InclusiveAvg,
+			EStatSortMode::InclusiveMax,
+			EStatSortMode::ExclusiveAvg,
+			EStatSortMode::ExclusiveMax
 		};
 		if (ensure(SortSpec.ColumnIndex < UE_ARRAY_COUNT(SortModes)))
 		{
@@ -243,6 +245,14 @@ namespace ImGuiStatsVizualizer
 
 	static bool CompareStat(const FComplexStatMessage& LHS, const FComplexStatMessage& RHS, EStatSortMode Mode, bool bAscending)
 	{
+		// counter stat groups can often contain cycle stats, so keep cycle stats on top
+		const bool bIsCycleA = LHS.NameAndInfo.GetFlag(EStatMetaFlags::IsCycle);
+		const bool bIsCycleB = RHS.NameAndInfo.GetFlag(EStatMetaFlags::IsCycle);
+		if (bIsCycleA ^ bIsCycleB)
+		{
+			return bIsCycleA;
+		}
+
 		switch (Mode)
 		{
 		default: [[fallthrough]];
@@ -287,7 +297,7 @@ namespace ImGuiStatsVizualizer
 			const bool bComparison = StatA < StatB;
 			return bAscending ? bComparison : !bComparison;
 		}
-		case EStatSortMode::IncAvg:
+		case EStatSortMode::InclusiveAvg:
 		{
 			const int64 StatA = LHS.GetValue_Duration(EComplexStatField::IncAve);
 			const int64 StatB = RHS.GetValue_Duration(EComplexStatField::IncAve);
@@ -295,21 +305,21 @@ namespace ImGuiStatsVizualizer
 			return bAscending ? bComparison : !bComparison;
 
 		}
-		case EStatSortMode::IncMax:
+		case EStatSortMode::InclusiveMax:
 		{
 			const int64 StatA = LHS.GetValue_Duration(EComplexStatField::IncMax);
 			const int64 StatB = RHS.GetValue_Duration(EComplexStatField::IncMax);
 			const bool bComparison = StatA < StatB;
 			return bAscending ? bComparison : !bComparison;
 		}
-		case EStatSortMode::ExcAvg:
+		case EStatSortMode::ExclusiveAvg:
 		{
 			const int64 StatA = LHS.GetValue_Duration(EComplexStatField::ExcAve);
 			const int64 StatB = RHS.GetValue_Duration(EComplexStatField::ExcAve);
 			const bool bComparison = StatA < StatB;
 			return bAscending ? bComparison : !bComparison;
 		}
-		case EStatSortMode::ExcMax:
+		case EStatSortMode::ExclusiveMax:
 		{
 			const int64 StatA = LHS.GetValue_Duration(EComplexStatField::ExcMax);
 			const int64 StatB = RHS.GetValue_Duration(EComplexStatField::ExcMax);
@@ -813,9 +823,6 @@ namespace ImGuiStatsVizualizer
 		bool bDeleteIconHovered = false;
 		if (Context->ImguiContext->DragDropActive && Context->ImguiContext->DragDropPayload.IsDataType(HeaderButtonDragDropPayloadType))
 		{
-			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-			const FImGuiImageBindingParams DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Delete"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
-			
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xFFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, 0xFF0000FF);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -836,9 +843,6 @@ namespace ImGuiStatsVizualizer
 		}
 		else
 		{
-			UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-			const FImGuiImageBindingParams SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Save"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
-
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
@@ -993,6 +997,8 @@ namespace ImGuiStatsVizualizer
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Edit"), ImGui::GetFontSize());
 		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Search"), ImGui::GetFontSize());
+		DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Delete"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
+		SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Save"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
 	}
 
 	static void Tick(FImGuiTickContext* Context)
