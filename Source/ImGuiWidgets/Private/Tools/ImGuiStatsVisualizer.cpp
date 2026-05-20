@@ -708,7 +708,7 @@ namespace ImGuiStatsVizualizer
 					}
 				}
 
-#if RHI_NEW_GPU_PROFILER && 0 // TODO: code not tested with the new gpu profiler
+#if RHI_NEW_GPU_PROFILER
 				// display gpu stats
 				if (!bCullNextSection && StatGroup.GpuStatsAggregate.Num())
 				{
@@ -727,7 +727,7 @@ namespace ImGuiStatsVizualizer
 						}
 					}
 
-					if (!FilteredStats.IsEmpty() && ImGui::BeginTable("GpuStats", GetCounterStatsColumnCount(), TableFlags))
+					if (!FilteredStats.IsEmpty() && ImGui::BeginTable("GpuStats", GpuStats_GetColumnCount(), TableFlags))
 					{
 						GpuStats_SetupTableColumns();
 
@@ -740,7 +740,7 @@ namespace ImGuiStatsVizualizer
 						}
 
 						int32 LastRowDisplayed = RenderArrayOfStats(FilteredStats, ViewData, RenderCounter);
-						bCullNextSection = LastRowDisplayed < SortedStatIndices.Num();
+						bCullNextSection = LastRowDisplayed < FilteredStats.Num();
 
 						ImGui::EndTable();
 					}
