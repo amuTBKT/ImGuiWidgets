@@ -845,6 +845,30 @@ namespace ImGuiTextureVisualizer
 
 		ImGui::EndDisabled();
 
+		// copy textue name widget
+		{
+			ImGui::SameLine();
+			
+			ImGui::BeginDisabled(PreviouslySelectedTextureName.IsEmpty());
+
+			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+			const FImGuiImageBindingParams CopyIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Clipboard"), ComboBoxSize.y);
+			if (FImGui::TransparentImageButton("CopyTextureName", CopyIcon))
+			{
+				ImGui::SetClipboardText(*PreviouslySelectedTextureName);
+			}
+			ImGui::SetItemTooltip("Copy texture name to clipboard");
+
+			ImGui::PopStyleVar();
+			ImGui::PopStyleColor(3);
+
+			ImGui::EndDisabled();
+		}
+
 		// reset icon
 		if (!bShowTextureList && !InOutSelectedTextureName.IsEmpty())
 		{

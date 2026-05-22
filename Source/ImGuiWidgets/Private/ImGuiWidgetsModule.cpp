@@ -30,6 +30,7 @@ public:
 		Set("ImIcon.Statistics", new IMAGE_BRUSH_SVG("Icons/im_statistics", Icon16x16));
 		Set("ImIcon.Cross", new IMAGE_BRUSH_SVG("Icons/im_cross", Icon16x16));
 		Set("ImIcon.Delete", new IMAGE_BRUSH_SVG("Icons/im_delete", Icon16x16));
+		Set("ImIcon.Clipboard", new IMAGE_BRUSH_SVG("Icons/im_clipboard", Icon16x16));
 
 		Set("ImIcon.CollapseAll", new IMAGE_BRUSH_SVG("Icons/im_collapse_all", Icon16x16));
 		Set("ImIcon.ExpandAll", new IMAGE_BRUSH_SVG("Icons/im_expand_all", Icon16x16));
