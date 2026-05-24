@@ -429,7 +429,6 @@ namespace ImGuiTextureVisualizer
 			uint32 NumBytes = sizeof(FVector4f) * 2;
 			Readback.EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, NumBytes);
 			RHICmdList.BlockUntilGPUIdle();
-			RHICmdList.FlushResources();
 			RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
 
 			if (const uint8* SrcRawBuffer = (const uint8*)Readback.Lock(NumBytes))
@@ -1406,7 +1405,7 @@ namespace ImGuiTextureVisualizer
 				}
 
 				// NOTE: adjust for viewport offset
-				ImVec2 WindowPos = ImGui::GetWindowPos();
+				ImVec2 WindowPos = ImGui::GetCurrentWindow()->ViewportPos;
 				InOutTexturePreviewOptions.TextureInspectorRect -= FIntVector4(WindowPos.x, WindowPos.y, WindowPos.x, WindowPos.y);
 			}
 		}
@@ -1489,8 +1488,8 @@ namespace ImGuiTextureVisualizer
 			}
 
 			FTexturePreviewUserData Params;
-			Params.ClipRectMin = ImGui::GetItemRectMin() - ImGui::GetWindowPos();
-			Params.ClipRectMax = ImGui::GetItemRectMax() - ImGui::GetWindowPos();
+			Params.ClipRectMin = ImGui::GetItemRectMin() - ImGui::GetCurrentWindow()->ViewportPos;
+			Params.ClipRectMax = ImGui::GetItemRectMax() - ImGui::GetCurrentWindow()->ViewportPos;
 			Params.Options = TexturePreviewOptions;
 			ImGui::GetWindowDrawList()->AddCallback(TexturePreviewCallback, &Params, sizeof(Params));
 
