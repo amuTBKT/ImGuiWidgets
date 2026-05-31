@@ -764,7 +764,7 @@ namespace ImGuiStatsVizualizer
 	};
 	static void LoadWidgetSettings()
 	{
-		FConfigFile* WidgetSettings = FImGuiSettings::GetConfigFile();
+		FConfigFile* WidgetSettings = UImGuiSubsystem::Get()->GetSaveDataConfigFile();
 		if (!WidgetSettings)
 		{
 			return;
@@ -795,7 +795,7 @@ namespace ImGuiStatsVizualizer
 	}
 	static void SaveWidgetSettings()
 	{
-		FConfigFile* WidgetSettings = FImGuiSettings::GetConfigFile();
+		FConfigFile* WidgetSettings = UImGuiSubsystem::Get()->GetSaveDataConfigFile();
 		if (!WidgetSettings)
 		{
 			return;
@@ -813,7 +813,7 @@ namespace ImGuiStatsVizualizer
 		WidgetSettings->SetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_DisplayNames"), SerializedData.DisplayNames);
 		WidgetSettings->SetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_StatGroupNames"), SerializedData.StatGroupNames);
 		
-		FImGuiSettings::SaveConfigFile();
+		UImGuiSubsystem::Get()->SaveConfigToDisk();
 	}
 
 	static void RenderStatsHeader(FImGuiTickContext* Context, int32& GroupIndexToRemove)
@@ -995,80 +995,69 @@ namespace ImGuiStatsVizualizer
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Edit"), ImGui::GetFontSize());
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Search"), ImGui::GetFontSize());
-		DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Delete"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
-		SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Save"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Edit"), ImGui::GetFontSize());
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Search"), ImGui::GetFontSize());
+		DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Delete"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
+		SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Save"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
 	}
 
 	static void Tick(FImGuiTickContext* Context)
 	{
 		FImGuiTickScope Scope{ Context };
 
-		// TODO: Find a better/reliable way to check if docknode is already active
-#if WITH_EDITOR //dockspace already created if not using standalone widgets
-		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar;
-		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
-		ImGui::SetNextWindowDockID(MainDockSpaceID, ImGuiCond_Always);
-#endif
-
-		if (ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
-		{
-			RegisterOneFrameResources();
+		RegisterOneFrameResources();
 			
-			int32 GroupIndexToRemove = INDEX_NONE;
-			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
-			{
-				RenderStatsHeader(Context, GroupIndexToRemove);
-			}
-			ImGui::EndChild();
+		int32 GroupIndexToRemove = INDEX_NONE;
+		if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+		{
+			RenderStatsHeader(Context, GroupIndexToRemove);
+		}
+		ImGui::EndChild();
 
-			ImGui::Separator();
+		ImGui::Separator();
 
-			if (ImGui::BeginChild("Body"))
+		if (ImGui::BeginChild("Body"))
+		{
+			FGameThreadStatsData* ViewData = FLatestGameThreadStatsData::Get().Latest;
+			if (ViewData/* || !ViewData->bRenderStats*/)
 			{
-				FGameThreadStatsData* ViewData = FLatestGameThreadStatsData::Get().Latest;
-				if (ViewData/* || !ViewData->bRenderStats*/)
+				if (!ViewData->RootFilter.IsEmpty())
 				{
-					if (!ViewData->RootFilter.IsEmpty())
-					{
-						ImGui::Text("Root filter is active. ROOT=%s", TCHAR_TO_UTF8(*ViewData->RootFilter));
+					ImGui::Text("Root filter is active. ROOT=%s", TCHAR_TO_UTF8(*ViewData->RootFilter));
 						
-						ImGui::Separator();
-					}
-
-					if (!ViewData->bDrawOnlyRawStats)
-					{
-						RenderGroupedWithHierarchy(*ViewData);
-					}
+					ImGui::Separator();
 				}
-				else
+
+				if (!ViewData->bDrawOnlyRawStats)
 				{
-					ImGui::TextUnformatted("Not recording stats...");
+					RenderGroupedWithHierarchy(*ViewData);
 				}
 			}
-			ImGui::EndChild();
-
-			// need to defer removal as showing current stats can readd the group
-			if (StatGroups.IsValidIndex(GroupIndexToRemove))
+			else
 			{
-				if (StatGroups[GroupIndexToRemove].bIsActive)
-				{
-					const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *StatGroups[GroupIndexToRemove].NameForCommand);
-					GEngine->Exec(nullptr, *StatCommand);
-				}
-				StatGroups.RemoveAt(GroupIndexToRemove);
+				ImGui::TextUnformatted("Not recording stats...");
 			}
 		}
-		ImGui::End();
+		ImGui::EndChild();
+
+		// need to defer removal as showing current stats can readd the group
+		if (StatGroups.IsValidIndex(GroupIndexToRemove))
+		{
+			if (StatGroups[GroupIndexToRemove].bIsActive)
+			{
+				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *StatGroups[GroupIndexToRemove].NameForCommand);
+				GEngine->Exec(nullptr, *StatCommand);
+			}
+			StatGroups.RemoveAt(GroupIndexToRemove);
+		}
 	}
-	
-	static FStaticWidgetRegisterParams RegisterParams =
+
+	static FImGuiWidgetRegisterParams RegisterParams =
 	{
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
-		.WidgetIcon			= FSlateIcon(FName("EditorStyle"), FName("Profiler.Tab")),
-		.WidgetName			= "Stats Visualizer",
+		.WidgetIcon			= IMGUI_ICON("ImIcon.StatsVisualizer"),
+		.WidgetPath			= "Profiling.Stats Visualizer",
 		.WidgetDescription	= "Widget for displaying stat groups.",
 		.bEnableViewports	= false
 	};

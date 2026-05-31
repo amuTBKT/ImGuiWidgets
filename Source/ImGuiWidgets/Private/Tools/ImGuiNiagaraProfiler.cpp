@@ -320,94 +320,83 @@ namespace ImGuiNiagaraProfiler
 	{
 		FImGuiTickScope Scope{ Context };
 
-		// TODO: Find a better/reliable way to check if docknode is already active
-#if WITH_EDITOR //dockspace already created if not using standalone widgets
-		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoTabBar;
-		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
-		ImGui::SetNextWindowDockID(MainDockSpaceID, ImGuiCond_Always);
-#endif
-
-		if (ImGui::Begin("Niagara Profiler", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+		if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
-			if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
-			{
-				ImGui::Checkbox("Enable profiling", &bIsCapturing);
+			ImGui::Checkbox("Enable profiling", &bIsCapturing);
 				
-				ImGui::Separator();
-
-				ImGui::BeginDisabled(!bIsCapturing);
-				SimStageFilter.Draw(Context, "SimStageFilter", "Filter Simulation Stages", ImGui::GetWindowWidth() * 0.75f);
-				ImGui::SameLine();
-
-				// collapse/expand buttons
-				{
-					UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-					const FImGuiImageBindingParams CollapseAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.CollapseAll"), 16.f * ImGui::GetStyle().FontScaleMain);
-					const FImGuiImageBindingParams ExpandAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.ExpandAll"), 16.f * ImGui::GetStyle().FontScaleMain);
-
-					ImGui::PushStyleColor(ImGuiCol_Button, 0);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
-					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
-					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
-
-					if (FImGui::ImageButtonWithTint("CollapseAll", CollapseAllIcon, 0x8FFFFFFF, 0xFFFFFFFF))
-					{
-						bExpandAll = false;
-					}
-					ImGui::SetItemTooltip("Collapse All");
-
-					ImGui::SameLine();
-
-					if (FImGui::ImageButtonWithTint("ExpandAll", ExpandAllIcon, 0x8FFFFFFF, 0xFFFFFFFF))
-					{
-						bExpandAll = true;
-					}
-					ImGui::SetItemTooltip("Expand All");
-
-					ImGui::PopStyleVar(2);
-					ImGui::PopStyleColor(3);
-				}
-				ImGui::EndDisabled();
-			}
-			ImGui::EndChild();
-
 			ImGui::Separator();
 
-			NiagaraGPUProfilerListener->SetEnabled(bIsCapturing);
-			if (bIsCapturing)
-			{
-				for (auto Itr = WorldStatData.CreateIterator(); Itr; ++Itr)
-				{
-					if (!Itr.Key().IsValid())
-					{
-						Itr.RemoveCurrent();
-					}
-				}
+			ImGui::BeginDisabled(!bIsCapturing);
+			SimStageFilter.Draw(Context, "SimStageFilter", "Filter Simulation Stages", ImGui::GetWindowWidth() * 0.75f);
+			ImGui::SameLine();
 
-				if ((WorldStatData.Num() > 0) && ImGui::BeginTabBar("Stats"))
+			// collapse/expand buttons
+			{
+				UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
+				const FImGuiImageBindingParams CollapseAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.CollapseAll"), 16.f * ImGui::GetStyle().FontScaleMain);
+				const FImGuiImageBindingParams ExpandAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ExpandAll"), 16.f * ImGui::GetStyle().FontScaleMain);
+
+				ImGui::PushStyleColor(ImGuiCol_Button, 0);
+				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
+				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
+				ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+
+				if (FImGui::ImageButtonWithTint("CollapseAll", CollapseAllIcon, 0x8FFFFFFF, 0xFFFFFFFF))
 				{
-					int32 WorldIndex = 0;
-					for (const auto& [World, WorldStats] : WorldStatData)
-					{
-						FImGuiNamedScope WorldScope{ WorldIndex++ };
-						DisplayWorldStats(World.Get(), WorldStats);
-					}
-					ImGui::EndTabBar();
+					bExpandAll = false;
+				}
+				ImGui::SetItemTooltip("Collapse All");
+
+				ImGui::SameLine();
+
+				if (FImGui::ImageButtonWithTint("ExpandAll", ExpandAllIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+				{
+					bExpandAll = true;
+				}
+				ImGui::SetItemTooltip("Expand All");
+
+				ImGui::PopStyleVar(2);
+				ImGui::PopStyleColor(3);
+			}
+			ImGui::EndDisabled();
+		}
+		ImGui::EndChild();
+
+		ImGui::Separator();
+
+		NiagaraGPUProfilerListener->SetEnabled(bIsCapturing);
+		if (bIsCapturing)
+		{
+			for (auto Itr = WorldStatData.CreateIterator(); Itr; ++Itr)
+			{
+				if (!Itr.Key().IsValid())
+				{
+					Itr.RemoveCurrent();
 				}
 			}
 
-			bExpandAll.Reset();
+			if ((WorldStatData.Num() > 0) && ImGui::BeginTabBar("Stats"))
+			{
+				int32 WorldIndex = 0;
+				for (const auto& [World, WorldStats] : WorldStatData)
+				{
+					FImGuiNamedScope WorldScope{ WorldIndex++ };
+					DisplayWorldStats(World.Get(), WorldStats);
+				}
+				ImGui::EndTabBar();
+			}
 		}
-		ImGui::End();
+
+		bExpandAll.Reset();
 	}
 
-	static FStaticWidgetRegisterParams RegisterParams =
+	static FImGuiWidgetRegisterParams RegisterParams =
 	{
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
-		.WidgetIcon			= FSlateIcon(FName("NiagaraEditorStyle"), FName("Tab.Debugger")),
-		.WidgetName			= "Niagara Profiler",
+		.WidgetIcon			= IMGUI_ICON("ImIcon.NiagaraProfiler"),
+		.WidgetPath			= "Profiling.Niagara Profiler",
 		.WidgetDescription	= "Widget for displaying Niagara gpu stats.",
 		.bEnableViewports	= false
 	};

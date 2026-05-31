@@ -5,17 +5,9 @@
 #include "ImGuiPluginTypes.h"
 #include "Input/DragAndDrop.h"
 
-// commonly used function to get ImGui icons
+// commonly used function to get ImGui icons/brushes
 #define IMGUI_ICON(IconName) IMGUI_STYLE_ICON("ImGuiStyle", IconName)
-
-///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-class FConfigFile;
-namespace FImGuiSettings
-{
-	IMGUIWIDGETS_API FConfigFile* GetConfigFile();
-	IMGUIWIDGETS_API bool SaveConfigFile();
-}
+#define IMGUI_ICON_BRUSH(IconName) IMGUI_STYLE_ICON_BRUSH("ImGuiStyle", IconName)
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -34,14 +26,13 @@ namespace FImGui
 	// Get ImGui tick context
 	FORCEINLINE FImGuiTickContext* GetTickContext(ImGuiContext* Context)
 	{
-		check(Context);
-		return (FImGuiTickContext*)Context->IO.UserData;
+		return FImGuiTickContext::GetTickContext(Context);
 	}
 
 	// Get the current ImGui tick context
 	FORCEINLINE FImGuiTickContext* GetCurrentTickContext()
 	{
-		return GetTickContext(ImGui::GetCurrentContext());
+		return FImGuiTickContext::GetTickContext(ImGui::GetCurrentContext());
 	}
 
 	// Similar to `ImGui::ImageButton` but allows tinting the image depending on button state (inactive/active|hovered)

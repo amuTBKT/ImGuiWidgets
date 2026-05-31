@@ -302,10 +302,10 @@ namespace ImGuiMaterialStats
 		static int32 DumpShaderInfoCVarRestoreValue = INDEX_NONE;
 		
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Warning"), ImGui::GetFontSize());
-		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Search"), ImGui::GetFontSize());
-		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Edit"), ImGui::GetFontSize());
-		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Statistics"), ImGui::GetFontSize());
+		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Warning"), ImGui::GetFontSize());
+		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Search"), ImGui::GetFontSize());
+		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Edit"), ImGui::GetFontSize());
+		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Statistics"), ImGui::GetFontSize());
 
 		bool bIsAnyWindowCompilingMaterial = false;
 		for (FMaterialWindowState& MaterialWindowState : MaterialWindowStates)
@@ -340,8 +340,9 @@ namespace ImGuiMaterialStats
 			bIsAnyWindowCompilingMaterial |= bIsCompilingPermutations;
 		}
 
-		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoCloseButton;
-		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
+		// offset to account for window padding
+		ImGui::SetCursorPos(ImGui::GetCursorPos() - ImGui::GetStyle().WindowPadding);
+		const ImGuiID MainDockSpaceID = ImGui::DockSpace(ImGui::GetID("DockSpace"), ImGui::GetContentRegionAvail() + ImGui::GetStyle().WindowPadding);
 
 		for (int32 WindowIndex = 0; WindowIndex < MaterialWindowStates.Num(); ++WindowIndex)
 		{
@@ -637,12 +638,12 @@ namespace ImGuiMaterialStats
 		}
 	}
 
-	static FStaticWidgetRegisterParams RegisterParams =
+	static FImGuiWidgetRegisterParams RegisterParams =
 	{
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
 		.WidgetIcon			= FSlateIcon(FAppStyle::GetAppStyleSetName(), FName("MaterialEditor.ToggleMaterialStats.Tab")),
-		.WidgetName			= "Material Stats",
+		.WidgetPath			= "Profiling.Material Stats",
 		.WidgetDescription	= "Widget for inspecting compiled Material stats."
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);

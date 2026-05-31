@@ -51,6 +51,10 @@ public:
 		Set("ImIcon.FallbackAssetIcon", new IMAGE_BRUSH_SVG("Icons/im_fallback_asset_icon", Icon16x16));
 		Set("ImIcon.PlusCircle", new IMAGE_BRUSH_SVG("Icons/im_plus_circle", Icon16x16));
 
+		Set("ImIcon.StatsVisualizer", new IMAGE_BRUSH_SVG("Icons/Tools/im_tool_stats_visualizer", Icon16x16));
+		Set("ImIcon.NiagaraProfiler", new IMAGE_BRUSH_SVG("Icons/Tools/im_tool_niagara_profiler", Icon16x16));
+		Set("ImIcon.TextureVisualizer", new IMAGE_BRUSH_SVG("Icons/Tools/im_tool_texture_visualizer", Icon16x16));
+
 		Set("ImTex.DashLine.Vertical", new IMAGE_BRUSH("Common/im_dash_line_vertical", FVector2f(1.f, 10.f), FLinearColor::White, ESlateBrushTileType::Vertical));
 		Set("ImTex.DashLine.Horizontal", new IMAGE_BRUSH("Common/im_dash_line_horizontal", FVector2f(10.f, 1.f), FLinearColor::White, ESlateBrushTileType::Horizontal));
 		Set("ImTex.DropDropArea.Background", new BOX_BRUSH("Common/im_dragdrop_area_background", FMargin(6.0f / 64.0f)));

@@ -3,57 +3,7 @@
 #include "ImGuiWidgets.h"
 #include "ImGuiSubsystem.h"
 
-#include "Misc/App.h"
-#include "Misc/EngineVersion.h"
-#include "Misc/ConfigCacheIni.h"
 #include "Blueprint/BlueprintSupport.h"
-
-namespace FImGuiSettings
-{
-	static const FString& GetConfigFilepath()
-	{
-		const TCHAR* UserSettingsDir = FPlatformProcess::UserSettingsDir();
-		const FString EngineVersion = FEngineVersion::Current().ToString(EVersionComponent::Minor);
-		static const FString ConfigFilepath =
-			FPaths::Combine(UserSettingsDir, *FApp::GetEpicProductIdentifier(), EngineVersion, TEXT("Config/ImGui/ImGuiWidgets.ini"));
-		return ConfigFilepath;
-	}
-
-	static FConfigFile* InitializeConfigFile()
-	{
-		const FString& ConfigFilepath = GetConfigFilepath();
-
-		FConfigFile* ConfigFile = GConfig->Find(ConfigFilepath);
-		if (!ConfigFile)
-		{
-			ConfigFile = &GConfig->Add(ConfigFilepath, FConfigFile{});
-		}
-
-		if (ConfigFile)
-		{
-			// needed to enable saving
-			ConfigFile->NoSave = false;
-		}
-
-		return ConfigFile;
-	}
-
-	FConfigFile* GetConfigFile()
-	{
-		static FConfigFile* SettingsConfigFile = InitializeConfigFile();
-		return SettingsConfigFile;
-	}
-
-	bool SaveConfigFile()
-	{
-		if (GetConfigFile())
-		{
-			GConfig->Flush(false, GetConfigFilepath());
-			return true;
-		}
-		return false;
-	}
-}
 
 namespace FImGui
 {
@@ -62,7 +12,7 @@ namespace FImGui
 		EnsureValidImGuiContext(context);
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImIcon.Warning"), ImGui::GetFontSize());
+		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Warning"), ImGui::GetFontSize());
 
 		/*
 		TODO: there must be a better way to add this ^^'
@@ -107,9 +57,9 @@ namespace FImGui
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
-		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImTex.DashLine.Vertical"));
-		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImTex.DashLine.Horizontal"));
-		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON("ImTex.DropDropArea.Background"));
+		const FImGuiImageBindingParams VerticalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImTex.DashLine.Vertical"));
+		const FImGuiImageBindingParams HorizontalImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImTex.DashLine.Horizontal"));
+		const FImGuiImageBindingParams BackgroundImage = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImTex.DropDropArea.Background"));
 
 		// TODO: scaling the UVs a bit to remove rounded corners (ideally should be using a different texture)
 		ImGui::GetWindowDrawList()->AddImage(BackgroundImage.Id, p_min, p_max, BackgroundImage.UV0 + ImVec2(0.001f, 0.001f), BackgroundImage.UV1 - ImVec2(0.001f, 0.001f), tint_col);
