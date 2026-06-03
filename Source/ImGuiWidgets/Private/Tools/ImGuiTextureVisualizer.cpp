@@ -19,6 +19,10 @@
 #include "RenderCaptureInterface.h"
 #include "PostProcess/DrawRectangle.h"
 
+#ifdef WITH_NET_IMGUI
+#include "net_imgui/NetImgui_Api.h"
+#endif
+
 // override setup
 namespace ImGuiTextureVisualizer
 {
@@ -268,8 +272,13 @@ namespace ImGuiTextureVisualizer
 		return Buffer;
 	}
 
+	void OnViewportRendered(FViewport* Viewport);
 	static void Initialize()
 	{
+#ifdef WITH_NET_IMGUI
+		UGameViewportClient::OnViewportRendered().AddStatic(OnViewportRendered);
+#endif
+
 		ViewExtension = FSceneViewExtensions::NewExtension<FTextureCollectorSceneViewExtension>();
 		FCoreDelegates::OnEnginePreExit.AddLambda(
 			[]()
@@ -591,6 +600,7 @@ namespace ImGuiTextureVisualizer
 	{
 		ImVec2 ClipRectMin;
 		ImVec2 ClipRectMax;
+		bool bEnableHighlight;
 		FTexturePreviewOptions Options;
 	};
 	static void TexturePreviewCallback(FRHICommandListImmediate& RHICmdList, const ImRect& DrawRect, const ImVec2& ViewportPos, void* UserData, size_t UserDataSize)
@@ -678,6 +688,7 @@ namespace ImGuiTextureVisualizer
 			FVector2f(PreviewParams.Options.RangeValueMin, 1.f / (PreviewParams.Options.RangeValueMax - PreviewParams.Options.RangeValueMin)),
 			PreviewParams.Options.UVScaleAndOffset,
 			PreviewParams.Options.BackgroundColor.A > 0.5f ? PreviewParams.Options.BackgroundColor.ToFColor(/*sRGB=*/false).DWColor() : 0u,
+			FIntVector4(PreviewParams.Options.CursorPosition.X, PreviewParams.Options.CursorPosition.Y, PreviewParams.Options.CanvasScale * 100.f, PreviewParams.bEnableHighlight),
 			FIntPoint(TexturePreviewOptions.TextureInspectorCursorPosition.X, TexturePreviewOptions.TextureInspectorCursorPosition.Y),
 			TextureInspectRect);
 
@@ -727,6 +738,38 @@ namespace ImGuiTextureVisualizer
 			TextureInfo.ArraySize = 1;
 		}
 	}
+
+#ifdef WITH_NET_IMGUI
+	TOptional<FTexturePreviewUserData> CallbackUserData;
+	void OnViewportRendered(FViewport* Viewport)
+	{
+		if (!CallbackUserData.IsSet())
+		{
+			return;
+		}
+
+		ImRect DrawRect = ImRect(ImVec2(0.f, 0.f), ImVec2(Viewport->GetSizeXY().X, Viewport->GetSizeXY().Y));
+		ENQUEUE_RENDER_COMMAND(ImGuiTexDisplay_PreviewCallback)(
+			[Viewport, UserData=CallbackUserData.GetValue(), DrawRect](FRHICommandListImmediate& RHICmdList)
+			{
+				const FViewportRHIRef& ViewportRHI = Viewport->GetViewportRHI();
+				FTextureRHIRef RenderTarget = ViewportRHI ? RHIGetViewportBackBuffer(ViewportRHI) : nullptr;
+				if (RenderTarget)
+				{
+					FRHIRenderPassInfo RPInfo(RenderTarget, MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore));
+					RHICmdList.Transition(FRHITransitionInfo(RenderTarget, ERHIAccess::Unknown, ERHIAccess::RTV));
+					RHICmdList.BeginRenderPass(RPInfo, TEXT("ImGuiTexDisplay_PreviewCallback"));
+
+					TexturePreviewCallback(RHICmdList, DrawRect, ImVec2(0.f, 0.f), (void*)&UserData, sizeof(UserData));
+
+					RHICmdList.EndRenderPass();
+					//RHICmdList.Transition(FRHITransitionInfo(RenderTarget, ERHIAccess::RTV, ERHIAccess::SRVMask));
+				}
+			});
+
+		CallbackUserData.Reset();
+	}
+#endif
 
 	static bool IsTextureOverrideValid()
 	{
@@ -1406,9 +1449,14 @@ namespace ImGuiTextureVisualizer
 					ImGui::EndTooltip();
 				}
 
-				// NOTE: adjust for viewport offset
-				ImVec2 WindowPos = ImGui::GetCurrentWindow()->ViewportPos;
-				InOutTexturePreviewOptions.TextureInspectorRect -= FIntVector4(WindowPos.x, WindowPos.y, WindowPos.x, WindowPos.y);
+				// account for viewport offset
+#ifdef WITH_NET_IMGUI
+				if (!NetImgui::IsConnected())
+#endif
+				{
+					ImVec2 WindowPos = ImGui::GetCurrentWindow()->ViewportPos;
+					InOutTexturePreviewOptions.TextureInspectorRect -= FIntVector4(WindowPos.x, WindowPos.y, WindowPos.x, WindowPos.y);
+				}
 			}
 		}
 	}
@@ -1485,7 +1533,20 @@ namespace ImGuiTextureVisualizer
 		Params.ClipRectMin = ImGui::GetItemRectMin();
 		Params.ClipRectMax = ImGui::GetItemRectMax();
 		Params.Options = TexturePreviewOptions;
-		ImGui::GetWindowDrawList()->AddCallback(TexturePreviewCallback, &Params, sizeof(Params));
+		Params.bEnableHighlight = false;
+#ifdef WITH_NET_IMGUI
+		if (NetImgui::IsConnected())
+		{
+			Params.bEnableHighlight = true;
+			Params.ClipRectMin = ImGui::GetItemRectMin() - ImGui::GetWindowViewport()->Pos;
+			Params.ClipRectMax = ImGui::GetItemRectMax() - ImGui::GetWindowViewport()->Pos;
+			CallbackUserData = Params;
+		}
+		else
+#endif
+		{
+			ImGui::GetWindowDrawList()->AddCallback(TexturePreviewCallback, &Params, sizeof(Params));
+		}
 
 		ImGui::SetCursorPosY(ImGui::GetWindowHeight() - TextureDetailsWidgetHeight);
 		ImGui::Separator();

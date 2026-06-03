@@ -9,6 +9,7 @@ uint BackgroundColor;
 float4 UVScaleAndOffset;
 int4 TextureInspectorRect;
 int2 TextureInspectorCursor;
+int4 HighlightPixelParams;
 float2 RangeMin_InvRangeSize;
 uint CurrentMip_ArraySliceOrDepth;
 
@@ -157,6 +158,16 @@ void Main(
 	else
 	{
 		OutColor = RunPixelShader(Input.Position.xy, Input.UV * UVScaleAndOffset.xy + UVScaleAndOffset.zw);
+
+		if (HighlightPixelParams.w > 0)
+		{
+			const float PointerSize = lerp(8.f, 1.f, (float(HighlightPixelParams.z) / 25600.f)) * 0.5f;
+
+			const float2 PixelCenter = TextureExtents.xy * (Input.UV * UVScaleAndOffset.xy + UVScaleAndOffset.zw);
+			const float2 CursorCenter = HighlightPixelParams.xy + 0.5f;
+			
+			OutColor = lerp(1.f - saturate(OutColor), OutColor, smoothstep(PointerSize * 0.75f, PointerSize, distance(CursorCenter, PixelCenter)));
+		}
 	}
 }
 
