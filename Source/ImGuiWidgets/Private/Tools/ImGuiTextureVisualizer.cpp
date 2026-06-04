@@ -19,10 +19,6 @@
 #include "RenderCaptureInterface.h"
 #include "PostProcess/DrawRectangle.h"
 
-#ifdef WITH_NET_IMGUI
-#include "net_imgui/NetImgui_Api.h"
-#endif
-
 // override setup
 namespace ImGuiTextureVisualizer
 {
@@ -1450,9 +1446,7 @@ namespace ImGuiTextureVisualizer
 				}
 
 				// account for viewport offset
-#ifdef WITH_NET_IMGUI
-				if (!NetImgui::IsConnected())
-#endif
+				if (!Context->bIsDrawingRemotely)
 				{
 					ImVec2 WindowPos = ImGui::GetCurrentWindow()->ViewportPos;
 					InOutTexturePreviewOptions.TextureInspectorRect -= FIntVector4(WindowPos.x, WindowPos.y, WindowPos.x, WindowPos.y);
@@ -1535,7 +1529,7 @@ namespace ImGuiTextureVisualizer
 		Params.Options = TexturePreviewOptions;
 		Params.bEnableHighlight = false;
 #ifdef WITH_NET_IMGUI
-		if (NetImgui::IsConnected())
+		if (Context->bIsDrawingRemotely)
 		{
 			Params.bEnableHighlight = true;
 			Params.ClipRectMin = ImGui::GetItemRectMin() - ImGui::GetWindowViewport()->Pos;
