@@ -1434,18 +1434,21 @@ namespace ImGuiTextureVisualizer
 				InOutTexturePreviewOptions.TextureInspectorRect.Z = AbsoluteMousePos.x + TextureInspectorOffset.x + TextureInspectorSize;
 				InOutTexturePreviewOptions.TextureInspectorRect.W = AbsoluteMousePos.y + TextureInspectorOffset.y + TextureInspectorSize;
 
-				// not checking `bHasPotentiallyValidData` here as the delay is very noticeable
-				ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y - 1.f), ImGuiCond_Always);
-				ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
-				if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse|ImGuiWindowFlags_NoInputs))
+				if (!Context->bIsDrawingRemotely)
 				{
-					ImGui::Text("UV: %.4f %.4f",
-						(float)HoveredTexCoordX / (float)InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip),
-						(float)HoveredTexCoordY / (float)InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip));
-					ImGui::Text("Coord: %i %i", HoveredTexCoordX, HoveredTexCoordY);
-					ImGui::Separator();
-					ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString((uint8*)&InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
-					ImGui::EndTooltip();
+					// not checking `bHasPotentiallyValidData` here as the delay is very noticeable
+					ImGui::SetNextWindowPos(ImVec2(InOutTexturePreviewOptions.TextureInspectorRect.X + TextureInspectorInfoWidgetOffsetX, InOutTexturePreviewOptions.TextureInspectorRect.Y - 1.f), ImGuiCond_Always);
+					ImGui::SetNextWindowSize(ImVec2(TextureInspectorInfoWidgetSize, TextureInspectorSize), ImGuiCond_Always);
+					if (ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoInputs))
+					{
+						ImGui::Text("UV: %.4f %.4f",
+							(float)HoveredTexCoordX / (float)InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip),
+							(float)HoveredTexCoordY / (float)InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip));
+						ImGui::Text("Coord: %i %i", HoveredTexCoordX, HoveredTexCoordY);
+						ImGui::Separator();
+						ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString((uint8*)&InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
+						ImGui::EndTooltip();
+					}
 				}
 
 				// account for viewport offset
