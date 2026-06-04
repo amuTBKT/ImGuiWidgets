@@ -62,7 +62,7 @@ public:
 		UVScaleAndOffsetParam.Bind(Initializer.ParameterMap, TEXT("UVScaleAndOffset"));
 		TextureInspectorRectParam.Bind(Initializer.ParameterMap, TEXT("TextureInspectorRect"));
 		TextureInspectorCursorParam.Bind(Initializer.ParameterMap, TEXT("TextureInspectorCursor"));
-		HighlightPixelParam.Bind(Initializer.ParameterMap, TEXT("HighlightPixelParams"));
+		CursorInfoParam.Bind(Initializer.ParameterMap, TEXT("CursorInfo"));
 		RangeMin_InvRangeSizeParam.Bind(Initializer.ParameterMap, TEXT("RangeMin_InvRangeSize"));
 		CurrentMip_ArraySliceOrDepthParam.Bind(Initializer.ParameterMap, TEXT("CurrentMip_ArraySliceOrDepth"));
 	}
@@ -98,7 +98,7 @@ public:
 		FVector2f RangeMin_InvRangeSize,
 		FVector4f UVScaleAndOffset,
 		uint32 BackgroundColor,
-		FIntVector4 HighlightPixelParams,
+		FIntVector4 CursorInfo,
 		FIntPoint TextureInspectorCursor,
 		FIntVector4 TextureInspectorRect)
 	{
@@ -117,7 +117,7 @@ public:
 		SetShaderValue(BatchedParameters, UVScaleAndOffsetParam, UVScaleAndOffset);
 		SetShaderValue(BatchedParameters, TextureInspectorRectParam, TextureInspectorRect);
 		SetShaderValue(BatchedParameters, TextureInspectorCursorParam, TextureInspectorCursor);
-		SetShaderValue(BatchedParameters, HighlightPixelParam, HighlightPixelParams);
+		SetShaderValue(BatchedParameters, CursorInfoParam, CursorInfo);
 		SetShaderValue(BatchedParameters, RangeMin_InvRangeSizeParam, RangeMin_InvRangeSize);
 		SetShaderValue(BatchedParameters, CurrentMip_ArraySliceOrDepthParam, (uint32(MipToDisplay) << 24) | ArraySliceOrDepthToDisplay);
 	}
@@ -132,7 +132,7 @@ private:
 	LAYOUT_FIELD(FShaderParameter, UVScaleAndOffsetParam);
 	LAYOUT_FIELD(FShaderParameter, TextureInspectorRectParam);
 	LAYOUT_FIELD(FShaderParameter, TextureInspectorCursorParam);
-	LAYOUT_FIELD(FShaderParameter, HighlightPixelParam);
+	LAYOUT_FIELD(FShaderParameter, CursorInfoParam);
 	LAYOUT_FIELD(FShaderParameter, RangeMin_InvRangeSizeParam);
 	LAYOUT_FIELD(FShaderParameter, CurrentMip_ArraySliceOrDepthParam);
 };

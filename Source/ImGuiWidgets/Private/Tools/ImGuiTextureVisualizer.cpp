@@ -171,7 +171,8 @@ namespace ImGuiTextureVisualizer
 
 		bool bRequestMinMaxTextureValues = false;
 
-		FIntPoint CursorPosition = FIntPoint::ZeroValue;
+		FIntPoint CursorPosition_CanvasSpace = FIntPoint::ZeroValue;
+		FIntPoint CursorPosition_WindowSpace = FIntPoint::ZeroValue;
 
 		FIntPoint TextureInspectorCursorPosition = FIntPoint::ZeroValue;
 		FIntVector4 TextureInspectorRect = FIntVector4::ZeroValue;
@@ -596,7 +597,7 @@ namespace ImGuiTextureVisualizer
 	{
 		ImVec2 ClipRectMin;
 		ImVec2 ClipRectMax;
-		bool bEnableHighlight;
+		bool bDrawCursor;
 		FTexturePreviewOptions Options;
 	};
 	static void TexturePreviewCallback(FRHICommandListImmediate& RHICmdList, const ImRect& DrawRect, const ImVec2& ViewportPos, void* UserData, size_t UserDataSize)
@@ -656,6 +657,17 @@ namespace ImGuiTextureVisualizer
 		GraphicsPSOInit.PrimitiveType = PT_TriangleList;
 		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit, 0);
 
+		const ImRect ViewportRect = ImRect(
+			FMath::RoundToFloat(DrawRect.Min.x), FMath::RoundToFloat(DrawRect.Min.y),
+			FMath::RoundToFloat(DrawRect.Max.x), FMath::RoundToFloat(DrawRect.Max.y));
+		const ImRect ScissorRect = ImRect(
+			FMath::Max(0, ViewportRect.Min.x + PreviewParams.ClipRectMin.x),
+			FMath::Max(0, ViewportRect.Min.y + PreviewParams.ClipRectMin.y),
+			FMath::Min(ViewportRect.Min.x + PreviewParams.ClipRectMax.x, ViewportRect.Max.x),
+			FMath::Min(ViewportRect.Min.y + PreviewParams.ClipRectMax.y, ViewportRect.Max.y));
+		RHICmdList.SetViewport(ViewportRect.Min.x, ViewportRect.Min.y, 0.f, ViewportRect.Max.x, ViewportRect.Max.y, 1.f);
+		RHICmdList.SetScissorRect(true, ScissorRect.Min.x, ScissorRect.Min.y, ScissorRect.Max.x, ScissorRect.Max.y);
+
 		ETextureDimension TextureDimension = TextureToDisplay->GetDesc().Dimension;
 		if (TextureDimension == ETextureDimension::TextureCube || TextureDimension == ETextureDimension::TextureCubeArray)
 		{
@@ -684,19 +696,9 @@ namespace ImGuiTextureVisualizer
 			FVector2f(PreviewParams.Options.RangeValueMin, 1.f / (PreviewParams.Options.RangeValueMax - PreviewParams.Options.RangeValueMin)),
 			PreviewParams.Options.UVScaleAndOffset,
 			PreviewParams.Options.BackgroundColor.A > 0.5f ? PreviewParams.Options.BackgroundColor.ToFColor(/*sRGB=*/false).DWColor() : 0u,
-			FIntVector4(PreviewParams.Options.CursorPosition.X, PreviewParams.Options.CursorPosition.Y, PreviewParams.Options.CanvasScale * 100.f, PreviewParams.bEnableHighlight),
+			FIntVector4(PreviewParams.Options.CursorPosition_WindowSpace.X + ScissorRect.Min.x, PreviewParams.Options.CursorPosition_WindowSpace.Y + ScissorRect.Min.y, 0.f, PreviewParams.bDrawCursor),
 			FIntPoint(TexturePreviewOptions.TextureInspectorCursorPosition.X, TexturePreviewOptions.TextureInspectorCursorPosition.Y),
 			TextureInspectRect);
-
-		const ImRect ViewportRect = ImRect(
-			FMath::RoundToFloat(DrawRect.Min.x), FMath::RoundToFloat(DrawRect.Min.y),
-			FMath::RoundToFloat(DrawRect.Max.x), FMath::RoundToFloat(DrawRect.Max.y));
-		RHICmdList.SetViewport(ViewportRect.Min.x, ViewportRect.Min.y, 0.f, ViewportRect.Max.x, ViewportRect.Max.y, 1.f);
-		RHICmdList.SetScissorRect(true, 
-			FMath::Max(0, ViewportRect.Min.x + PreviewParams.ClipRectMin.x),
-			FMath::Max(0, ViewportRect.Min.y + PreviewParams.ClipRectMin.y),
-			FMath::Min(ViewportRect.Min.x + PreviewParams.ClipRectMax.x, ViewportRect.Max.x),
-			FMath::Min(ViewportRect.Min.y + PreviewParams.ClipRectMax.y, ViewportRect.Max.y));
 
 		UE::Renderer::PostProcess::DrawRectangle(
 			RHICmdList,
@@ -910,7 +912,7 @@ namespace ImGuiTextureVisualizer
 		}
 
 		// reset icon
-		if (!bShowTextureList && !InOutSelectedTextureName.IsEmpty())
+		if (!InOutSelectedTextureName.IsEmpty())
 		{
 			ImGui::SameLine();
 
@@ -1386,7 +1388,8 @@ namespace ImGuiTextureVisualizer
 
 			FVector2f Scale = FVector2f(InTextureInfo.SizeX, InTextureInfo.SizeY) / FVector2f(ConstrainedCanvasSize.x, ConstrainedCanvasSize.y);
 			FVector2f CursorPos = (FVector2f(RelativeMousePos.x, RelativeMousePos.y) - InOutTexturePreviewOptions.CanvasCenter) * Scale;
-			InOutTexturePreviewOptions.CursorPosition = FIntPoint(CursorPos.X, CursorPos.Y);
+			InOutTexturePreviewOptions.CursorPosition_CanvasSpace = FIntPoint(CursorPos.X, CursorPos.Y);
+			InOutTexturePreviewOptions.CursorPosition_WindowSpace = FIntPoint(RelativeMousePos.x, RelativeMousePos.y);
 
 			if (bIsCanvasClicked && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.f))
 			{
@@ -1527,11 +1530,11 @@ namespace ImGuiTextureVisualizer
 		Params.ClipRectMin = ImGui::GetItemRectMin();
 		Params.ClipRectMax = ImGui::GetItemRectMax();
 		Params.Options = TexturePreviewOptions;
-		Params.bEnableHighlight = false;
+		Params.bDrawCursor = false;
 #ifdef WITH_NET_IMGUI
 		if (Context->bIsDrawingRemotely)
 		{
-			Params.bEnableHighlight = true;
+			Params.bDrawCursor = true;
 			Params.ClipRectMin = ImGui::GetItemRectMin() - ImGui::GetWindowViewport()->Pos;
 			Params.ClipRectMax = ImGui::GetItemRectMax() - ImGui::GetWindowViewport()->Pos;
 			CallbackUserData = Params;
@@ -1551,8 +1554,8 @@ namespace ImGuiTextureVisualizer
 		}
 		else
 		{
-			const int32 HoveredTexCoordX = TexturePreviewOptions.CursorPosition.X >> TexturePreviewOptions.CurrentMip;
-			const int32 HoveredTexCoordY = TexturePreviewOptions.CursorPosition.Y >> TexturePreviewOptions.CurrentMip;
+			const int32 HoveredTexCoordX = TexturePreviewOptions.CursorPosition_CanvasSpace.X >> TexturePreviewOptions.CurrentMip;
+			const int32 HoveredTexCoordY = TexturePreviewOptions.CursorPosition_CanvasSpace.Y >> TexturePreviewOptions.CurrentMip;
 
 			if (TextureInfo.SizeZ > 0)
 			{

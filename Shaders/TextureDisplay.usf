@@ -9,7 +9,7 @@ uint BackgroundColor;
 float4 UVScaleAndOffset;
 int4 TextureInspectorRect;
 int2 TextureInspectorCursor;
-int4 HighlightPixelParams;
+int4 CursorInfo;
 float2 RangeMin_InvRangeSize;
 uint CurrentMip_ArraySliceOrDepth;
 
@@ -99,6 +99,38 @@ float4 RunPixelShader(in int2 PixelCoord, in float2 TextureUV)
 	return OutColor;
 }
 
+// source for polygon sdf: https://www.shadertoy.com/view/wdBXRW
+float SDF_Cursor(float2 P)
+{
+	const int VertCount = 7;
+	float2 Verts[VertCount] =
+	{
+		float2( 0.f,  0.f),
+		float2( 0.f, 16.f),
+		float2( 4.f, 12.f),
+		float2( 6.f, 18.f),
+		float2( 9.f, 17.f),
+		float2( 7.f, 11.f),
+		float2(12.f, 11.f),
+	};
+
+	float Dist = dot(P - Verts[0], P - Verts[0]);
+	float Sign = 1.f;
+	for (int i = 0, j = VertCount - 1; i < VertCount; j = i, i++)
+	{
+		float2 E = Verts[j] - Verts[i];
+		float2 W = P - Verts[i];
+		float2 B = W - E * clamp(dot(W, E) / dot(E, E), 0.f, 1.f);
+		Dist = min(Dist, dot(B, B));
+
+		int3 bCond = int3(P.y >= Verts[i].y,
+			P.y < Verts[j].y,
+			E.x * W.y > E.y * W.x);
+		if (all(bCond > 0) || all(bCond == 0)) Sign = -Sign;
+	}
+	return sqrt(Dist) * Sign;
+}
+
 void Main(
 	FScreenVertexOutput Input,
 	out float4 OutColor : SV_Target0)
@@ -158,16 +190,19 @@ void Main(
 	else
 	{
 		OutColor = RunPixelShader(Input.Position.xy, Input.UV * UVScaleAndOffset.xy + UVScaleAndOffset.zw);
+	}
 
-		if (HighlightPixelParams.w > 0)
-		{
-			const float PointerSize = lerp(8.f, 1.f, (float(HighlightPixelParams.z) / 25600.f)) * 0.5f;
+	// render software cursor (only used when drawing remotely using NetImGui)
+	const float2 CursorCenter = CursorInfo.xy + 0.5f;
+	const float2 CursorLocalPos = Input.Position.xy - CursorCenter;
+	if (CursorInfo.w > 0 && all(CursorLocalPos > -2.f) && all(CursorLocalPos < 32.f))
+	{
+		const float CursorDist = SDF_Cursor(CursorLocalPos);
+		const float CursorFillMask = 1.f - smoothstep(0.f, 1.f, CursorDist);
+		const float CursorOutlineMask = 1.f - smoothstep(0.f, 0.98f, abs(CursorDist));
 
-			const float2 PixelCenter = TextureExtents.xy * (Input.UV * UVScaleAndOffset.xy + UVScaleAndOffset.zw);
-			const float2 CursorCenter = HighlightPixelParams.xy + 0.5f;
-			
-			OutColor = lerp(1.f - saturate(OutColor), OutColor, smoothstep(PointerSize * 0.75f, PointerSize, distance(CursorCenter, PixelCenter)));
-		}
+		OutColor = lerp(OutColor, float4(1.f, 1.f, 1.f, 1.f), CursorFillMask);
+		OutColor = lerp(OutColor, float4(0.f, 0.f, 0.f, 1.f), CursorOutlineMask);
 	}
 }
 
