@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "SceneView.h"
 #include "SceneViewExtension.h"
 #include "RenderGraphBuilder.h"
 #include "RenderGraphResources.h"

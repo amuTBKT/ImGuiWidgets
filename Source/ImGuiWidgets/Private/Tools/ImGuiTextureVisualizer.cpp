@@ -18,6 +18,7 @@
 #include "CommonRenderResources.h"
 #include "RenderCaptureInterface.h"
 #include "PostProcess/DrawRectangle.h"
+#include "Engine/GameViewportClient.h"
 
 // override setup
 namespace ImGuiTextureVisualizer

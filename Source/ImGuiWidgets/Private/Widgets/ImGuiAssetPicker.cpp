@@ -20,6 +20,7 @@
 #include "ImGuiSubsystem.h"
 #include "Algo/BinarySearch.h"
 #include "Misc/ConfigCacheIni.h"
+#include "HAL/LowLevelMemStats.h"
 #include "AssetRegistry/AssetData.h"
 #include "Interfaces/IPluginManager.h"
 #include "AssetRegistry/AssetRegistryModule.h"

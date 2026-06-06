@@ -13,6 +13,7 @@
 
 #include "ImGuiSubsystem.h"
 #include "Engine/Blueprint.h"
+#include "HAL/LowLevelMemStats.h"
 #include "AssetRegistry/AssetData.h"
 #include "UObject/UObjectIterator.h"
 #include "Blueprint/BlueprintSupport.h"

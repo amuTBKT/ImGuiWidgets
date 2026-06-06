@@ -12,6 +12,7 @@
 #include "Engine/World.h"
 #include "NiagaraSystem.h"
 #include "ImGuiSubsystem.h"
+#include "UObject/Package.h"
 #include "Textures/SlateIcon.h"
 #include "NiagaraSimulationStageBase.h"
 
