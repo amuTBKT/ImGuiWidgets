@@ -340,9 +340,8 @@ namespace ImGuiMaterialStats
 			bIsAnyWindowCompilingMaterial |= bIsCompilingPermutations;
 		}
 
-		// offset to account for window padding
-		ImGui::SetCursorPos(ImGui::GetCursorPos() - ImGui::GetStyle().WindowPadding);
-		const ImGuiID MainDockSpaceID = ImGui::DockSpace(ImGui::GetID("DockSpace"), ImGui::GetContentRegionAvail() + ImGui::GetStyle().WindowPadding);
+		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoCloseButton;
+		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
 
 		for (int32 WindowIndex = 0; WindowIndex < MaterialWindowStates.Num(); ++WindowIndex)
 		{
@@ -644,7 +643,8 @@ namespace ImGuiMaterialStats
 		.TickFunction		= &Tick,
 		.WidgetIcon			= FSlateIcon(FAppStyle::GetAppStyleSetName(), FName("MaterialEditor.ToggleMaterialStats.Tab")),
 		.WidgetPath			= "Profiling.Material Stats",
-		.WidgetDescription	= "Widget for inspecting compiled Material stats."
+		.WidgetDescription	= "Widget for inspecting compiled Material stats.",
+		.bSkipWindowCreation = true
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
 }
