@@ -41,7 +41,7 @@ namespace FImGui
 			ImGui::Dummy(ImVec2(0, padding)); // <padding bottom>
 		}
 		ImGui::EndGroup();
-		DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(col), 0.f, ImDrawFlags_None, 1.f);
+		DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(col), 0.f, 1.f, ImDrawFlags_None);
 		
 		// render background
 		DrawList->ChannelsSetCurrent(0);

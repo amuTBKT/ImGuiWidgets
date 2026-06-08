@@ -1169,7 +1169,7 @@ namespace ImGuiTextureVisualizer
 			}
 			else
 			{
-				ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f), 0.f, ImDrawFlags_None, 2.f);
+				ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f), 0.f, 2.f, ImDrawFlags_None);
 			}
 			ImGui::SameLine();
 
@@ -1188,7 +1188,7 @@ namespace ImGuiTextureVisualizer
 
 				if (bIsActive)
 				{
-					ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f), 0.f, ImDrawFlags_None, 2.f);
+					ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f), 0.f, 2.f, ImDrawFlags_None);
 				}
 				ImGui::PopStyleVar();
 			}

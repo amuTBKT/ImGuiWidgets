@@ -534,7 +534,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			const ImVec2 p1 = ImVec2(CursorPosition.x + BorderRectSize.x, CursorPosition.y - 4.f);
 
 			ImDrawList* DrawList = ImGui::GetWindowDrawList();
-			DrawList->AddRect(p0, p1, 0x80FFFFFF, 0.f, ImDrawFlags_None, 1.f);
+			DrawList->AddRect(p0, p1, 0x80FFFFFF, 0.f, 1.f, ImDrawFlags_None);
 
 			ImGui::SetTooltip("%s", TCHAR_TO_UTF8_PATH(*InSoftAssetPtr.GetLongPackageName()));
 

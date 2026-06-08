@@ -174,7 +174,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 	if (bSearchBoxHasFocus)
 	{
 		ImDrawList* DrawList = ImGui::GetWindowDrawList();
-		DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(ImGuiCol_FrameBgActive), 0.f, ImDrawFlags_None, 1.f);
+		DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(ImGuiCol_FrameBgActive), 0.f, 1.f, ImDrawFlags_None);
 	}
 
 	return bFilterChanged;
