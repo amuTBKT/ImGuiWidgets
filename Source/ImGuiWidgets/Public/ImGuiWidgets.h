@@ -178,6 +178,7 @@ public:
 		FilterStringBuffer = Other.FilterStringBuffer;
 		FilterStringBuffer_ANSI = Other.FilterStringBuffer_ANSI;
 		FilterKeywordTokens = Other.FilterKeywordTokens;
+		FilterKeywordTokens_ANSI = Other.FilterKeywordTokens_ANSI;
 		SearchIconTint = Other.SearchIconTint;
 		ClearIconTint = Other.ClearIconTint;
 
