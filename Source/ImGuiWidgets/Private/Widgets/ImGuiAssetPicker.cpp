@@ -858,7 +858,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImGui::BeginGroup();
 		if (bDrawCompactWidget)
 		{
-			if (strstr(Label, "##") == nullptr)
+			if (FCStringAnsi::Strstr(Label, "##") == nullptr)
 			{
 				ImGui::BeginGroup();
 				ImGui::AlignTextToFramePadding();
@@ -919,7 +919,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		else
 		{
-			if (strstr(Label, "##") == nullptr)
+			if (FCStringAnsi::Strstr(Label, "##") == nullptr)
 			{
 				ImGui::BeginGroup();
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 25.f * GlobalScale - ImGui::GetFontSize() * 0.5f);

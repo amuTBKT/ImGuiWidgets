@@ -759,7 +759,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	{
 		ImGui::BeginGroup();
 		{
-			if (strstr(Label, "##") == nullptr)
+			if (FCStringAnsi::Strstr(Label, "##") == nullptr)
 			{
 				ImGui::BeginGroup();
 				ImGui::AlignTextToFramePadding();
