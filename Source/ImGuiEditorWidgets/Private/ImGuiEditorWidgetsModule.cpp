@@ -8,12 +8,11 @@ class FImGuiEditorWidgetsModule : public IModuleInterface
 {
 	virtual void StartupModule() override
 	{
-		SETUP_DEFAULT_IMGUI_ALLOCATOR();
+		IMGUI_SETUP_DEFAULT_ALLOCATOR();
 	}
 
 	virtual void ShutdownModule() override
 	{
-
 	}
 };
 
