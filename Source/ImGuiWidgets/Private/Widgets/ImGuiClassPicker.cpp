@@ -105,7 +105,7 @@ namespace ClassPickerUtils
 			if (auto AssetRegistryModulePtr = FModuleManager::GetModulePtr<FAssetRegistryModule>(FName("AssetRegistry")))
 			{
 				IAssetRegistry& AssetRegistry = AssetRegistryModulePtr->Get();
-				
+
 				auto AddAsset = [&](const FAssetData& AssetData)
 				{
 					FClassData ClassData{};
@@ -123,7 +123,7 @@ namespace ClassPickerUtils
 				TArray<FAssetData> GeneratedBlueprintAssets;
 				AssetRegistry.GetAssetsByClass(UBlueprint::StaticClass()->GetClassPathName(), BlueprintAssets, /*bSearchSubClasses=*/true);
 				AssetRegistry.GetAssetsByClass(UBlueprintGeneratedClass::StaticClass()->GetClassPathName(), GeneratedBlueprintAssets, /*bSearchSubClasses=*/true);
-				
+
 				AvailableClasses.Reserve(BlueprintAssets.Num() + GeneratedBlueprintAssets.Num());
 				for (const FAssetData& Asset : BlueprintAssets)
 				{
@@ -159,13 +159,13 @@ namespace ClassPickerUtils
 				ClassData.ObjectPath = TCHAR_TO_UTF8(*ClassData.ClassPath.ToString());
 				ClassData.bIsAsset = false;
 				ClassData.bIsAbstractClass = CurrentClass->HasAnyClassFlags(EClassFlags::CLASS_Abstract);
-				
+
 				ClassData.ImplementedInterfaces.Reserve(CurrentClass->Interfaces.Num());
 				for (FImplementedInterface& Interface : CurrentClass->Interfaces)
 				{
 					ClassData.ImplementedInterfaces.Emplace(Interface.Class);
 				}
-				
+
 				AvailableClasses.AddUnique(ClassData);
 
 				if (CurrentClass->GetSuperClass())
@@ -262,7 +262,7 @@ namespace ClassPickerUtils
 				{
 					ClassData.ParentClassPath = ParentClassPathString;
 					bUpdated = true;
-					
+
 					CacheAssetParentClass(AssetData);
 				}
 			}
@@ -281,7 +281,7 @@ namespace ClassPickerUtils
 
 				FSoftClassPath AssetClassPath = GetClassPathForAsset(AssetData);
 				FAnsiString AssetDisplayName = TCHAR_TO_UTF8(*AssetData.AssetName.ToString());
-				
+
 				int32 InsertIndex = Algo::LowerBound(AvailableClasses, AssetDisplayName, [](const auto& A, const auto& B) { return A.DisplayName < B; });
 				bool bExists = (AvailableClasses.IsValidIndex(InsertIndex) && AvailableClasses[InsertIndex].ClassPath == AssetClassPath);
 				if (!bExists && InsertIndex >= 0)
@@ -452,7 +452,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	if (bClassContainerChanged || LastSelectedClassPtr.IsStale() || (SelectedSoftClassPtr != LastSelectedClassPtr))
 	{
 		LastSelectedClassIndex = !SelectedSoftClassPtr.IsNull() ? AvailableClasses.IndexOfByKey(FSoftClassPath(SelectedSoftClassPtr.ToString())) : INDEX_NONE;
-		
+
 		if (LastSelectedClassPtr.IsStale() || (LastSelectedClassIndex == INDEX_NONE))
 		{
 			SelectedSoftClassPtr.Reset();
@@ -506,7 +506,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		const char* ClassViewerPopupName = "ClassViewerPopup";
 		const float ClassViewerMaxRowsVisible = 10;
 		const float ClassViewerRowHeight = ImGui::GetFontSize();
-		
+
 		const float ClassViewerRowHeightWithSpacing = (ClassViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale);
 		const float ClassViewerDesiredHeight = FMath::Min(ClassViewerMaxRowsVisible, FilteredClassIndices.Num()) * ClassViewerRowHeightWithSpacing + ClassViewerRowHeightWithSpacing * 1.5f;
 		const float ClassViewerComboxBoxWidth = FMath::Clamp(256.f * GlobalScale, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - 100.f * GlobalScale);
@@ -534,7 +534,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImVec2 ComboBoxSize;
 		bool bIsComboBoxVisible;
 		ImGui::BeginGroup();
-		{			
+		{
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
 			if (ImGui::Button(*PreviewText, ImVec2(ClassViewerComboxBoxWidth, 0.f)))
 			{
@@ -548,14 +548,14 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			bIsComboBoxVisible = ImGui::IsItemVisible();
 
 			ImGui::SameLine();
-			
+
 			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.DropDownArrow"), ComboBoxSize.y * 0.9f);
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - DropDownArrowIcon.Size.x * 2.f);
 			FImGui::Image(DropDownArrowIcon);
 			ImGui::PopStyleVar(1);
 		}
 		ImGui::EndGroup();
-		
+
 		if ((AvailableSpaceBelow > ClassViewerPopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
 		{
 			ImGui::SetNextWindowPos(ImVec2(ClassViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
@@ -674,49 +674,42 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		return ComboBoxSize;
 	};
 
+#if WITH_EDITOR
 	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.UseSelectedAsset"), IconSize);
-		if (WITH_EDITOR == 0)
+		if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
 		{
-			ImGui::BeginDisabled();
-			FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon);
-			ImGui::EndDisabled();
-		}
-		else
-		{
-			if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
+			FSoftObjectPtr ClassPtr = ClassPickerUtils::GetSelectedClassOfType(BaseClassPath);
+			if (!ClassPtr.IsNull())
 			{
-				FSoftObjectPtr ClassPtr = ClassPickerUtils::GetSelectedClassOfType(BaseClassPath);
-				if (!ClassPtr.IsNull())
-				{
-					InOutSoftClassPtr = ClassPtr;
-				}
+				InOutSoftClassPtr = ClassPtr;
 			}
-			ImGui::SetItemTooltip("Use Selected Asset from Content Browser");
 		}
+		ImGui::SetItemTooltip("%s", "Use Selected Asset from Content Browser");
 	};
 
 	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.BrowseToAsset"), IconSize);
-		if (InSoftClassPtr.IsNull() || (!SelectedClassData || !SelectedClassData->bIsAsset) || (WITH_EDITOR == 0))
+		const bool bIsInvalidAsset = InSoftClassPtr.IsNull() || (!SelectedClassData || !SelectedClassData->bIsAsset);
+		ImGui::BeginDisabled(bIsInvalidAsset);
+		if (FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon))
 		{
-			ImGui::BeginDisabled();
-			FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon);
-			ImGui::EndDisabled();
+			ClassPickerUtils::SyncContentBrowserToAsset(InSoftClassPtr, BaseClassPath);
+		}
+		ImGui::EndDisabled();
+
+		if (bIsInvalidAsset)
+		{
+			ImGui::SetItemTooltip("%s", "Browse to Asset in Content Browser");
 		}
 		else
 		{
-			if (FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon))
-			{
-				ClassPickerUtils::SyncContentBrowserToAsset(InSoftClassPtr, BaseClassPath);
-			}
 			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_UTF8(*InSoftClassPtr.GetAssetName()));
 		}
 	};
 
-#if WITH_EDITOR
 	auto Add_CreateBlueprintButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams CreateNewBlueprintIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.PlusCircle"), IconSize);
@@ -736,7 +729,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				InOutSoftClassPtr = FSoftObjectPtr{ GeneratedClassPath };
 			}
 		}
-		ImGui::SetItemTooltip("Create New Blueprint");
+		ImGui::SetItemTooltip("%s", "Create New Blueprint");
 	};
 #endif
 
@@ -750,7 +743,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		if (!InOutSoftClassPtr.IsNull())
 		{
-			ImGui::SetItemTooltip("Clear");
+			ImGui::SetItemTooltip("%s", "Clear");
 		}
 		ImGui::EndDisabled();
 	};
@@ -772,7 +765,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			ImGui::BeginGroup();
 			{
 				const ImVec2 ClassViewerComboBoxSize = Add_ClassViewer(SelectedSoftClassPtr);
-				
+
 				const float IconSize = ClassViewerComboBoxSize.y * 0.9f;
 				const float IconPaddingTop = ClassViewerComboBoxSize.y * 0.05f;
 
@@ -782,6 +775,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4 * GlobalScale, 0));
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2 * GlobalScale, 0));
 
+#if WITH_EDITOR
 				ImGui::SameLine();
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
 				Add_UseSelectedAssetButton(SelectedSoftClassPtr, IconSize);
@@ -790,7 +784,6 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + IconPaddingTop);
 				Add_BrowseToAssetButton(SelectedSoftClassPtr, IconSize);
 
-#if WITH_EDITOR
 				if (FKismetEditorUtilities::CanCreateBlueprintOfClass(BaseClass))
 				{
 					ImGui::SameLine();
@@ -811,7 +804,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		ImGui::EndGroup();
 	}
-	
+
 #if WITH_EDITOR
 	if (FImGui::DrawDragDropArea<FAssetDragDropOp>(Context, "AssetDragDrop", AssetDragDropArea,
 		[&](TSharedPtr<FAssetDragDropOp> DragDropOp) { return DragDropOp->GetAssets().Num() == 1 && ClassPickerUtils::IsClassChildOf(ClassPickerUtils::GetClassPathForAsset(DragDropOp->GetAssets()[0]), BaseClassPath); },
@@ -853,7 +846,7 @@ void FImGuiClassPicker::FilterAvailableClasses()
 		{
 			continue;
 		}
-		
+
 		if (!OptionalFilters.IsEmpty())
 		{
 			bool bOptionalFiltersPassed = true;

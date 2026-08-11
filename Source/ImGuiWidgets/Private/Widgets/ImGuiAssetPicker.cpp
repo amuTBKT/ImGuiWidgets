@@ -94,7 +94,7 @@ namespace AssetPickerUtils
 			Filter.ClassPaths.Add(AssetClassPath.GetAssetPath());
 			Filter.bRecursiveClasses = true;
 			Filter.bIncludeOnlyOnDiskAssets = true;
-			
+
 			TArray<FAssetData> AvailableAssetsTemp;
 			AssetRegistry.GetAssets(Filter, AvailableAssetsTemp);
 			AvailableAssetsTemp.Sort([](const auto& A, const auto& B) { return SortAssetDataPredicate(A, B); });
@@ -467,7 +467,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	{
 		LastSelectedAssetIndex = AvailableAssets.IndexOfByPredicate(
 			[SoftObjectPath=SelectedSoftAssetPtr.ToSoftObjectPath()](const auto& InAssetData) { return InAssetData.GetSoftObjectPath() == SoftObjectPath; });
-		
+
 		if (LastSelectedAssetPtr.IsStale() || (LastSelectedAssetIndex == INDEX_NONE))
 		{
 			SelectedSoftAssetPtr.Reset();
@@ -548,43 +548,34 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftAssetPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.UseSelectedAsset"), IconSize);
-
-		if (WITH_EDITOR == 0)
+		if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
 		{
-			ImGui::BeginDisabled();
-			FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon);
-			ImGui::EndDisabled();
-		}
-		else
-		{
-			if (FImGui::TransparentImageButton("UseSelectedAsset", UseSelectedAssetIcon))
+			FSoftObjectPtr AssetPtr = (AssetPickerUtils::GetSelectedAssetOfType(AssetClass));
+			if (!AssetPtr.IsNull())
 			{
-				FSoftObjectPtr AssetPtr = (AssetPickerUtils::GetSelectedAssetOfType(AssetClass));
-				if (!AssetPtr.IsNull())
-				{
-					InOutSoftAssetPtr = AssetPtr;
-				}
+				InOutSoftAssetPtr = AssetPtr;
 			}
-			ImGui::SetItemTooltip("Use Selected Asset from Content Browser");
 		}
+		ImGui::SetItemTooltip("%s", "Use Selected Asset from Content Browser");
 	};
 
 	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftAssetPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.BrowseToAsset"), IconSize);
-
-		if (InSoftAssetPtr.IsNull() || (WITH_EDITOR == 0))
+		const bool bIsInvalidAsset = InSoftAssetPtr.IsNull();
+		ImGui::BeginDisabled(bIsInvalidAsset);
+		if (FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon))
 		{
-			ImGui::BeginDisabled();
-			FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon);
-			ImGui::EndDisabled();
+			AssetPickerUtils::SyncContentBrowserToAsset(FAssetData(InSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), InSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetClassPath.GetAssetPath()));
+		}
+		ImGui::EndDisabled();
+
+		if (bIsInvalidAsset)
+		{
+			ImGui::SetItemTooltip("%s", "Browse to Asset in Content Browser");
 		}
 		else
 		{
-			if (FImGui::TransparentImageButton("BrowseToAsset", BrowseToAssetIcon))
-			{
-				AssetPickerUtils::SyncContentBrowserToAsset(FAssetData(InSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), InSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetClassPath.GetAssetPath()));
-			}
 			ImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_UTF8(*InSoftAssetPtr.GetAssetName()));
 		}
 	};
@@ -599,7 +590,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		if (!InOutSoftAssetPtr.IsNull())
 		{
-			ImGui::SetItemTooltip("Reset");
+			ImGui::SetItemTooltip("%s", "Reset");
 		}
 	};
 
@@ -653,7 +644,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			bIsComboBoxVisible = ImGui::IsItemVisible();
 
 			ImGui::SameLine();
-			
+
 			const FImGuiImageBindingParams DropDownArrowIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.DropDownArrow"), ComboBoxSize.y * 0.9f);
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() - DropDownArrowIcon.Size.x * 2.f);
 			FImGui::Image(DropDownArrowIcon);
@@ -877,6 +868,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				IconSize = AssetViewerComboBoxSize.y * 0.9f;
 				IconPaddingTop = AssetViewerComboBoxSize.y * 0.05f;
 
+#if WITH_EDITOR
 				ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
 				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
@@ -893,6 +885,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 				ImGui::PopStyleVar(2);
 				ImGui::PopStyleColor(3);
+#endif
 			}
 			ImGui::EndGroup();
 			AssetDragDropArea = ImRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
@@ -940,6 +933,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					Add_AssetViewer(SelectedSoftAssetPtr);
 
 					// icons
+#if WITH_EDITOR
 					{
 						ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
 						ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
@@ -954,6 +948,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 						ImGui::PopStyleVar(2);
 						ImGui::PopStyleColor(3);
 					}
+#endif
 				}
 				ImGui::EndGroup();
 			}
@@ -1046,7 +1041,7 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 				ECollectionShareType::CST_All,
 				AssetCollectionNames,
 				ECollectionRecursionFlags::SelfAndChildren);
-			
+
 			for (const FName& CollectionName : AssetCollectionNames)
 			{
 				FNameBuilder Collection{ CollectionName };
