@@ -426,8 +426,8 @@ namespace ImGuiStatsVizualizer
 						TArray<UObject*> Objects = { Asset };
 						GEditor->SyncBrowserToObjects(Objects);
 					}
-					ImGui::SetItemTooltip("Browse to asset");
-					
+					ImGui::SetItemTooltip("%s", "Browse to asset");
+
 					ImGui::SameLine();
 
 					if (FImGui::ImageButtonWithTint("EditAsset", EditAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
@@ -448,7 +448,7 @@ namespace ImGuiStatsVizualizer
 								}
 							}, TStatId(), NULL, ENamedThreads::GameThread);
 					}
-					ImGui::SetItemTooltip("Edit asset");
+					ImGui::SetItemTooltip("%s", "Edit asset");
 
 					ImGui::PopStyleVar(2);
 					ImGui::PopStyleColor(3);
@@ -852,7 +852,7 @@ namespace ImGuiStatsVizualizer
 			{
 				SaveWidgetSettings();
 			}
-			ImGui::SetItemTooltip("Save Settings");
+			ImGui::SetItemTooltip("%s", "Save Settings");
 
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(3);

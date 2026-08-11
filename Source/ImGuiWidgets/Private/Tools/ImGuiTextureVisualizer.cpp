@@ -904,7 +904,7 @@ namespace ImGuiTextureVisualizer
 			{
 				ImGui::SetClipboardText(*PreviouslySelectedTextureName);
 			}
-			ImGui::SetItemTooltip("Copy texture name to clipboard");
+			ImGui::SetItemTooltip("%s", "Copy texture name to clipboard");
 
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(3);
@@ -932,7 +932,7 @@ namespace ImGuiTextureVisualizer
 					ClearTextureOverride_GameThread();
 				}
 			}
-			ImGui::SetItemTooltip(bIsUsingTextureOverride ? "Clear Texture Override" : "Reset");
+			ImGui::SetItemTooltip("%s", bIsUsingTextureOverride ? "Clear Texture Override" : "Reset");
 
 			ImGui::PopStyleVar();
 			ImGui::PopStyleColor(3);
@@ -1165,7 +1165,7 @@ namespace ImGuiTextureVisualizer
 			}
 			if (!bIsEnabled)
 			{
-				ImGui::SetItemTooltip("Pick solid background color");
+				ImGui::SetItemTooltip("%s", "Pick solid background color");
 			}
 			else
 			{
@@ -1184,7 +1184,7 @@ namespace ImGuiTextureVisualizer
 				{
 					InOutTexturePreviewOptions.BackgroundColor.A = 0.f;
 				}
-				ImGui::SetItemTooltip("Show checker background");
+				ImGui::SetItemTooltip("%s", "Show checker background");
 
 				if (bIsActive)
 				{
@@ -1221,7 +1221,7 @@ namespace ImGuiTextureVisualizer
 				{
 					InOutTexturePreviewOptions.bRequestMinMaxTextureValues = true;
 				}
-				ImGui::SetItemTooltip("Set range based on texture Min/Max value");
+				ImGui::SetItemTooltip("%s", "Set range based on texture Min/Max value");
 
 				ImGui::PopStyleVar();
 				ImGui::PopStyleColor(3);
@@ -1241,7 +1241,7 @@ namespace ImGuiTextureVisualizer
 					InOutTexturePreviewOptions.RangeMin = InOutTexturePreviewOptions.RangeValueMin;
 					InOutTexturePreviewOptions.RangeMax = InOutTexturePreviewOptions.RangeValueMax;
 				}
-				ImGui::SetItemTooltip("Fit to slider Min/Max range");
+				ImGui::SetItemTooltip("%s", "Fit to slider Min/Max range");
 
 				ImGui::PopStyleVar();
 				ImGui::PopStyleColor(3);
@@ -1263,7 +1263,7 @@ namespace ImGuiTextureVisualizer
 					InOutTexturePreviewOptions.RangeValueMin = 0.;
 					InOutTexturePreviewOptions.RangeValueMax = 1.;
 				}
-				ImGui::SetItemTooltip("Reset");
+				ImGui::SetItemTooltip("%s", "Reset");
 
 				ImGui::PopStyleVar();
 				ImGui::PopStyleColor(3);

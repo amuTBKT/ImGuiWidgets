@@ -555,7 +555,7 @@ namespace ImGuiMaterialStats
 												{
 													FPlatformProcess::ExploreFolder(*Shader.ShaderFilePath);
 												}
-												ImGui::SetItemTooltip("Browse to shader file");
+												ImGui::SetItemTooltip("%s", "Browse to shader file");
 
 												ImGui::SameLine();
 
@@ -563,7 +563,7 @@ namespace ImGuiMaterialStats
 												{
 													FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderFilePath);
 												}
-												ImGui::SetItemTooltip("Edit shader file");
+												ImGui::SetItemTooltip("%s", "Edit shader file");
 
 												ImGui::SameLine();
 
@@ -573,7 +573,7 @@ namespace ImGuiMaterialStats
 												{
 													ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
 												}
-												ImGui::SetItemTooltip("Analyze shader");
+												ImGui::SetItemTooltip("%s", "Analyze shader");
 												ImGui::EndDisabled();
 #endif
 

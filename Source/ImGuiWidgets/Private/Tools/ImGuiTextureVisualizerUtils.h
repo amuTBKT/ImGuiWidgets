@@ -369,7 +369,7 @@ namespace ImGuiTextureVisualizer
 				sprintf_s(Buffer, sizeof(Buffer), ClipboardFmt, ColorValue[ComponentIndex]);
 				ImGui::SetClipboardText(Buffer);
 			}
-			ImGui::SetItemTooltip("Copy to clipboard");
+			ImGui::SetItemTooltip("%s", "Copy to clipboard");
 			ImGui::RenderColorComponentMarker({ ImGui::GetItemRectMin(), ImGui::GetItemRectMax() }, MarkerColor, ImGui::GetStyle().FrameRounding);
 		}
 

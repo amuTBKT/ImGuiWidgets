@@ -347,7 +347,7 @@ namespace ImGuiNiagaraProfiler
 				{
 					bExpandAll = false;
 				}
-				ImGui::SetItemTooltip("Collapse All");
+				ImGui::SetItemTooltip("%s", "Collapse All");
 
 				ImGui::SameLine();
 
@@ -355,7 +355,7 @@ namespace ImGuiNiagaraProfiler
 				{
 					bExpandAll = true;
 				}
-				ImGui::SetItemTooltip("Expand All");
+				ImGui::SetItemTooltip("%s", "Expand All");
 
 				ImGui::PopStyleVar(2);
 				ImGui::PopStyleColor(3);
