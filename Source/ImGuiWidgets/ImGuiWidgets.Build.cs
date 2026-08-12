@@ -43,5 +43,8 @@ public class ImGuiWidgets : ModuleRules
 				}
 			);
 		}
+
+		// package slate resources
+		RuntimeDependencies.Add("$(PluginDir)/Resources/Slate...", StagedFileType.UFS);
 	}
 }

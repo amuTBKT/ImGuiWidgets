@@ -18,12 +18,12 @@ public:
 	{
 		SetParentStyleName(FAppStyle::GetAppStyleSetName());
 
-		const FString IconDirectory = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("ImGuiWidgets"))->GetBaseDir(), TEXT("Content/Editor/Slate"));
+		const FString IconDirectory = FPaths::Combine(IPluginManager::Get().FindPlugin(TEXT("ImGuiWidgets"))->GetBaseDir(), TEXT("Resources/Slate"));
 		SetCoreContentRoot(FPaths::EngineContentDir() / TEXT("Slate"));
 		SetContentRoot(IconDirectory);
 
 		const FVector2f Icon16x16 = FVector2f(16.f, 16.f);
-		
+
 		Set("ImIcon.Warning", new IMAGE_BRUSH_SVG("Icons/im_alert_triangle", Icon16x16));
 		Set("ImIcon.Search", new IMAGE_BRUSH_SVG("Icons/im_search", Icon16x16));
 		Set("ImIcon.Edit", new IMAGE_BRUSH_SVG("Icons/im_edit", Icon16x16));
