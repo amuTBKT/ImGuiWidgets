@@ -63,7 +63,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 		return false;
 	}
 
-	FImGui::EnsureValidImGuiContext(Context);
+	FImGuiTickScope TickScope{ Context };
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 	const FImGuiImageBindingParams SearchIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Search"), ImGui::GetFontSize());

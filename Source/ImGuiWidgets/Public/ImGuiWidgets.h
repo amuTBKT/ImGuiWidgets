@@ -13,16 +13,6 @@
 
 namespace FImGui
 {
-	// Required to have valid ImGui context across modules
-	FORCEINLINE void EnsureValidImGuiContext(FImGuiTickContext* Context)
-	{
-		check(Context->ImguiContext);
-		if (ImGui::GetCurrentContext() != Context->ImguiContext)
-		{
-			ImGui::SetCurrentContext(Context->ImguiContext);
-		}
-	}
-
 	// Get ImGui tick context
 	FORCEINLINE FImGuiTickContext* GetTickContext(ImGuiContext* Context)
 	{
@@ -112,7 +102,7 @@ namespace FImGui
 	}
 
 	IMGUIWIDGETS_API void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message);
-	
+
 	IMGUIWIDGETS_API void DrawHighlightArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size = 1.f, float border_uv_scale = 1.f, ImU32 tint_col = 0xFFFFFFFF);
 
 	// Hacky/Experimental widget

@@ -891,7 +891,7 @@ namespace ImGuiTextureVisualizer
 		// copy textue name widget
 		{
 			ImGui::SameLine();
-			
+
 			ImGui::BeginDisabled(PreviouslySelectedTextureName.IsEmpty());
 
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
@@ -1019,7 +1019,7 @@ namespace ImGuiTextureVisualizer
 					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.7f, 0.7f));
 					ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
 				}
-				
+
 				if (ImGui::Button(Label))
 				{
 					bInOutState = !bInOutState;
@@ -1029,7 +1029,7 @@ namespace ImGuiTextureVisualizer
 				{
 					ImGui::PopStyleColor(3);
 				}
-				
+
 				return bWasActive != bInOutState;
 			};
 
@@ -1464,7 +1464,7 @@ namespace ImGuiTextureVisualizer
 
 	static void Tick(FImGuiTickContext* Context)
 	{
-		FImGuiTickScope Scope{ Context };
+		FImGuiTickScope TickScope{ Context };
 
 		static FAnsiString VisTextureName;
 		static bool bWasTextureOverrideValid = false;

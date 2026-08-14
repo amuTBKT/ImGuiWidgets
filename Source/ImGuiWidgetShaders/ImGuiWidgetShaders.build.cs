@@ -17,8 +17,7 @@ namespace UnrealBuildTool.Rules
 					"CoreUObject",
 					"Projects",
 					"Engine",
-				}
-			);
+				});
 
 			PublicDependencyModuleNames.AddRange(
 				new string[]
@@ -26,8 +25,7 @@ namespace UnrealBuildTool.Rules
 					"RHI",
 					"RenderCore",
 					"Renderer",
-				}
-			);
+				});
 		}
 	}
 }

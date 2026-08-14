@@ -9,7 +9,7 @@ namespace FImGui
 {
 	void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message)
 	{
-		EnsureValidImGuiContext(context);
+		FImGuiTickScope TickScope{ context };
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Warning"), ImGui::GetFontSize());
@@ -42,7 +42,7 @@ namespace FImGui
 		}
 		ImGui::EndGroup();
 		DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(col), 0.f, 1.f, ImDrawFlags_None);
-		
+
 		// render background
 		DrawList->ChannelsSetCurrent(0);
 		DrawList->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(ImVec4(col.x, col.y, col.z, 0.15f)), 0.f, ImDrawFlags_None);
@@ -52,7 +52,7 @@ namespace FImGui
 
 	void DrawHighlightArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size, float border_uv_scale, ImU32 tint_col)
 	{
-		EnsureValidImGuiContext(context);
+		FImGuiTickScope TickScope{ context };
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
@@ -92,7 +92,7 @@ namespace FImGui
 		const TDataType prev_data_1 = p_data_1;
 		bool value_changed = false;
 
-		EnsureValidImGuiContext(context);
+		FImGuiTickScope TickScope{ context };
 
 		FImGuiNamedScope Scope{ label };
 

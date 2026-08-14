@@ -191,7 +191,7 @@ namespace ImGuiNiagaraProfiler
 
 	static void DisplayEmitterStats(const FEmitterStatData& EmitterStat)
 	{
-		UNiagaraEmitter* Emitter = EmitterStat.Emitter.Get();		
+		UNiagaraEmitter* Emitter = EmitterStat.Emitter.Get();
 		const FString& EmitterName = Emitter->GetUniqueEmitterName();
 
 		ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -319,12 +319,12 @@ namespace ImGuiNiagaraProfiler
 
 	static void Tick(FImGuiTickContext* Context)
 	{
-		FImGuiTickScope Scope{ Context };
+		FImGuiTickScope TickScope{ Context };
 
 		if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
 			ImGui::Checkbox("Enable profiling", &bIsCapturing);
-				
+
 			ImGui::Separator();
 
 			ImGui::BeginDisabled(!bIsCapturing);

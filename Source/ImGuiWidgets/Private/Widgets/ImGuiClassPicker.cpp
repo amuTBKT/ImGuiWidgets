@@ -439,7 +439,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		return false;
 	}
 
-	FImGui::EnsureValidImGuiContext(Context);
+	FImGuiTickScope TickScope{ Context };
 
 	FImGuiNamedScope WidgetScope{ Label };
 

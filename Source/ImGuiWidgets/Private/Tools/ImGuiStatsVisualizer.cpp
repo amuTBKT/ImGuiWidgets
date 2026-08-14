@@ -336,13 +336,13 @@ namespace ImGuiStatsVizualizer
 		const bool bIsInitialized = Item.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_int64;
 
 		//if (bIsInitialized) -> no need to worry about checking, default times will be 0ms (selectively disabling section breaks ImGui::Clipper)
-		{        
+		{
 			const char* StatDescription = GetStatDescription(Item);
 
 			const FName RawStatName = Item.NameAndInfo.GetRawName();
 
 			ImGui::TableNextRow();
-		
+
 			ImGui::TableSetColumnIndex(0);
 			{
 				AddSelectableRow(StatDescription, RawStatName);
@@ -480,7 +480,7 @@ namespace ImGuiStatsVizualizer
 		// Now append the max value of the stat
 		ImGui::TableSetColumnIndex(1);
 		ImGui::Text("%.2f MB", float(MaxMemUsed / (1024.0 * 1024.0)));
-	
+
 		ImGui::TableSetColumnIndex(2);
 		if (ViewData.PoolCapacity.Contains(Region))
 		{
@@ -490,7 +490,7 @@ namespace ImGuiStatsVizualizer
 		{
 			//ImGui::Text(""); leave the column empty?
 		}
-	
+
 		ImGui::TableSetColumnIndex(3);
 		if (ViewData.PoolAbbreviation.Contains(Region))
 		{
@@ -500,7 +500,7 @@ namespace ImGuiStatsVizualizer
 		{
 			//ImGui::Text(""); leave the column empty?
 		}
-	
+
 		ImGui::TableSetColumnIndex(4);
 		if (ViewData.PoolCapacity.Contains(Region))
 		{
@@ -527,7 +527,7 @@ namespace ImGuiStatsVizualizer
 		ImGui::TableNextRow();
 
 		const bool bDisplayAll = Item.NameAndInfo.GetFlag(EStatMetaFlags::ShouldClearEveryFrame);
-	
+
 		ImGui::TableSetColumnIndex(0);
 		{
 			AddSelectableRow(StatDescription, Item.NameAndInfo.GetRawName());
@@ -554,7 +554,7 @@ namespace ImGuiStatsVizualizer
 		{
 			//ImGui::Text(""); leave the column empty?
 		}
-	
+
 		// Append the maximum.
 		ImGui::TableSetColumnIndex(2);
 		if (Item.NameAndInfo.GetField<EStatDataType>() == EStatDataType::ST_double)
@@ -620,12 +620,12 @@ namespace ImGuiStatsVizualizer
 			// If the stat isn't enabled for this particular viewport, skip
 			const FName& StatGroupFName = ViewData.GroupNames[GroupIndex];
 			const FName& GroupName = ViewData.GroupNames[GroupIndex];
-		
+
 			FStatGroupData* StatGroupData = StatGroups.FindByKey(StatGroupFName);
 			if (!StatGroupData)
 			{
 				const FString& GroupDesc = ViewData.GroupDescriptions[GroupIndex];
-			
+
 				FString StatName = GroupName.ToString();
 				StatName.RemoveFromStart(TEXT("STATGROUP_"), ESearchCase::CaseSensitive);
 
@@ -670,7 +670,7 @@ namespace ImGuiStatsVizualizer
 					if (FilterStats(StatGroup.CountersAggregate, FilteredStats) && ImGui::BeginTable("CounterStats", CounterStats_GetColumnCount(), TableFlags))
 					{
 						CounterStats_SetupTableColumns();
-						
+
 						if (ImGuiTableSortSpecs* SortSpecs = ImGui::TableGetSortSpecs())
 						{
 							FilteredStats.Sort([&](const auto StatA, const auto StatB)
@@ -812,7 +812,7 @@ namespace ImGuiStatsVizualizer
 		WidgetSettings->SetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_StatNames"), SerializedData.StatNames);
 		WidgetSettings->SetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_DisplayNames"), SerializedData.DisplayNames);
 		WidgetSettings->SetArray(TEXT("ImGuiStatsVisualizer"), TEXT("StatGroup_StatGroupNames"), SerializedData.StatGroupNames);
-		
+
 		UImGuiSubsystem::Get()->SaveConfigToDisk();
 	}
 
@@ -826,7 +826,7 @@ namespace ImGuiStatsVizualizer
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xFFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, 0xFF0000FF);
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-			
+
 			FImGui::TransparentImageButton("DeleteIcon", DeleteIcon);
 			bDeleteIconHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly);
 			if (ImGui::BeginDragDropTarget())
@@ -937,7 +937,7 @@ namespace ImGuiStatsVizualizer
 				}
 
 				ImGui::EndPopup();
-			}	
+			}
 
 			// disable at the end, we'll re-enable when stat group is encountered when displaying..
 			GroupData.bIsActive = false;
@@ -977,7 +977,7 @@ namespace ImGuiStatsVizualizer
 			const int32 SourceIndex = PendingButtonMoveOp.GetValue().Key;
 			const int32 DestIndex = PendingButtonMoveOp.GetValue().Value;
 			FStatGroupData Source = StatGroups[SourceIndex];
-			
+
 			StatGroups.RemoveAt(SourceIndex);
 			StatGroups.Insert(Source, DestIndex);
 		}
@@ -1003,10 +1003,10 @@ namespace ImGuiStatsVizualizer
 
 	static void Tick(FImGuiTickContext* Context)
 	{
-		FImGuiTickScope Scope{ Context };
+		FImGuiTickScope TickScope{ Context };
 
 		RegisterOneFrameResources();
-			
+
 		int32 GroupIndexToRemove = INDEX_NONE;
 		if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
@@ -1024,7 +1024,7 @@ namespace ImGuiStatsVizualizer
 				if (!ViewData->RootFilter.IsEmpty())
 				{
 					ImGui::Text("Root filter is active. ROOT=%s", TCHAR_TO_UTF8(*ViewData->RootFilter));
-						
+
 					ImGui::Separator();
 				}
 

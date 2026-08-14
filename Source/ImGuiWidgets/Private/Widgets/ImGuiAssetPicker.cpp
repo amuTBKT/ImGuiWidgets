@@ -452,7 +452,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	AssetPickerUtils::LoadSettings();
 
-	FImGui::EnsureValidImGuiContext(Context);
+	FImGuiTickScope TickScope{ Context };
 
 	FImGuiNamedScope WidgetScope{ Label };
 

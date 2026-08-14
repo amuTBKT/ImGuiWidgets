@@ -295,12 +295,12 @@ namespace ImGuiMaterialStats
 
 	static void Tick(FImGuiTickContext* Context)
 	{
-		FImGuiTickScope Scope{ Context };
-		
+		FImGuiTickScope TickScope{ Context };
+
 		static IConsoleVariable* DumpShaderInfoCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DumpShaderDebugInfo"));
 		static IConsoleVariable* DumpShaderShortNamesCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DumpShaderDebugShortNames"));
 		static int32 DumpShaderInfoCVarRestoreValue = INDEX_NONE;
-		
+
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Warning"), ImGui::GetFontSize());
 		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Search"), ImGui::GetFontSize());
@@ -366,10 +366,10 @@ namespace ImGuiMaterialStats
 			{
 				FImGuiAssetPicker& MaterialPicker = MaterialWindowState.MaterialPicker;
 				FImGuiTextFilter& ShaderFilter = MaterialWindowState.ShaderFilter;
-				
+
 				TWeakObjectPtr<UMaterialInterface>& SelectedMaterial = MaterialWindowState.SelectedMaterial;
 				FMaterialStatsData& MaterialStats = MaterialWindowState.MaterialStats;
-				
+
 				EMaterialQualityLevel::Type PreviewQualityLevel = MaterialWindowState.PreviewQualityLevel;
 				EShaderPlatform& PreviewShaderPlatform = MaterialWindowState.PreviewShaderPlatform;
 				bool& bIsCompilingPermutations = MaterialWindowState.bIsCompilingPermutations;

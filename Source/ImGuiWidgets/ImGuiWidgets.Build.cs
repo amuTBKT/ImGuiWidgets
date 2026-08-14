@@ -23,8 +23,7 @@ public class ImGuiWidgets : ModuleRules
 				"Renderer",
 				"RenderCore",
 				"ImGuiWidgetShaders",
-			}
-		);
+			});
 
 		// for using ImGui
 		PublicDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime" });
@@ -38,10 +37,11 @@ public class ImGuiWidgets : ModuleRules
 				new string[]
 				{
 					"UnrealEd",
+					"BlueprintGraph",
 					"ContentBrowser",
+					"EditorFramework",
 					"CollectionManager",
-				}
-			);
+				});
 		}
 
 		// package slate resources

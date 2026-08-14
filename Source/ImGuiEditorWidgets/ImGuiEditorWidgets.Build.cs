@@ -22,8 +22,7 @@ public class ImGuiEditorWidgets : ModuleRules
 				"UnrealEd",
 				"MaterialEditor",
 				"ShaderCompilerCommon",
-			}
-		);
+			});
 
 		// for using ImGui
 		PublicDependencyModuleNames.AddRange(new string[] { "ImGui", "ImGuiRuntime", "ImGuiWidgets" });
