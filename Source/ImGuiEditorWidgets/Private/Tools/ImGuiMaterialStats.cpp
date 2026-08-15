@@ -642,7 +642,7 @@ namespace ImGuiMaterialStats
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
 		.WidgetIcon			= FSlateIcon(FAppStyle::GetAppStyleSetName(), FName("MaterialEditor.ToggleMaterialStats.Tab")),
-		.WidgetPath			= "Profiling.Material Stats",
+		.WidgetPath			= "Tools.Profile.Material Stats",
 		.WidgetDescription	= "Widget for inspecting compiled Material stats.",
 		.bSkipWindowCreation = true
 	};

@@ -1642,7 +1642,7 @@ namespace ImGuiTextureVisualizer
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
 		.WidgetIcon			= IMGUI_ICON("ImIcon.TextureVisualizer"),
-		.WidgetPath			= "Debugging.Texture Visualizer",
+		.WidgetPath			= "Tools.Debug.Texture Visualizer",
 		.WidgetDescription	= "Tool for visualizing textures."
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(Params);
