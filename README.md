@@ -12,26 +12,26 @@ Widgets
 - [Class Picker](#class-picker)
 
 Tools
-- [Texture Visualizer](#texture-visualizer)
+- [Texture Viewer](#texture-viewer)
 - [Material Stats](#material-stats)
 - [Stats Visualizer](#stats-visualizer)
 - [Niagara GPU Profiler](#niagara-gpu-profiler)
 
-### Texture Visualizer
+### Texture Viewer
 Tool for inspecting render graph textures. Very much inspired and based on RenderDoc's texture viewer.<br>
-![TextureVisualizer](Gallery/tool_texture_visualizer.png)
-Texture visualizer allows setting texture from code which can be useful to view textures not accessible through render graph.
+![TextureViewer](Gallery/tool_texture_viewer.png)
+Texture Viewer allows setting texture from code which can be useful to view textures not accessible through render graph.
 ```cpp
-#include "ImGuiTextureVisualizer.h"
+#include "ImGuiTextureViewer.h"
 
 // for inspecting UTexture assets
-ImGuiTextureVisualizer::SetTextureOverride_GameThread(TextureAsset);
+ImGuiTextureViewer::SetTextureOverride_GameThread(TextureAsset);
 
 // for inspecting texture resource
-ImGuiTextureVisualizer::SetTextureOverride_GameThread("MyResource", TextureResource);
+ImGuiTextureViewer::SetTextureOverride_GameThread("MyResource", TextureResource);
 
 // for inspecting RHI texture
-ImGuiTextureVisualizer::SetTextureOverride_RenderThread("MyTexture", TextureRHI);
+ImGuiTextureViewer::SetTextureOverride_RenderThread("MyTexture", TextureRHI);
 
 ```
 

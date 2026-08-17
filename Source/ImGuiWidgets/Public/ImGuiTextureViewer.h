@@ -8,11 +8,11 @@ class UTexture;
 class FRHITexture;
 class FTextureResource;
 
-namespace ImGuiTextureVisualizer
+namespace ImGuiTextureViewer
 {
 	// display the specified texture, the pointer is stored as WeakObjectPtr.
 	IMGUIWIDGETS_API void SetTextureOverride_GameThread(const UTexture* Texture);
-	
+
 	// display the specified texture resource, the pointer lifetime is not tracked.
 	IMGUIWIDGETS_API void SetTextureOverride_GameThread(const FString& DisplayName, const FTextureResource* TextureResource);
 

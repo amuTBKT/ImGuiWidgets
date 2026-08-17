@@ -1,11 +1,11 @@
 // Copyright 2026 Amit Kumar Mehar. All Rights Reserved.
 
-#include "ImGuiTextureVisualizer.h"
+#include "ImGuiTextureViewer.h"
 
 #include "ImGuiWidgets.h"
 #include "ImGuiSubsystem.h"
 #include "ImGuiTextureDisplayShaders.h"
-#include "ImGuiTextureVisualizerUtils.h"
+#include "ImGuiTextureViewerUtils.h"
 
 #include "Engine/Engine.h"
 #include "Engine/Texture.h"
@@ -21,7 +21,7 @@
 #include "Engine/GameViewportClient.h"
 
 // override setup
-namespace ImGuiTextureVisualizer
+namespace ImGuiTextureViewer
 {
 	static const FTextureResource* TextureResourceOverride = nullptr;
 	static TWeakObjectPtr<const UTexture> TextureOverride = nullptr;
@@ -81,7 +81,7 @@ namespace ImGuiTextureVisualizer
 }
 
 // widget logic
-namespace ImGuiTextureVisualizer
+namespace ImGuiTextureViewer
 {
 	FVertexBuffer* GPixelValueDestBuffer = new TGlobalResource<FPixelValueDestBuffer, FRenderResource::EInitPhase::Default>;
 
@@ -1641,9 +1641,9 @@ namespace ImGuiTextureVisualizer
 	{
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
-		.WidgetIcon			= IMGUI_ICON("ImIcon.TextureVisualizer"),
-		.WidgetPath			= "Tools.Debug.Texture Visualizer",
-		.WidgetDescription	= "Tool for visualizing textures."
+		.WidgetIcon			= IMGUI_ICON("ImIcon.TextureViewer"),
+		.WidgetPath			= "Tools.Debug.Texture Viewer",
+		.WidgetDescription	= "Tool for inspecting textures."
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(Params);
 }

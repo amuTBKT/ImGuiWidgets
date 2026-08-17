@@ -37,7 +37,7 @@ namespace PrivateAccess \
 	auto& Property(const Class& Object); \
 }
 
-namespace ImGuiTextureVisualizer
+namespace ImGuiTextureViewer
 {
 	DEFINE_PRIVATE_ACCESS(FRDGBuilder, Textures);
 
