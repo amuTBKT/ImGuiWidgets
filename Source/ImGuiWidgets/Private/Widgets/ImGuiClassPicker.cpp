@@ -514,8 +514,8 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 		const float ClassViewerPopupPosX = ImGui::GetCursorScreenPos().x;
 		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y;
-		const float MonitorDisplaySize = ImGui::GetPlatformIO().Monitors.empty() ? ImGui::GetWindowHeight() : ImGui::GetPlatformIO().Monitors[0].WorkSize.y;
-		const float AvailableSpaceBelow = (MonitorDisplaySize - ImGui::GetCursorScreenPos().y);
+		const float MonitorDisplayHeight = Context->bIsDrawingRemotely ? ImGui::GetIO().DisplaySize.y : ImGui::GetCurrentContext()->PlatformMonitorsFullWorkRect.Max.y;
+		const float AvailableSpaceBelow = (MonitorDisplayHeight - ImGui::GetCursorScreenPos().y);
 		float ClassViewerPopupHeight = ((AvailableSpaceBelow > ClassViewerDesiredHeight) ? AvailableSpaceBelow : AvailableSpaceAbove) * 0.8f;
 		ClassViewerPopupHeight = FMath::Min(ClassViewerPopupHeight, ClassViewerDesiredHeight);
 

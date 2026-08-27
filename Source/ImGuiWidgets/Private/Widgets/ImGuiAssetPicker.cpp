@@ -609,8 +609,8 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
 		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y;
-		const float MonitorDisplaySize = ImGui::GetPlatformIO().Monitors.empty() ? ImGui::GetWindowHeight() : ImGui::GetPlatformIO().Monitors[0].WorkSize.y;
-		const float AvailableSpaceBelow = (MonitorDisplaySize - ImGui::GetCursorScreenPos().y);
+		const float MonitorDisplayHeight = Context->bIsDrawingRemotely ? ImGui::GetIO().DisplaySize.y : ImGui::GetCurrentContext()->PlatformMonitorsFullWorkRect.Max.y;
+		const float AvailableSpaceBelow = (MonitorDisplayHeight - ImGui::GetCursorScreenPos().y);
 		float AssetViewerPopupHeight = ((AvailableSpaceBelow > AssetViewerDesiredHeight) ? AvailableSpaceBelow : AvailableSpaceAbove) * 0.8f;
 		AssetViewerPopupHeight = FMath::Min(AssetViewerPopupHeight, AssetViewerDesiredHeight);
 		float AssetViewerPopupHeightMin = ((float)AssetViewerMinSizeFactor * AssetViewerRowHeightWithSpacing) + ImGui::GetStyle().WindowPadding.y * 2.f;
