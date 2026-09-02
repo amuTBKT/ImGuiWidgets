@@ -164,7 +164,7 @@ bool FImGuiTextFilter::Draw(FImGuiTickContext* Context, const char* Label, const
 					ParseOptions);
 			}
 		}
-		bSearchBoxHasFocus = ImGui::IsItemActive() || (Context->ImguiContext->NavId == ImGui::GetItemID()); //account for nav focus as NavCursor is disabled
+		bSearchBoxHasFocus = ImGui::IsItemActive() && (Context->ImguiContext->NavCursorVisible && Context->ImguiContext->NavId == ImGui::GetItemID()); //account for nav focus as NavCursor is disabled
 		SearchIconTint = bSearchBoxHasFocus ? 1.f : 0.75f;
 
 		ImGui::PopStyleVar(1);
