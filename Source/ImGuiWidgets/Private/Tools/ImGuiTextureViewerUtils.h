@@ -138,7 +138,7 @@ namespace ImGuiTextureViewer
 		FORCEINLINE EPixelFormatChannelFlags GetValidChannelsForFormat(EPixelFormat PixelFormat)
 		{
 			EPixelFormatChannelFlags ValidTextureChannels = GetPixelFormatValidChannels(PixelFormat);
-			
+
 			// NOTE: fix for `GetPixelFormatValidChannels` not handling certain formats correctly
 			if (PixelFormat == PF_R32_SINT)
 			{
@@ -158,7 +158,7 @@ namespace ImGuiTextureViewer
 		{
 			OutResType = ETexDisplay_ResourceType::Tex2D;
 			OutBaseType = ETexDisplay_ShaderBaseType::Float;
-			
+
 			if (IsInteger(TextureDesc.Format))
 			{
 				OutBaseType = PixelFormatUtils::IsSignedIntegerFormat(TextureDesc.Format) ? ETexDisplay_ShaderBaseType::SInt : ETexDisplay_ShaderBaseType::UInt;
@@ -195,9 +195,10 @@ namespace ImGuiTextureViewer
 			}
 		}
 
-		FAnsiString GetPixelValueAsString(const uint8* RawValue, EPixelFormat Format, bool bReadAsStencil)
+		const char* GetPixelValueAsText(const uint8* RawValue, EPixelFormat Format, bool bReadAsStencil)
 		{
-			FAnsiString ValueAsString;
+			static TAnsiStringBuilder<256> ValueAsString;
+			ValueAsString.Reset();
 
 			const EPixelFormatChannelFlags ValidTextureChannels = GetValidChannelsForFormat(Format);
 			if (IsStencilFormat(Format))
@@ -205,12 +206,12 @@ namespace ImGuiTextureViewer
 				if (bReadAsStencil)
 				{
 					FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
-					ValueAsString += FAnsiString::Printf("Stencil: %i (0x%x)\n", Value.X, Value.X);
+					ValueAsString.Appendf("Stencil: %i (0x%x)\n", Value.X, Value.X);
 				}
 				else
 				{
 					FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
-					ValueAsString += FAnsiString::Printf("Depth: %f\n", Value.X);
+					ValueAsString.Appendf("Depth: %f\n", Value.X);
 				}
 			}
 			else if (IsSignedIntegerFormat(Format))
@@ -218,19 +219,19 @@ namespace ImGuiTextureViewer
 				FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					ValueAsString += FAnsiString::Printf("R: %i (0x%x)\n", Value.X, Value.X);
+					ValueAsString.Appendf("R: %i (0x%x)\n", Value.X, Value.X);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					ValueAsString += FAnsiString::Printf("G: %i (0x%x)\n", Value.Y, Value.Y);
+					ValueAsString.Appendf("G: %i (0x%x)\n", Value.Y, Value.Y);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					ValueAsString += FAnsiString::Printf("B: %i (0x%x)\n", Value.Z, Value.Z);
+					ValueAsString.Appendf("B: %i (0x%x)\n", Value.Z, Value.Z);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					ValueAsString += FAnsiString::Printf("A: %i (0x%x)\n", Value.W, Value.W);
+					ValueAsString.Appendf("A: %i (0x%x)\n", Value.W, Value.W);
 				}
 			}
 			else if (IsInteger(Format))
@@ -238,19 +239,19 @@ namespace ImGuiTextureViewer
 				FUintVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FUintVector4));
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					ValueAsString += FAnsiString::Printf("R: %i (0x%x)\n", Value.X, Value.X);
+					ValueAsString.Appendf("R: %i (0x%x)\n", Value.X, Value.X);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					ValueAsString += FAnsiString::Printf("G: %i (0x%x)\n", Value.Y, Value.Y);
+					ValueAsString.Appendf("G: %i (0x%x)\n", Value.Y, Value.Y);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					ValueAsString += FAnsiString::Printf("B: %i (0x%x)\n", Value.Z, Value.Z);
+					ValueAsString.Appendf("B: %i (0x%x)\n", Value.Z, Value.Z);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					ValueAsString += FAnsiString::Printf("A: %i (0x%x)\n", Value.W, Value.W);
+					ValueAsString.Appendf("A: %i (0x%x)\n", Value.W, Value.W);
 				}
 			}
 			else
@@ -258,115 +259,33 @@ namespace ImGuiTextureViewer
 				FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					ValueAsString += FAnsiString::Printf("R: %.5f\n", Value.X);
+					ValueAsString.Appendf("R: %.5f\n", Value.X);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					ValueAsString += FAnsiString::Printf("G: %.5f\n", Value.Y);
+					ValueAsString.Appendf("G: %.5f\n", Value.Y);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					ValueAsString += FAnsiString::Printf("B: %.5f\n", Value.Z);
+					ValueAsString.Appendf("B: %.5f\n", Value.Z);
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					ValueAsString += FAnsiString::Printf("A: %.5f\n", Value.W);
+					ValueAsString.Appendf("A: %.5f\n", Value.W);
 				}
 			}
 
-			return ValueAsString;
+			return ValueAsString.GetData();
 		}
 
-		FAnsiString GetPixelValueAsStringInline(const uint8* RawValue, EPixelFormat Format, bool bReadAsStencil)
-		{
-			FAnsiString ValueAsString;
-
-			const EPixelFormatChannelFlags ValidTextureChannels = GetValidChannelsForFormat(Format);
-			if (IsStencilFormat(Format))
-			{
-				if (bReadAsStencil)
-				{
-					FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
-					ValueAsString += FAnsiString::Printf("(Stencil)%i", Value.X);
-				}
-				else
-				{
-					FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
-					ValueAsString += FAnsiString::Printf("(Depth)%f", Value.X);
-				}
-			}
-			else if (IsSignedIntegerFormat(Format))
-			{
-				FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
-				{
-					ValueAsString += FAnsiString::Printf("(R)%i ", Value.X);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
-				{
-					ValueAsString += FAnsiString::Printf("(G)%i ", Value.Y);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
-				{
-					ValueAsString += FAnsiString::Printf("(B)%i ", Value.Z);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
-				{
-					ValueAsString += FAnsiString::Printf("(A)%i ", Value.W);
-				}
-			}
-			else if (IsInteger(Format))
-			{
-				FUintVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FUintVector4));
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
-				{
-					ValueAsString += FAnsiString::Printf("(R)%u ", Value.X);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
-				{
-					ValueAsString += FAnsiString::Printf("(G)%u ", Value.Y);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
-				{
-					ValueAsString += FAnsiString::Printf("(B)%u ", Value.Z);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
-				{
-					ValueAsString += FAnsiString::Printf("(A)%u ", Value.W);
-				}
-			}
-			else
-			{
-				FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
-				{
-					ValueAsString += FAnsiString::Printf("(R)%.5f ", Value.X);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
-				{
-					ValueAsString += FAnsiString::Printf("(G)%.5f ", Value.Y);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
-				{
-					ValueAsString += FAnsiString::Printf("(B)%.5f ", Value.Z);
-				}
-				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
-				{
-					ValueAsString += FAnsiString::Printf("(A)%.5f ", Value.W);
-				}
-			}
-
-			return ValueAsString;
-		}
-
-		template <typename TColorFormat>
-		void DrawPixelColorComponentWidget(const TColorFormat& ColorValue, int32 ComponentIndex, const char* LabelFmt, const char* ClipboardFmt, ImU32 MarkerColor)
+		template <typename TColorFormat, size_t LabelFmtLen, size_t ClipboardFmtLen>
+		void DrawPixelColorComponentWidget(const TColorFormat& ColorValue, int32 ComponentIndex, const char(&LabelFmt)[LabelFmtLen], const char(&ClipboardFmt)[ClipboardFmtLen], ImU32 MarkerColor)
 		{
 			char Buffer[128];
-			sprintf_s(Buffer, sizeof(Buffer), LabelFmt, ColorValue[ComponentIndex]);
+			FCStringAnsi::Snprintf(Buffer, sizeof(Buffer), LabelFmt, ColorValue[ComponentIndex]);
 			if (ImGui::Button(Buffer))
 			{
-				sprintf_s(Buffer, sizeof(Buffer), ClipboardFmt, ColorValue[ComponentIndex]);
+				FCStringAnsi::Snprintf(Buffer, sizeof(Buffer), ClipboardFmt, ColorValue[ComponentIndex]);
 				ImGui::SetClipboardText(Buffer);
 			}
 			ImGui::SetItemTooltip("%s", "Copy to clipboard");
