@@ -751,8 +751,12 @@ namespace ImGuiTextureViewer
 		ENQUEUE_RENDER_COMMAND(ImGuiTexDisplay_PreviewCallback)(
 			[Viewport, UserData=CallbackUserData.GetValue(), DrawRect](FRHICommandListImmediate& RHICmdList)
 			{
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 507) //(Version > 5.7)
+				FTextureRHIRef RenderTarget = Viewport->GetRenderTargetTexture();
+#else
 				const FViewportRHIRef& ViewportRHI = Viewport->GetViewportRHI();
 				FTextureRHIRef RenderTarget = ViewportRHI ? RHIGetViewportBackBuffer(ViewportRHI) : nullptr;
+#endif
 				if (RenderTarget)
 				{
 					FRHIRenderPassInfo RPInfo(RenderTarget, MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore));
