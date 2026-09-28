@@ -1447,7 +1447,7 @@ namespace ImGuiTextureViewer
 							(float)HoveredTexCoordY / (float)InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip));
 						ImGui::Text("Coord: %i %i", HoveredTexCoordX, HoveredTexCoordY);
 						ImGui::Separator();
-						ImGui::TextUnformatted(*PixelFormatUtils::GetPixelValueAsString((uint8*)&InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
+						ImGui::TextUnformatted(PixelFormatUtils::GetPixelValueAsText((uint8*)&InTextureInfo.SelectedPixelValue, InTextureInfo.Format, InOutTexturePreviewOptions.bDisplayStencil));
 						ImGui::EndTooltip();
 					}
 				}

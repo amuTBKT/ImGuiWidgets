@@ -125,8 +125,8 @@ namespace FImGui
 		const bool bHighlightArea = bIsDragDropOperationValid && (bPredicatePassed || ImGui::IsMouseHoveringRect(drag_rect.Min, drag_rect.Max));
 		if (bHighlightArea)
 		{
-			const ImU32 ValidColor = 0xFFFFBB26;
-			const ImU32 InvalidColor = 0xFF3535EF;
+			const ImU32 ValidColor = IM_COL32(38, 187, 255, 255);
+			const ImU32 InvalidColor = IM_COL32(239, 53, 53, 255);
 			DrawHighlightArea(context, drag_rect.Min, drag_rect.Max, ImGui::GetStyle().FontScaleMain, ImGui::GetStyle().FontScaleMain, bPredicatePassed ? ValidColor : InvalidColor);
 		}
 

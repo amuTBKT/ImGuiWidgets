@@ -309,12 +309,12 @@ namespace ImGuiTextureViewer
 				if (bReadAsStencil)
 				{
 					FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
-					DrawPixelColorComponentWidget(Value, 0, "%i##STENCIL", "%i", 0xFFFFFFFF);
+					DrawPixelColorComponentWidget(Value, 0, "%i##STENCIL", "%i", IM_COL32_WHITE);
 				}
 				else
 				{
 					FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
-					DrawPixelColorComponentWidget(Value, 0, "%.7f##DEPTH", "%.7f", 0xFFFFFFFF);
+					DrawPixelColorComponentWidget(Value, 0, "%.7f##DEPTH", "%.7f", IM_COL32_WHITE);
 				}
 			}
 			else if (IsSignedIntegerFormat(Format))
@@ -322,19 +322,19 @@ namespace ImGuiTextureViewer
 				FIntVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FIntVector4));
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					DrawPixelColorComponentWidget(Value, 0, "%i##RED", "%i", 0xFF0000FF);
+					DrawPixelColorComponentWidget(Value, 0, "%i##RED", "%i", IM_COL32(255, 0, 0, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					DrawPixelColorComponentWidget(Value, 1, "%i##GREEN", "%i", 0xFF00FF00);
+					DrawPixelColorComponentWidget(Value, 1, "%i##GREEN", "%i", IM_COL32(0, 255, 0, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					DrawPixelColorComponentWidget(Value, 2, "%i##BLUE", "%i", 0xFFFF0000);
+					DrawPixelColorComponentWidget(Value, 2, "%i##BLUE", "%i", IM_COL32(0, 0, 255, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					DrawPixelColorComponentWidget(Value, 3, "%i##ALPHA", "%i", 0xFFFFFFFF);
+					DrawPixelColorComponentWidget(Value, 3, "%i##ALPHA", "%i", IM_COL32_WHITE);
 				}
 			}
 			else if (IsInteger(Format))
@@ -342,19 +342,19 @@ namespace ImGuiTextureViewer
 				FUintVector4 Value; FMemory::Memcpy(&Value, RawValue, sizeof(FUintVector4));
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					DrawPixelColorComponentWidget(Value, 0, "%u##RED", "%u", 0xFF0000FF);
+					DrawPixelColorComponentWidget(Value, 0, "%u##RED", "%u", IM_COL32(255, 0, 0, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					DrawPixelColorComponentWidget(Value, 1, "%u##GREEN", "%u", 0xFF00FF00);
+					DrawPixelColorComponentWidget(Value, 1, "%u##GREEN", "%u", IM_COL32(0, 255, 0, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					DrawPixelColorComponentWidget(Value, 2, "%u##BLUE", "%u", 0xFFFF0000);
+					DrawPixelColorComponentWidget(Value, 2, "%u##BLUE", "%u", IM_COL32(0, 0, 255, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					DrawPixelColorComponentWidget(Value, 3, "%u##ALPHA", "%u", 0xFFFFFFFF);
+					DrawPixelColorComponentWidget(Value, 3, "%u##ALPHA", "%u", IM_COL32_WHITE);
 				}
 			}
 			else
@@ -362,19 +362,19 @@ namespace ImGuiTextureViewer
 				FVector4f Value; FMemory::Memcpy(&Value, RawValue, sizeof(FVector4f));
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::R))
 				{
-					DrawPixelColorComponentWidget(Value, 0, "%.5f##RED", "%.5f", 0xFF0000FF);
+					DrawPixelColorComponentWidget(Value, 0, "%.5f##RED", "%.5f", IM_COL32(255, 0, 0, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::G))
 				{
-					DrawPixelColorComponentWidget(Value, 1, "%.5f##GREEN", "%.5f", 0xFF00FF00);
+					DrawPixelColorComponentWidget(Value, 1, "%.5f##GREEN", "%.5f", IM_COL32(0, 255, 0, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::B))
 				{
-					DrawPixelColorComponentWidget(Value, 2, "%.5f##BLUE", "%.5f", 0xFFFF0000);
+					DrawPixelColorComponentWidget(Value, 2, "%.5f##BLUE", "%.5f", IM_COL32(0, 0, 255, 255));
 				}
 				if (EnumHasAnyFlags(ValidTextureChannels, EPixelFormatChannelFlags::A))
 				{
-					DrawPixelColorComponentWidget(Value, 3, "%.5f##ALPHA", "%.5f", 0xFFFFFFFF);
+					DrawPixelColorComponentWidget(Value, 3, "%.5f##ALPHA", "%.5f", IM_COL32_WHITE);
 				}
 			}
 			ImGui::NewLine();

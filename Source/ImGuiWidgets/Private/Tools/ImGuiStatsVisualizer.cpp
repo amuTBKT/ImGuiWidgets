@@ -824,7 +824,7 @@ namespace ImGuiStatsVizualizer
 		if (Context->ImguiContext->DragDropActive && Context->ImguiContext->DragDropPayload.IsDataType(HeaderButtonDragDropPayloadType))
 		{
 			ImGui::PushStyleColor(ImGuiCol_Button, 0xFFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, 0xFF0000FF);
+			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, IM_COL32(255, 0, 0, 255));
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
 			FImGui::TransparentImageButton("DeleteIcon", DeleteIcon);
