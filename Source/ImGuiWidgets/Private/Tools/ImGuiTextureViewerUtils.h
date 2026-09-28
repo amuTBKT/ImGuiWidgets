@@ -363,10 +363,10 @@ namespace ImGuiTextureViewer
 		void DrawPixelColorComponentWidget(const TColorFormat& ColorValue, int32 ComponentIndex, const char* LabelFmt, const char* ClipboardFmt, ImU32 MarkerColor)
 		{
 			char Buffer[128];
-			sprintf_s(Buffer, sizeof(Buffer), LabelFmt, ColorValue[ComponentIndex]);
+			snprintf(Buffer, sizeof(Buffer), LabelFmt, ColorValue[ComponentIndex]);
 			if (ImGui::Button(Buffer))
 			{
-				sprintf_s(Buffer, sizeof(Buffer), ClipboardFmt, ColorValue[ComponentIndex]);
+				snprintf(Buffer, sizeof(Buffer), ClipboardFmt, ColorValue[ComponentIndex]);
 				ImGui::SetClipboardText(Buffer);
 			}
 			ImGui::SetItemTooltip("%s", "Copy to clipboard");
