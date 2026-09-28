@@ -751,8 +751,14 @@ namespace ImGuiTextureViewer
 		ENQUEUE_RENDER_COMMAND(ImGuiTexDisplay_PreviewCallback)(
 			[Viewport, UserData=CallbackUserData.GetValue(), DrawRect](FRHICommandListImmediate& RHICmdList)
 			{
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 507) //(Version > 5.7)
+				// FViewport::GetViewportRHI() is gone in 5.8; on the render thread, during the viewport draw, the
+				// render target texture is the viewport's back buffer.
+				FTextureRHIRef RenderTarget = Viewport->GetRenderTargetTexture();
+#else
 				const FViewportRHIRef& ViewportRHI = Viewport->GetViewportRHI();
 				FTextureRHIRef RenderTarget = ViewportRHI ? RHIGetViewportBackBuffer(ViewportRHI) : nullptr;
+#endif
 				if (RenderTarget)
 				{
 					FRHIRenderPassInfo RPInfo(RenderTarget, MakeRenderTargetActions(ERenderTargetLoadAction::ELoad, ERenderTargetStoreAction::EStore));
