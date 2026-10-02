@@ -287,6 +287,14 @@ namespace ImGuiTextureViewer
 			});
 	}
 
+	static void OnWindowClosed()
+	{
+		if (ViewExtension)
+		{
+			ViewExtension->bDisabled = true;
+		}
+	}
+
 	FRHITexture* GetTextureToDisplay(const FTexturePreviewOptions& InPreviewOptions)
 	{
 		if (TextureRHIOverride)
@@ -1475,6 +1483,11 @@ namespace ImGuiTextureViewer
 
 		FAnsiString PreviouslySelectedTextureName = VisTextureName;
 
+		if (ViewExtension->bDisabled)
+		{
+			ViewExtension->bDisabled = false;
+		}
+
 		bool bRequestNewTexture = false;
 		if (IsTextureOverrideValid())
 		{
@@ -1644,6 +1657,7 @@ namespace ImGuiTextureViewer
 	FImGuiWidgetRegisterParams Params =
 	{
 		.InitFunction		= &Initialize,
+		.OnWindowClosed		= &OnWindowClosed,
 		.TickFunction		= &Tick,
 		.WidgetIcon			= IMGUI_ICON("ImIcon.TextureViewer"),
 		.WidgetPath			= "Tools.Debug.Texture Viewer",

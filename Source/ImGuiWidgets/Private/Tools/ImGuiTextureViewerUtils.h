@@ -50,6 +50,11 @@ namespace ImGuiTextureViewer
 		{
 		}
 
+		virtual bool IsActiveThisFrame_Internal(const FSceneViewExtensionContext& Context) const override
+		{
+			return !bDisabled;
+		}
+
 		virtual void SetupViewFamily(FSceneViewFamily& InViewFamily) override {}
 		virtual void SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView) override {}
 		virtual void BeginRenderViewFamily(FSceneViewFamily& InViewFamily) override {}
@@ -91,6 +96,7 @@ namespace ImGuiTextureViewer
 			DisplayedTextureName = MoveTemp(TextureName);
 		}
 
+		bool bDisabled = true;
 		FString DisplayedTextureName;
 		TSet<FString> AvailableTextures;
 		TRefCountPtr<IPooledRenderTarget> TextureToDisplay;
