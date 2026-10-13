@@ -13,7 +13,7 @@ public:
 	using FFilter = TVariant<FImGuiAllowedClassFilter, FImGuiDisallowedClassFilter, FImGuiRequiredInterfaceFilter, FImGuiDisallowAbstractClassFilter>;
 
 	[[nodiscard]] IMGUIWIDGETS_API static FImGuiClassPicker MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters = {});
-	
+
 	template <typename TImGuiFilterType>
 	[[nodiscard]] FORCEINLINE FImGuiClassPicker& AddFilter(TImGuiFilterType Filter)
 	{

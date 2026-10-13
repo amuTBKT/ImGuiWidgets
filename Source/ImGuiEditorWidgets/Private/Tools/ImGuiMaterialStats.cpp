@@ -106,7 +106,7 @@ namespace ImGuiMaterialStats
 		}
 		static FString MakeShaderName(FString VFName, FString ShaderClassName)
 		{
-			static IConsoleVariable* DumpShaderDebugInfoShortCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DumpShaderDebugShortNames"));			
+			static IConsoleVariable* DumpShaderDebugInfoShortCVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.DumpShaderDebugShortNames"));
 			if (DumpShaderDebugInfoShortCVar && (DumpShaderDebugInfoShortCVar->GetInt() == 1))
 			{
 				// shorten name based on: GlobalBeginCompileShader()
@@ -303,9 +303,11 @@ namespace ImGuiMaterialStats
 
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 		const FImGuiImageBindingParams WarningIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Warning"), ImGui::GetFontSize());
-		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Search"), ImGui::GetFontSize());
-		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Edit"), ImGui::GetFontSize());
-		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Statistics"), ImGui::GetFontSize());
+		const FImGuiImageBindingParams BrowseIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Search"), ImGui::GetTextLineHeight());
+		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Edit"), ImGui::GetTextLineHeight());
+		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Statistics"), ImGui::GetTextLineHeight());
+
+		static const FButtonStyle& SimpleButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("SimpleButton"));
 
 		bool bIsAnyWindowCompilingMaterial = false;
 		for (FMaterialWindowState& MaterialWindowState : MaterialWindowStates)
@@ -340,6 +342,7 @@ namespace ImGuiMaterialStats
 			bIsAnyWindowCompilingMaterial |= bIsCompilingPermutations;
 		}
 
+		ImGui::PushStyleVar(ImGuiStyleVar_TabBarOverlineSize, 1.f);
 		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoCloseButton;
 		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
 
@@ -357,12 +360,17 @@ namespace ImGuiMaterialStats
 			else if (WindowIndex == 0)
 			{
 				// keep the first window pinned to the dock
-				ImGui::SetNextWindowDockID(MainDockSpaceID, ImGuiCond_Always);
+				ImGui::SetNextWindowDockID(MainDockSpaceID, ImGuiCond_Once);
 			}
 
 			bool bKeepItem = true;
 			bool* bKeepItemPtr = (WindowIndex > 0) ? &bKeepItem : nullptr;
-			if (ImGui::Begin(*FAnsiString::Printf("%s###MaterialWindow%i", *TabName, MaterialWindowState.WindowId), bKeepItemPtr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+			ImGuiWindowFlags WindowFlags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+			if (WindowIndex == 0)
+			{
+				WindowFlags |= ImGuiWindowFlags_NoMove;
+			}
+			if (ImGui::Begin(*FAnsiString::Printf("%s###MaterialWindow%i", *TabName, MaterialWindowState.WindowId), bKeepItemPtr, WindowFlags))
 			{
 				FImGuiAssetPicker& MaterialPicker = MaterialWindowState.MaterialPicker;
 				FImGuiTextFilter& ShaderFilter = MaterialWindowState.ShaderFilter;
@@ -462,37 +470,41 @@ namespace ImGuiMaterialStats
 					ImGui::SameLine();
 					// filtering
 					{
-						auto AddCheckboxButton = [](const char* Label, const char* ToolTip, uint32& InOutState, uint32 BitsToToggle)
+						static const FCheckBoxStyle& ToggleButtonStyle = []()
 							{
-								const bool bApplyStyle = (InOutState & BitsToToggle) > 0u;
-								if (bApplyStyle)
-								{
-									ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f));
-									ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.7f, 0.7f));
-									ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
-								}
-
-								if (ImGui::Button(Label))
+								auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("FilterBar.BasicFilterButton"));
+								Style.SetPadding(FMargin(4.f));
+								return Style;
+							}();
+						auto AddCheckboxButton = [&](const char* Label, const char* ToolTip, uint32& InOutState, uint32 BitsToToggle)
+							{
+								bool bChecked = (InOutState & BitsToToggle) > 0u;
+								if (FImGui::CheckBox(Context, Label, &bChecked, ToggleButtonStyle))
 								{
 									InOutState ^= BitsToToggle;
 								}
-								ImGui::SetItemTooltip("%s", ToolTip);
-
-								if (bApplyStyle)
-								{
-									ImGui::PopStyleColor(3);
-								}
+								FImGui::SetItemTooltip("%s", ToolTip);
 							};
 
-						ShaderFilter.Draw(Context, "FilterShaders", "Filter Shaders", ImGui::GetContentRegionAvail().x * 0.5f);
+						ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+						ShaderFilter.Draw(Context, "FilterShaders", "Filter Shaders");
 
+						ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, 4.f);
 						ImGui::SameLine(); AddCheckboxButton("VS", "Toggle Vertex Shaders", EnabledShaderTypes, (1u << SF_Vertex));
 						ImGui::SameLine(); AddCheckboxButton("PS", "Toggle Pixel Shaders", EnabledShaderTypes, (1u << SF_Pixel));
 						ImGui::SameLine(); AddCheckboxButton("CS", "Toggle Compute Shaders", EnabledShaderTypes, (1u << SF_Compute));
 						ImGui::SameLine(); AddCheckboxButton("RTX", "Toggle RayTracing Shaders", EnabledShaderTypes, ((1u << SF_RayMiss) | (1u << SF_RayHitGroup)));
 						//ImGui::SameLine(); AddCheckboxButton("MS", "Toggle Mesh/Amplification Shaders", EnabledShaderTypes, ((1u << SF_Mesh) | (1u << SF_Amplification)));
+						ImGui::PopStyleVar();
 					}
 					ImGui::Separator();
+
+					FImGuiScopedStyleEdit TabBarStyle
+					{
+						ImGuiStyleVar_TabBarBorderSize, 2.f,
+						ImGuiCol_TabSelected,			0xFF404040,
+						ImGuiCol_TabHovered,			0xFF5A5A5A,
+					};
 
 					if (ImGui::BeginTabBar("Shaders"))
 					{
@@ -502,7 +514,14 @@ namespace ImGuiMaterialStats
 							{
 								FImGuiNamedScope VF_Scope{ *VFName };
 
-								static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
+								FImGuiScopedStyleEdit TableStyle
+								{
+									ImGuiCol_Header,		FImGui::GetSlateColorVec4(EStyleColor::SelectInactive),
+									ImGuiCol_HeaderActive,	FImGui::GetSlateColorVec4(EStyleColor::Select),
+									ImGuiCol_HeaderHovered, FImGui::GetSlateColorVec4(EStyleColor::SelectHover)
+								};
+
+								static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
 								if (ImGui::BeginTable("ShaderTable", 4, TableFlags))
 								{
 									ImGui::TableSetupColumn("Shader Name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
@@ -527,58 +546,48 @@ namespace ImGuiMaterialStats
 										ImGui::TableNextRow(ImGuiTableRowFlags_None);
 
 										ImGui::TableSetColumnIndex(0);
-										{
-											ImGui::TextUnformatted(TCHAR_TO_UTF8(*Shader.ShaderClassName));
-										}
+										ImGui::TextUnformatted(TCHAR_TO_UTF8(*Shader.ShaderClassName));
 
 										ImGui::TableSetColumnIndex(1);
-										{
-											ImGui::TextUnformatted(TCHAR_TO_UTF8(CrossCompiler::GetFrequencyName(Shader.ShaderType)));
-										}
+										ImGui::TextUnformatted(TCHAR_TO_UTF8(CrossCompiler::GetFrequencyName(Shader.ShaderType)));
 
 										ImGui::TableSetColumnIndex(2);
-										{
-											ImGui::Text("%i", Shader.NumInstructions);
-										}
+										ImGui::Text("%i", Shader.NumInstructions);
 
 										ImGui::TableSetColumnIndex(3);
 										{
 											if (MaterialStats.ActiveShaderIndices.Contains(ShaderIndex))
 											{
-												ImGui::PushStyleColor(ImGuiCol_Button, 0);
-												ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
-												ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
-												ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
-												ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+												ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
 
-												if (FImGui::ImageButtonWithTint("BrowseToDir", BrowseIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+												ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.f);
+												if (FImGui::Button(Context, "BrowseToDir", BrowseIcon, SimpleButtonStyle))
 												{
 													FPlatformProcess::ExploreFolder(*Shader.ShaderFilePath);
 												}
-												ImGui::SetItemTooltip("%s", "Browse to shader file");
+												FImGui::SetItemTooltip("%s", "Browse to shader file");
 
 												ImGui::SameLine();
 
-												if (FImGui::ImageButtonWithTint("EditFile", EditIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+												if (FImGui::Button(Context, "EditFile", EditIcon, SimpleButtonStyle))
 												{
 													FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderFilePath);
 												}
-												ImGui::SetItemTooltip("%s", "Edit shader file");
+												FImGui::SetItemTooltip("%s", "Edit shader file");
 
 												ImGui::SameLine();
 
 #if 0
 												ImGui::BeginDisabled(ImGuiShaderAnalyzer::CanAnalyzeShader(Shader.ShaderType) == false);
-												if (FImGui::ImageButtonWithTint("Analyze", AnalyzeIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+												if (FImGui::Button(Context, "Analyze", AnalyzeIcon, SimpleButtonStyle))
 												{
 													ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
 												}
-												ImGui::SetItemTooltip("%s", "Analyze shader");
+												FImGui::SetItemTooltip("%s", "Analyze shader");
 												ImGui::EndDisabled();
 #endif
 
-												ImGui::PopStyleVar(2);
-												ImGui::PopStyleColor(3);
+												ImGui::PopStyleVar();
 											}
 										}
 									}
@@ -602,6 +611,7 @@ namespace ImGuiMaterialStats
 				WindowIndex = FMath::Max(0, WindowIndex - 1);
 			}
 		}
+		ImGui::PopStyleVar();
 
 		// TabBar customization
 		{

@@ -57,7 +57,8 @@ public:
 
 		Set("ImTex.DashLine.Vertical", new IMAGE_BRUSH("Common/im_dash_line_vertical", FVector2f(1.f, 10.f), FLinearColor::White, ESlateBrushTileType::Vertical));
 		Set("ImTex.DashLine.Horizontal", new IMAGE_BRUSH("Common/im_dash_line_horizontal", FVector2f(10.f, 1.f), FLinearColor::White, ESlateBrushTileType::Horizontal));
-		Set("ImTex.DropDropArea.Background", new BOX_BRUSH("Common/im_dragdrop_area_background", FMargin(6.0f / 64.0f)));
+		Set("ImTex.DropDropArea.Background", new BOX_BRUSH("Common/im_dragdrop_area_background", FMargin(6.f / 64.f)));
+		Set("ImTex.DropShadow", new BOX_BRUSH("Common/im_drop_shadow", FMargin(4.f / 64.f)));
 
 		FSlateStyleRegistry::RegisterSlateStyle(*this);
 	}

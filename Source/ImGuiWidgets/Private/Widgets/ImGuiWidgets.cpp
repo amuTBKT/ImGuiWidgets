@@ -2,6 +2,7 @@
 
 #include "ImGuiWidgets.h"
 #include "ImGuiSubsystem.h"
+#include "Styling/StyleColors.h"
 
 #include "Blueprint/BlueprintSupport.h"
 
@@ -98,7 +99,7 @@ namespace FImGui
 
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
-		auto Add_HandlesWidget = [](const char* label, TDataType& p_data_0, TDataType& p_data_1, const TDataType p_min, const TDataType p_max)
+		auto Add_HandlesWidget = [context](const char* label, TDataType& p_data_0, TDataType& p_data_1, const TDataType p_min, const TDataType p_max)
 		{
 			ImGuiWindow* window = ImGui::GetCurrentWindow();
 			if (window->SkipItems)
@@ -125,8 +126,8 @@ namespace FImGui
 			const ImVec2 grab_hsize_v = ImVec2(grab_hsize, grab_hsize);
 
 			const bool has_valid_range = !FMath::IsNearlyEqual(p_max, p_min, 0.00001f);
-			const float grab_xpos_0 = frame_bb.Min.x + (has_valid_range ? (((p_data_0 - p_min) / (p_max - p_min)) * frame_bb.GetWidth()) : 0.f);
-			const float grab_xpos_1 = frame_bb.Min.x + (has_valid_range ? (((p_data_1 - p_min) / (p_max - p_min)) * frame_bb.GetWidth()) : 0.f);
+			const float grab_xpos_0 = (frame_bb.Min.x + style.GrabRounding * 0.5f) + (has_valid_range ? (((p_data_0 - p_min) / (p_max - p_min)) * (frame_bb.GetWidth() - style.GrabRounding)) : 0.f);
+			const float grab_xpos_1 = (frame_bb.Min.x + style.GrabRounding * 0.5f) + (has_valid_range ? (((p_data_1 - p_min) / (p_max - p_min)) * (frame_bb.GetWidth() - style.GrabRounding)) : 0.f);
 			const float grab_ypos_0 = frame_bb.GetCenter().y - grab_hsize;
 			const float grab_ypos_1 = frame_bb.GetCenter().y + grab_hsize;
 
@@ -169,12 +170,12 @@ namespace FImGui
 					if (active_0)
 					{
 						p_data_0 = FMath::Min(p_data_0, p_data_1);
-						grab_pos_0.x = frame_bb.Min.x + ((p_data_0 - p_min) / (p_max - p_min)) * frame_bb.GetWidth();
+						grab_pos_0.x = (frame_bb.Min.x + style.GrabRounding * 0.5f) + ((p_data_0 - p_min) / (p_max - p_min)) * (frame_bb.GetWidth() - style.GrabRounding);
 					}
 					else
 					{
 						p_data_1 = FMath::Max(p_data_0, p_data_1);
-						grab_pos_1.x = frame_bb.Min.x + ((p_data_1 - p_min) / (p_max - p_min)) * frame_bb.GetWidth();
+						grab_pos_1.x = (frame_bb.Min.x + style.GrabRounding * 0.5f) + ((p_data_1 - p_min) / (p_max - p_min)) * (frame_bb.GetWidth() - style.GrabRounding);
 					}
 
 					ImGui::MarkItemEdited(id);
@@ -183,8 +184,8 @@ namespace FImGui
 
 			// render
 			{
-				const ImU32 col_dark = ImGui::GetColorU32(ImGuiCol_FrameBg);
-				const ImU32 col_light = ImGui::GetColorU32(ImGuiCol_FrameBgActive);
+				const ImU32 col_dark = ImGui::GetColorU32(FImGui::GetSlateColorU32(context, EStyleColor::PrimaryPress), 0.6f);
+				const ImU32 col_light = ImGui::GetColorU32(FImGui::GetSlateColorU32(context, EStyleColor::PrimaryHover), 0.6f);
 				const ImU32 col_dark_solid = col_dark | 0xFF000000;
 				const ImU32 col_light_solid = col_light | 0xFF000000;
 
@@ -192,8 +193,10 @@ namespace FImGui
 				ImGui::RenderNavCursor(frame_bb, id);
 				ImGui::RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
 
-				window->DrawList->AddRectFilled(frame_bb.Min, ImVec2(grab_pos_0.x, frame_bb.Max.y), col_dark, style.GrabRounding);
-				window->DrawList->AddRectFilled(ImVec2(grab_pos_1.x, frame_bb.Min.y), frame_bb.Max, col_light, style.GrabRounding);
+				if (frame_bb.Min.x + style.GrabRounding < grab_pos_0.x)
+					window->DrawList->AddRectFilled(frame_bb.Min, ImVec2(grab_pos_0.x, frame_bb.Max.y), col_dark, style.GrabRounding);
+				if (grab_pos_1.x < frame_bb.Max.x - style.GrabRounding)
+					window->DrawList->AddRectFilled(ImVec2(grab_pos_1.x, frame_bb.Min.y), frame_bb.Max, col_light, style.GrabRounding);
 
 				{
 					window->DrawList->AddTriangleFilled(

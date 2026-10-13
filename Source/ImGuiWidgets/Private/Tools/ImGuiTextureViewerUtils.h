@@ -294,7 +294,7 @@ namespace ImGuiTextureViewer
 				FCStringAnsi::Snprintf(Buffer, sizeof(Buffer), ClipboardFmt, ColorValue[ComponentIndex]);
 				ImGui::SetClipboardText(Buffer);
 			}
-			ImGui::SetItemTooltip("%s", "Copy to clipboard");
+			FImGui::SetItemTooltip("%s", "Copy to clipboard");
 			ImGui::RenderColorComponentMarker({ ImGui::GetItemRectMin(), ImGui::GetItemRectMax() }, MarkerColor, ImGui::GetStyle().FrameRounding);
 		}
 

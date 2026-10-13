@@ -5,6 +5,10 @@
 #include "ImGuiPluginTypes.h"
 #include "Input/DragAndDrop.h"
 
+#include "Styling/AppStyle.h"
+#include "Styling/SlateTypes.h"
+#include "Styling/StyleColors.h"
+
 // commonly used function to get ImGui icons/brushes
 #define IMGUI_ICON(IconName) IMGUI_STYLE_ICON("ImGuiStyle", IconName)
 #define IMGUI_ICON_BRUSH(IconName) IMGUI_STYLE_ICON_BRUSH("ImGuiStyle", IconName)
@@ -13,94 +17,6 @@
 
 namespace FImGui
 {
-	// Get ImGui tick context
-	FORCEINLINE FImGuiTickContext* GetTickContext(ImGuiContext* Context)
-	{
-		return FImGuiTickContext::GetTickContextFromImGuiContext(Context);
-	}
-
-	// Get the current ImGui tick context
-	FORCEINLINE FImGuiTickContext* GetCurrentTickContext()
-	{
-		return FImGuiTickContext::GetTickContextFromImGuiContext(ImGui::GetCurrentContext());
-	}
-
-	// Similar to `ImGui::ImageButton` but allows tinting the image depending on button state (inactive/active|hovered)
-	FORCEINLINE bool ImageButtonWithTint(const char* str_id, ImTextureRef user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, ImU32 normal_tint_col, ImU32 active_tint_col, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
-	{
-		ImGuiContext& g = *ImGui::GetCurrentContext();
-		ImGuiWindow* window = ImGui::GetCurrentWindow();
-		if (window->SkipItems)
-			return false;
-
-		const ImGuiID id = window->GetID(str_id);
-
-		const ImVec2 padding = g.Style.FramePadding;
-		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + image_size + padding * 2.0f);
-		ImGui::ItemSize(bb);
-		if (!ImGui::ItemAdd(bb, id))
-			return false;
-
-		bool hovered, held;
-		bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held, flags);
-
-		// Render
-		const ImU32 col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-		const ImU32 tint_col = (held || hovered) ? active_tint_col : normal_tint_col;
-		ImGui::RenderNavCursor(bb, id);
-		ImGui::RenderFrame(bb.Min, bb.Max, col, true, ImClamp((float)ImMin(padding.x, padding.y), 0.0f, g.Style.FrameRounding));
-		window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, ImGui::GetColorU32(tint_col));
-
-		return pressed;
-	}
-
-	// Similar to `ImGui::ImageButton` but doesn't render the background
-	FORCEINLINE bool TransparentImageButton(const char* str_id, ImTextureRef user_texture_id, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
-	{
-		ImGuiContext& g = *ImGui::GetCurrentContext();
-		ImGuiWindow* window = g.CurrentWindow;
-		if (window->SkipItems)
-			return false;
-
-		const ImGuiID id = window->GetID(str_id);
-
-		const ImVec2 padding = g.Style.FramePadding;
-		const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + image_size + padding * 2.0f);
-		ImGui::ItemSize(bb);
-		if (!ImGui::ItemAdd(bb, id))
-			return false;
-
-		bool hovered, held;
-		bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held, flags);
-
-		// Render
-		const ImU32 col = ImGui::GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-		ImGui::RenderNavCursor(bb, id);
-		window->DrawList->AddImage(user_texture_id, bb.Min + padding, bb.Max - padding, uv0, uv1, col);
-
-		return pressed;
-	}
-
-	FORCEINLINE bool ImageButtonWithTint(const char* str_id, const FImGuiImageBindingParams& image, ImU32 normal_tint_col, ImU32 active_tint_col, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
-	{
-		return ImageButtonWithTint(str_id, image.Id, image.Size, image.UV0, image.UV1, normal_tint_col, active_tint_col, flags);
-	}
-
-	FORCEINLINE bool TransparentImageButton(const char* str_id, const FImGuiImageBindingParams& image, ImGuiButtonFlags flags = ImGuiButtonFlags_None)
-	{
-		return TransparentImageButton(str_id, image.Id, image.Size, image.UV0, image.UV1, flags);
-	}
-
-	FORCEINLINE bool ImageButton(const char* str_id, const FImGuiImageBindingParams& image, const ImVec4& bg_col = ImVec4(0, 0, 0, 0), const ImVec4& tint_col = ImVec4(1, 1, 1, 1))
-	{
-		return ImGui::ImageButton(str_id, image.Id, image.Size, image.UV0, image.UV1, bg_col, tint_col);
-	}
-
-	FORCEINLINE void Image(const FImGuiImageBindingParams& image, const ImVec4& tint_col = ImVec4(1, 1, 1, 1))
-	{
-		ImGui::ImageWithBg(image.Id, image.Size, image.UV0, image.UV1, /*bg_col=*/ImVec4(0, 0, 0, 0), tint_col);
-	}
-
 	IMGUIWIDGETS_API void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message);
 
 	IMGUIWIDGETS_API void DrawHighlightArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size = 1.f, float border_uv_scale = 1.f, ImU32 tint_col = 0xFFFFFFFF);
@@ -148,8 +64,14 @@ class FImGuiTextFilter
 {
 public:
 	IMGUIWIDGETS_API static FImGuiTextFilter MakeWidget(uint32 MaxLength);
-	IMGUIWIDGETS_API bool Draw(FImGuiTickContext* Context, const char* Label, const char* HintText = nullptr, float WidgetWidth = 0.f, bool bSetFocus = false, bool bActivateOnNavFocus = false);
+	IMGUIWIDGETS_API bool Draw(FImGuiTickContext* Context, const char* Label, const char* HintText = nullptr, bool bSetFocus = false, bool bActivateOnNavFocus = false);
 	IMGUIWIDGETS_API void Reset();
+	IMGUIWIDGETS_API void SetText(const char* Text);
+	FORCEINLINE FImGuiTextFilter& SetStyle(const FSearchBoxStyle& Style)
+	{
+		SlateStyle = Style;
+		return *this;
+	}
 
 	bool IsActive()									const { return !FilterKeywordTokens_ANSI.IsEmpty(); }
 	bool PassFilter(FStringView StringToCheck)		const { return PassFilterInternal(GetFilterString(), FilterKeywordTokens, StringToCheck); }
@@ -165,12 +87,12 @@ public:
 	}
 	FImGuiTextFilter& operator=(const FImGuiTextFilter& Other) noexcept
 	{
+		SlateStyle = Other.SlateStyle;
+
 		FilterStringBuffer = Other.FilterStringBuffer;
 		FilterStringBuffer_ANSI = Other.FilterStringBuffer_ANSI;
 		FilterKeywordTokens = Other.FilterKeywordTokens;
 		FilterKeywordTokens_ANSI = Other.FilterKeywordTokens_ANSI;
-		SearchIconTint = Other.SearchIconTint;
-		ClearIconTint = Other.ClearIconTint;
 
 		// ensure we have valid buffer capacity
 		FilterStringBuffer.Reserve(Other.FilterStringBuffer.Max());
@@ -210,13 +132,15 @@ private:
 		return true;
 	}
 
+	void OnFilterChanged();
+
 private:
+	// TODO: using optional here as we don't want static initialization (Slate not initialized in time for it)
+	TOptional<FSearchBoxStyle> SlateStyle;
 	TArray<TCHAR> FilterStringBuffer;
 	TArray<ANSICHAR> FilterStringBuffer_ANSI;
 	TArray<TPair<uint16, uint16>> FilterKeywordTokens;
 	TArray<TPair<uint16, uint16>> FilterKeywordTokens_ANSI;
-	float SearchIconTint = 0.75f;
-	float ClearIconTint = 0.75f;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////

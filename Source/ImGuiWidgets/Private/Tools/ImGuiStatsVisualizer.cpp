@@ -35,7 +35,7 @@ namespace ImGuiStatsVizualizer
 	};
 	static TArray<FStatGroupData> StatGroups;
 
-	static FImGuiTextFilter StatFilter = FImGuiTextFilter::MakeWidget(64u);
+	static FImGuiTextFilter StatFilter;
 	static FImGuiImageBindingParams EditAssetIcon;
 	static FImGuiImageBindingParams BrowseAssetIcon;
 	static FImGuiImageBindingParams DeleteIcon;
@@ -415,22 +415,20 @@ namespace ImGuiStatsVizualizer
 				{
 					FImGuiNamedScope Scope{ GetTypeHash(StatDescription) };
 
-					ImGui::PushStyleColor(ImGuiCol_Button, 0);
-					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
-					ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
-					ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
-					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+					static const FButtonStyle& ButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("ThinHoverOnlyButton"));
 
-					if (FImGui::ImageButtonWithTint("BrowseToAsset", BrowseAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+
+					if (FImGui::Button(FImGui::GetCurrentTickContext(), "BrowseToAsset", BrowseAssetIcon, ButtonStyle))
 					{
 						TArray<UObject*> Objects = { Asset };
 						GEditor->SyncBrowserToObjects(Objects);
 					}
-					ImGui::SetItemTooltip("%s", "Browse to asset");
+					FImGui::SetItemTooltip("%s", "Browse to asset");
 
 					ImGui::SameLine();
 
-					if (FImGui::ImageButtonWithTint("EditAsset", EditAssetIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+					if (FImGui::Button(FImGui::GetCurrentTickContext(), "EditAsset", EditAssetIcon, ButtonStyle))
 					{
 						// NOTE: executing this immediately causes crashes when quering stats next frame
 						FFunctionGraphTask::CreateAndDispatchWhenReady(
@@ -448,10 +446,9 @@ namespace ImGuiStatsVizualizer
 								}
 							}, TStatId(), NULL, ENamedThreads::GameThread);
 					}
-					ImGui::SetItemTooltip("%s", "Edit asset");
+					FImGui::SetItemTooltip("%s", "Edit asset");
 
-					ImGui::PopStyleVar(2);
-					ImGui::PopStyleColor(3);
+					ImGui::PopStyleVar();
 				}
 #else
 				//ImGui::Text("");
@@ -819,15 +816,19 @@ namespace ImGuiStatsVizualizer
 	static void RenderStatsHeader(FImGuiTickContext* Context, int32& GroupIndexToRemove)
 	{
 		static const char* HeaderButtonDragDropPayloadType = "DND_STATGROUP_BUTTON";
+		static const FButtonStyle& SimpleButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("SimpleButton"));
+		static const FButtonStyle& PrimaryButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("PrimaryButton"));
+		static const FCheckBoxStyle& ToggleButtonStyle = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("FilterBar.BasicFilterButton"));
+
+		ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemSpacing.x * 0.5f);
 
 		bool bDeleteIconHovered = false;
 		if (Context->ImguiContext->DragDropActive && Context->ImguiContext->DragDropPayload.IsDataType(HeaderButtonDragDropPayloadType))
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, 0xFFFFFFFF);
 			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, IM_COL32(255, 0, 0, 255));
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
-			FImGui::TransparentImageButton("DeleteIcon", DeleteIcon);
+			FImGui::Button(Context, "DeleteGroup", DeleteIcon, SimpleButtonStyle);
 			bDeleteIconHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly);
 			if (ImGui::BeginDragDropTarget())
 			{
@@ -839,23 +840,19 @@ namespace ImGuiStatsVizualizer
 			}
 
 			ImGui::PopStyleVar();
-			ImGui::PopStyleColor(2);
+			ImGui::PopStyleColor();
 		}
 		else
 		{
-			ImGui::PushStyleColor(ImGuiCol_Button, 0xBFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFFFFFFFF);
-			ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFFFFFFFF);
-			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
-			if (FImGui::TransparentImageButton("SaveSettings", SaveIcon))
+			if (FImGui::Button(Context, "SaveSettings", SaveIcon, SimpleButtonStyle))
 			{
 				SaveWidgetSettings();
 			}
-			ImGui::SetItemTooltip("%s", "Save Settings");
+			FImGui::SetItemTooltip("%s", "Save Settings");
 
 			ImGui::PopStyleVar();
-			ImGui::PopStyleColor(3);
 		}
 
 		ImGui::SameLine();
@@ -865,7 +862,7 @@ namespace ImGuiStatsVizualizer
 			ImGui::SetNextItemWidth(128);
 
 			static char StatSourceBuffer[64] = { 0 };
-			if (ImGui::InputTextWithHint("##NewStat", "Add Stat", StatSourceBuffer, sizeof(StatSourceBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+			if (FImGui::EditableTextBox(Context, "##NewStat", "Add Stat", StatSourceBuffer, sizeof(StatSourceBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
 			{
 				// execute command
 				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), ANSI_TO_TCHAR(StatSourceBuffer));
@@ -874,12 +871,6 @@ namespace ImGuiStatsVizualizer
 				// reset and keep focus
 				StatSourceBuffer[0] = 0;
 				ImGui::SetKeyboardFocusHere(-1);
-			}
-
-			if (ImGui::IsItemActive())
-			{
-				ImDrawList* DrawList = ImGui::GetWindowDrawList();
-				DrawList->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::GetColorU32(ImGuiCol_FrameBgActive), 0.f, 1.f, ImDrawFlags_None);
 			}
 		}
 
@@ -897,21 +888,11 @@ namespace ImGuiStatsVizualizer
 				ImGui::NewLine(); //<br>
 			}
 
-			const bool bApplyStyle = GroupData.bIsActive;
-			if (bApplyStyle)
-			{
-				ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.6f, 0.6f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.7f, 0.7f));
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(2.f / 7.0f, 0.8f, 0.8f));
-			}
-			if (ImGui::Button(GroupName))
+			bool bActive = GroupData.bIsActive;
+			if (FImGui::CheckBox(Context, GroupName, &bActive, ToggleButtonStyle))
 			{
 				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *GroupData.NameForCommand);
 				GEngine->Exec(nullptr, *StatCommand);
-			}
-			if (bApplyStyle)
-			{
-				ImGui::PopStyleColor(3);
 			}
 
 			if (ImGui::BeginPopupContextItem("Customization"))
@@ -923,7 +904,7 @@ namespace ImGuiStatsVizualizer
 				}
 
 				ImGui::Text("Display Name:");
-				if (ImGui::InputText("##Name", NameBuffer, sizeof(NameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
+				if (FImGui::EditableTextBox(Context, "##Name", nullptr, NameBuffer, sizeof(NameBuffer), ImGuiInputTextFlags_EnterReturnsTrue))
 				{
 					if (FCStringAnsi::Strlen(NameBuffer) > 2)
 					{
@@ -931,7 +912,7 @@ namespace ImGuiStatsVizualizer
 					}
 				}
 
-				if (ImGui::Button("Remove Group"))
+				if (FImGui::Button(Context, "Remove Group", PrimaryButtonStyle))
 				{
 					GroupIndexToRemove = GroupIndex;
 				}
@@ -982,23 +963,25 @@ namespace ImGuiStatsVizualizer
 			StatGroups.Insert(Source, DestIndex);
 		}
 
-		ImGui::Separator();
+		ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.75f);
+		StatFilter.Draw(Context, "FilterLabel", "Filter Stats");
 
-		StatFilter.Draw(Context, "FilterLabel", "Filter Stats", ImGui::GetWindowWidth() * 0.75f);
+		ImGui::PopStyleVar();
 	}
 
 	static void Initialize()
 	{
+		StatFilter = FImGuiTextFilter::MakeWidget(64u);
 		LoadWidgetSettings();
 	}
 
 	static void RegisterOneFrameResources()
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Edit"), ImGui::GetFontSize());
-		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Search"), ImGui::GetFontSize());
-		DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Delete"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
-		SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Save"), ImGui::GetFontSize() + ImGui::GetStyle().FramePadding.y * 2.f);
+		EditAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Edit"), ImGui::GetTextLineHeight());
+		BrowseAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Search"), ImGui::GetTextLineHeight());
+		DeleteIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Delete"), ImGui::GetTextLineHeightWithSpacing());
+		SaveIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Save"), ImGui::GetTextLineHeightWithSpacing());
 	}
 
 	static void Tick(FImGuiTickContext* Context)

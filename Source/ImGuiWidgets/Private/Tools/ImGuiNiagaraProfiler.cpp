@@ -107,13 +107,15 @@ namespace ImGuiNiagaraProfiler
 
 	static TMap<TWeakObjectPtr<UWorld>, FWorldStatData> WorldStatData;
 	static TUniquePtr<FNiagaraGpuProfilerListener> NiagaraGPUProfilerListener;
-	static FImGuiTextFilter SimStageFilter = FImGuiTextFilter::MakeWidget(32u);
+	static FImGuiTextFilter SimStageFilter;
 	static bool bIsCapturing = false;
 
 	static TOptional<bool> bExpandAll;
 
 	static void Initialize()
 	{
+		SimStageFilter = FImGuiTextFilter::MakeWidget(32u);
+
 		NiagaraGPUProfilerListener = MakeUnique<FNiagaraGpuProfilerListener>();
 		NiagaraGPUProfilerListener->SetEnabled(bIsCapturing);
 		NiagaraGPUProfilerListener->SetHandler(
@@ -199,7 +201,14 @@ namespace ImGuiNiagaraProfiler
 		{
 			FImGuiNamedScope Scope{ *EmitterName };
 
-			static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+			FImGuiScopedStyleEdit TableStyle
+			{
+				ImGuiCol_Header,		FImGui::GetSlateColorVec4(EStyleColor::SelectInactive),
+				ImGuiCol_HeaderActive,	FImGui::GetSlateColorVec4(EStyleColor::Select),
+				ImGuiCol_HeaderHovered, FImGui::GetSlateColorVec4(EStyleColor::SelectHover)
+			};
+
+			static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
 			if (ImGui::BeginTable("SimStages", 3, TableFlags))
 			{
 				ImGui::TableSetupColumn("Stage Name", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoReorder | ImGuiTableColumnFlags_NoHide);
@@ -323,42 +332,39 @@ namespace ImGuiNiagaraProfiler
 
 		if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
-			ImGui::Checkbox("Enable profiling", &bIsCapturing);
-
-			ImGui::Separator();
+			static const FCheckBoxStyle CheckBoxStyle = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("CheckBox"));
+			FImGui::CheckBox("Enable profiling", &bIsCapturing, CheckBoxStyle);
 
 			ImGui::BeginDisabled(!bIsCapturing);
-			SimStageFilter.Draw(Context, "SimStageFilter", "Filter Simulation Stages", ImGui::GetWindowWidth() * 0.75f);
+			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.75f);
+			SimStageFilter.Draw(Context, "SimStageFilter", "Filter Simulation Stages");
 			ImGui::SameLine();
 
 			// collapse/expand buttons
 			{
 				UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
-				const FImGuiImageBindingParams CollapseAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.CollapseAll"), 16.f * ImGui::GetStyle().FontScaleMain);
-				const FImGuiImageBindingParams ExpandAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ExpandAll"), 16.f * ImGui::GetStyle().FontScaleMain);
+				const FImGuiImageBindingParams CollapseAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.CollapseAll"), ImGui::GetTextLineHeightWithSpacing());
+				const FImGuiImageBindingParams ExpandAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ExpandAll"), ImGui::GetTextLineHeightWithSpacing());
+				static const FButtonStyle& SimpleButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("SimpleButton"));
 
-				ImGui::PushStyleColor(ImGuiCol_Button, 0);
-				ImGui::PushStyleColor(ImGuiCol_ButtonHovered, 0xFF404040);
-				ImGui::PushStyleColor(ImGuiCol_ButtonActive, 0xFF404040);
-				ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2);
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
+				ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, 2.f);
 
-				if (FImGui::ImageButtonWithTint("CollapseAll", CollapseAllIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+				if (FImGui::Button(Context, "CollapseAll", CollapseAllIcon, SimpleButtonStyle))
 				{
 					bExpandAll = false;
 				}
-				ImGui::SetItemTooltip("%s", "Collapse All");
+				FImGui::SetItemTooltip("%s", "Collapse All");
 
 				ImGui::SameLine();
 
-				if (FImGui::ImageButtonWithTint("ExpandAll", ExpandAllIcon, 0x8FFFFFFF, 0xFFFFFFFF))
+				if (FImGui::Button(Context, "ExpandAll", ExpandAllIcon, SimpleButtonStyle))
 				{
 					bExpandAll = true;
 				}
-				ImGui::SetItemTooltip("%s", "Expand All");
+				FImGui::SetItemTooltip("%s", "Expand All");
 
 				ImGui::PopStyleVar(2);
-				ImGui::PopStyleColor(3);
 			}
 			ImGui::EndDisabled();
 		}
