@@ -706,7 +706,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 			ImGui::BeginGroup();
 			{
-				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f);
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.f);
 				ImGui::SetNextItemWidth(AssetViewerWidth);
 				if (TextFilter.Draw(Context, "Filter", "Search Assets", /*bSetFocus=*/ImGui::IsWindowAppearing()))
 				{
@@ -822,7 +822,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			ImGui::EndGroup();
 
 			ImGui::SameLine();
-			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(-6.f, 2.f));
+			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(-7.f, 1.f));
 			ImGui::BeginGroup();
 			{
 				static const FCheckBoxStyle& ToggleButtonStyle = []()

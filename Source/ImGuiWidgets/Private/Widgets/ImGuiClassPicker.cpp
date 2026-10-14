@@ -599,7 +599,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 			ImGui::BeginGroup();
 			{
-				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 2.f);
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.f);
 				ImGui::SetNextItemWidth(ClassViewerWidth);
 				if (TextFilter.Draw(Context, "Filter", "Search", /*bSetFocus=*/ImGui::IsWindowAppearing()))
 				{
