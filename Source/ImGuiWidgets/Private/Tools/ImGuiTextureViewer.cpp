@@ -987,7 +987,13 @@ namespace ImGuiTextureViewer
 				return Style;
 			}();
 		static const FComboButtonStyle ComboButtonStyle = FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton"));
-		static const FCheckBoxStyle RadioButtonStyle = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("RadioButton"));
+		static const FCheckBoxStyle RadioButtonStyle = []()
+			{
+				auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("RadioButton"));
+				Style.Padding.Top = 1.f;
+				Style.Padding.Bottom = 1.f;
+				return Style;
+			}();
 		static const FCheckBoxStyle CheckBoxStyle = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("CheckBox"));
 		static const FButtonStyle HoverButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("ThinHoverOnlyButton"));
 		static FCheckBoxStyle ToggleButtonStyle = []()
@@ -1063,7 +1069,6 @@ namespace ImGuiTextureViewer
 		// texture channel controls
 		if (IsStencilFormat(InTextureInfo.Format))
 		{
-			ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.f);
 			if (FImGui::RadioButton(Context, "Depth", &InOutTexturePreviewOptions.bDisplayDepth, RadioButtonStyle))
 			{
 				InOutTexturePreviewOptions.bDisplayStencil = false;
