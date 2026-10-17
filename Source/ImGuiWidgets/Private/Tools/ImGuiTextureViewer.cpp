@@ -1579,12 +1579,16 @@ namespace ImGuiTextureViewer
 		ImGui::Separator();
 
 		// estimated size for 2xTextField + Separator widget
-		const int32 TextureDetailsWidgetHeight = ImGui::GetTextLineHeightWithSpacing() * 2.f + ImGui::GetStyle().FramePadding.y * 2.f + ImGui::GetStyle().ItemSpacing.y + ImGui::GetStyle().WindowPadding.y;
+		const int32 TextureDetailsWidgetHeight = ImGui::GetTextLineHeightWithSpacing() * 2.f + (ImGui::GetStyle().ItemSpacing.y + 1.f) + ImGui::GetStyle().WindowPadding.y;
 
 		const ImVec2 TextureCanvasSize = ImGui::GetContentRegionAvail() - ImVec2(0.f, TextureDetailsWidgetHeight);
 		if (!VisTextureName.IsEmpty() && TextureInfo.Format != PF_Unknown)
 		{
 			DrawTextureCanvas(Context, TextureCanvasSize, TextureInfo, TexturePreviewOptions);
+		}
+		else
+		{
+			ImGui::Dummy(ImVec2(TextureCanvasSize));
 		}
 
 		TexturePreviewOptions.TextureResourceOverride = nullptr;
@@ -1616,7 +1620,6 @@ namespace ImGuiTextureViewer
 			ImGui::GetWindowDrawList()->AddCallback(TexturePreviewCallback, &Params, sizeof(Params));
 		}
 
-		ImGui::SetCursorPosY(ImGui::GetWindowHeight() - TextureDetailsWidgetHeight);
 		ImGui::Separator();
 
 		if (VisTextureName.IsEmpty() || TextureInfo.Format == PF_Unknown)
