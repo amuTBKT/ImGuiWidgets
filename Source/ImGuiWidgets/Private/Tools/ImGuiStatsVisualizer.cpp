@@ -632,6 +632,8 @@ namespace ImGuiStatsVizualizer
 
 			if (!bCullNextSection && ImGui::CollapsingHeader(*StatGroupData->DisplayName, ImGuiTreeNodeFlags_DefaultOpen))
 			{
+				ImGui::PushStyleColor(ImGuiCol_Header, FImGui::GetSlateColorVec4(EStyleColor::PrimaryPress) * ImVec4(1.f, 1.f, 1.f, 0.5f));
+
 				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable;
 
 				const bool bHasHierarchy = false;// StatGroup.HierAggregate.Num() > 0; //NOTE: hierarchy view not supported atm
@@ -743,6 +745,8 @@ namespace ImGuiStatsVizualizer
 					}
 				}
 #endif //#if RHI_NEW_GPU_PROFILER
+
+				ImGui::PopStyleColor();
 			}
 		}
 	}
@@ -1023,7 +1027,7 @@ namespace ImGuiStatsVizualizer
 		}
 		ImGui::EndChild();
 
-		// need to defer removal as showing current stats can readd the group
+		// need to defer remove as showing current stats can readd the group
 		if (StatGroups.IsValidIndex(GroupIndexToRemove))
 		{
 			if (StatGroups[GroupIndexToRemove].bIsActive)
