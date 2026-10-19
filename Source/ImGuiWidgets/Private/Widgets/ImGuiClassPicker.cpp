@@ -565,11 +565,11 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 		if ((AvailableSpaceBelow > ClassViewerPopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
 		{
-			ImGui::SetNextWindowPos(ImVec2(ClassViewerPopupPosX, ImGui::GetCursorScreenPos().y), ImGuiCond_Always, ImVec2(0.f, 0.f));
+			ImGui::SetNextWindowPos(ImVec2(ClassViewerPopupPosX, ImGui::GetCursorScreenPos().y - ImGui::GetStyle().ItemSpacing.y * 0.5f), ImGuiCond_Always, ImVec2(0.f, 0.f));
 		}
 		else
 		{
-			const float OffsetY = ComboBoxSize.y + ImGui::GetStyle().ItemSpacing.y * 2.f * GlobalScale;
+			const float OffsetY = ComboBoxSize.y + ImGui::GetStyle().ItemSpacing.y * 1.5f;
 			ImGui::SetNextWindowPos(ImVec2(ClassViewerPopupPosX, ImGui::GetCursorScreenPos().y - OffsetY), ImGuiCond_Always, ImVec2(0.f, 1.f));
 		}
 
