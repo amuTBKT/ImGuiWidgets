@@ -514,13 +514,6 @@ namespace ImGuiMaterialStats
 							{
 								FImGuiNamedScope VF_Scope{ *VFName };
 
-								FImGuiScopedStyleEdit TableStyle
-								{
-									ImGuiCol_Header,		FImGui::GetSlateColorVec4(EStyleColor::SelectInactive),
-									ImGuiCol_HeaderActive,	FImGui::GetSlateColorVec4(EStyleColor::Select),
-									ImGuiCol_HeaderHovered, FImGui::GetSlateColorVec4(EStyleColor::SelectHover)
-								};
-
 								static constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_ScrollY;
 								if (ImGui::BeginTable("ShaderTable", 4, TableFlags))
 								{
