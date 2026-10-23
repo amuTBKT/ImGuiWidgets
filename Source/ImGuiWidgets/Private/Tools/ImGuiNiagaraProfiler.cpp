@@ -395,8 +395,8 @@ namespace ImGuiNiagaraProfiler
 	{
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
-		.WidgetIcon			= IMGUI_ICON("ImIcon.NiagaraProfiler"),
 		.WidgetPath			= "Tools.Profile.Niagara Profiler",
+		.WidgetIcon			= IMGUI_ICON("ImIcon.NiagaraProfiler"),
 		.WidgetDescription	= "Widget for displaying Niagara gpu stats.",
 		.bEnableViewports	= false
 	};

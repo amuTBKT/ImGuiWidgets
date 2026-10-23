@@ -1712,8 +1712,8 @@ namespace ImGuiTextureViewer
 		.InitFunction		= &Initialize,
 		.OnWindowClosed		= &OnWindowClosed,
 		.TickFunction		= &Tick,
-		.WidgetIcon			= IMGUI_ICON("ImIcon.TextureViewer"),
 		.WidgetPath			= "Tools.Debug.Texture Viewer",
+		.WidgetIcon			= IMGUI_ICON("ImIcon.TextureViewer"),
 		.WidgetDescription	= "Tool for inspecting textures."
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(Params);

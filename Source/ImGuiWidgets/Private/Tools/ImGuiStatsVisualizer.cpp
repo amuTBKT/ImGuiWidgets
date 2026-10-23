@@ -1043,8 +1043,8 @@ namespace ImGuiStatsVizualizer
 	{
 		.InitFunction		= &Initialize,
 		.TickFunction		= &Tick,
-		.WidgetIcon			= IMGUI_ICON("ImIcon.StatsVisualizer"),
 		.WidgetPath			= "Tools.Profile.Stats Visualizer",
+		.WidgetIcon			= IMGUI_ICON("ImIcon.StatsVisualizer"),
 		.WidgetDescription	= "Widget for displaying stat groups.",
 		.bEnableViewports	= false
 	};

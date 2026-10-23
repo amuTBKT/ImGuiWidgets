@@ -642,11 +642,11 @@ namespace ImGuiMaterialStats
 
 	static FImGuiWidgetRegisterParams RegisterParams =
 	{
-		.InitFunction		= &Initialize,
-		.TickFunction		= &Tick,
-		.WidgetIcon			= FSlateIcon(FAppStyle::GetAppStyleSetName(), FName("MaterialEditor.ToggleMaterialStats.Tab")),
-		.WidgetPath			= "Tools.Profile.Material Stats",
-		.WidgetDescription	= "Widget for inspecting compiled Material stats.",
+		.InitFunction		 = &Initialize,
+		.TickFunction		 = &Tick,
+		.WidgetPath			 = "Tools.Profile.Material Stats",
+		.WidgetIcon			 = FSlateIcon(FAppStyle::GetAppStyleSetName(), FName("MaterialEditor.ToggleMaterialStats.Tab")),
+		.WidgetDescription	 = "Widget for inspecting compiled Material stats.",
 		.bSkipWindowCreation = true
 	};
 	IMGUI_REGISTER_STANDALONE_WIDGET(RegisterParams);
