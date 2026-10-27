@@ -346,6 +346,14 @@ namespace ImGuiMaterialStats
 		ImGuiDockNodeFlags DockingFlags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoCloseButton;
 		const ImGuiID MainDockSpaceID = ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport(), DockingFlags);
 
+		struct FTabBarDockNode
+		{
+			ImGuiTabBar* TabBar = nullptr;
+			ImGuiDockNode* DockNode = nullptr;
+
+			bool operator==(const ImGuiTabBar* InTabBar) const { return InTabBar == TabBar; }
+		};
+		TArray<FTabBarDockNode> TabBarNodes;
 		for (int32 WindowIndex = 0; WindowIndex < MaterialWindowStates.Num(); ++WindowIndex)
 		{
 			FMaterialWindowState& MaterialWindowState = MaterialWindowStates[WindowIndex];
@@ -595,6 +603,13 @@ namespace ImGuiMaterialStats
 					}
 				}
 			}
+			{
+				ImGuiDockNode* WindowDockNode = ImGui::GetWindowDockNode();
+				if (WindowDockNode && WindowDockNode->TabBar && !TabBarNodes.FindByKey(WindowDockNode->TabBar))
+				{
+					TabBarNodes.Emplace(WindowDockNode->TabBar, WindowDockNode);
+				}
+			}
 			ImGui::End();
 
 			if (!bKeepItem)
@@ -607,30 +622,12 @@ namespace ImGuiMaterialStats
 		ImGui::PopStyleVar();
 
 		// TabBar customization
+		for (const auto& Node : TabBarNodes)
 		{
-			/*
-			TODO: how to find the ideal tab bar for customization?
-			Just finding the first node with valid TabBar here, seems to pick the last window (ideally should be using the first?)
-			*/
-			TArray<ImGuiDockNode*> Stack;
-			Stack.Add(ImGui::DockContextFindNodeByID(Context->ImguiContext, MainDockSpaceID));
-			ImGuiDockNode* DockNode = nullptr;
-			while (true)
-			{
-				DockNode = Stack.IsEmpty() ? nullptr : Stack.Pop();
-				if (!DockNode || DockNode->TabBar)
-				{
-					break;
-				}
-
-				if (DockNode->ChildNodes[0]) Stack.Add(DockNode->ChildNodes[0]);
-				if (DockNode->ChildNodes[1]) Stack.Add(DockNode->ChildNodes[1]);
-			}
-
+			ImGuiDockNode* DockNode = Node.DockNode;
 			if (DockNode && ImGui::DockNodeBeginAmendTabBar(DockNode))
 			{
-				ImGui::SameLine();
-				if (ImGui::Button("+"))
+				if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing))
 				{
 					FMaterialWindowState& NewMaterialWindowState = MaterialWindowStates.AddDefaulted_GetRef();
 					NewMaterialWindowState.DockNodeId = DockNode->ID;
