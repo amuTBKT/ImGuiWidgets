@@ -443,7 +443,7 @@ namespace ImGuiTextureViewer
 			FRHIGPUBufferReadback Readback(IMGUI_FNAME("TexDisplay::MinMaxReadback"));
 			uint32 NumBytes = sizeof(FVector4f) * 2;
 			Readback.EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, NumBytes);
-			RHICmdList.BlockUntilGPUIdle();
+			RHICmdList.SubmitAndBlockUntilGPUIdle();
 			RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
 
 			if (const uint8* SrcRawBuffer = (const uint8*)Readback.Lock(NumBytes))

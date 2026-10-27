@@ -10,6 +10,7 @@
 #include "ImGuiSubsystem.h"
 #include "Stats/StatsData.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -18,6 +19,13 @@
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #endif //#if WITH_EDITOR
+
+// 5.8 deprecates RHI_NEW_GPU_PROFILER (always 1, warns on every use); older engines still need the check.
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 507) //(Version > 5.7)
+#define IMGUI_STATS_NEW_GPU_PROFILER 1
+#else
+#define IMGUI_STATS_NEW_GPU_PROFILER RHI_NEW_GPU_PROFILER
+#endif
 
 namespace ImGuiStatsVizualizer
 {
@@ -709,7 +717,7 @@ namespace ImGuiStatsVizualizer
 					}
 				}
 
-#if RHI_NEW_GPU_PROFILER
+#if IMGUI_STATS_NEW_GPU_PROFILER
 				// display gpu stats
 				if (!bCullNextSection && StatGroup.GpuStatsAggregate.Num())
 				{
@@ -746,7 +754,7 @@ namespace ImGuiStatsVizualizer
 						ImGui::EndTable();
 					}
 				}
-#endif //#if RHI_NEW_GPU_PROFILER
+#endif //#if IMGUI_STATS_NEW_GPU_PROFILER
 
 				ImGui::PopStyleColor(3);
 			}
