@@ -633,6 +633,8 @@ namespace ImGuiStatsVizualizer
 			if (!bCullNextSection && ImGui::CollapsingHeader(*StatGroupData->DisplayName, ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				ImGui::PushStyleColor(ImGuiCol_Header, FImGui::GetSlateColorVec4(EStyleColor::PrimaryPress) * ImVec4(1.f, 1.f, 1.f, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImGui::GetColorU32(ImGuiCol_HeaderActive, 0.5f));
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, FImGui::GetSlateColorVec4(EStyleColor::PrimaryHover) * ImVec4(1.f, 1.f, 1.f, 0.5f));
 
 				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable;
 
@@ -746,7 +748,7 @@ namespace ImGuiStatsVizualizer
 				}
 #endif //#if RHI_NEW_GPU_PROFILER
 
-				ImGui::PopStyleColor();
+				ImGui::PopStyleColor(3);
 			}
 		}
 	}
