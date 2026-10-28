@@ -7,6 +7,10 @@
 #include "AssetThumbnail.h"
 #include "ClassIconFinder.h"
 #include "ICollectionManager.h"
+#include "Runtime/Launch/Resources/Version.h"
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 505) //(Version > 5.5)
+#include "ICollectionContainer.h"
+#endif
 #include "ContentBrowserModule.h"
 #include "CollectionManagerModule.h"
 #include "Styling/SlateIconFinder.h"
@@ -1045,7 +1049,12 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 	PackedAssetPathFilter = AssetPickerUtils::GetPackedAssetPathFilter();
 
 #if WITH_EDITOR
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 505) //(Version > 5.5)
+	// 5.6 moved collections under ICollectionContainer; the ICollectionManager queries are deprecated.
+	const ICollectionContainer* CollectionManager = AssetPickerUtils::bSearchAssetCollections ? &FCollectionManagerModule::GetModule().Get().GetProjectCollectionContainer().Get() : nullptr;
+#else
 	const ICollectionManager* CollectionManager = AssetPickerUtils::bSearchAssetCollections ? &FCollectionManagerModule::GetModule().Get() : nullptr;
+#endif
 #endif
 
 	TArray<UClass*> ResolvedFilterClasses;
