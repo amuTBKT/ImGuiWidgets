@@ -62,7 +62,7 @@ namespace ImGuiStatsVizualizer
 		static TSet<FName> SelectedItems;
 
 		const bool bWasSelected = SelectedItems.Contains(ItemName);
-		const bool bIsSelected = ImGui::Selectable(Label, bWasSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);	
+		const bool bIsSelected = ImGui::Selectable(Label, bWasSelected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap);
 		if (bIsSelected)
 		{
 			const int32 NumItemsSelected = SelectedItems.Num();
@@ -80,6 +80,12 @@ namespace ImGuiStatsVizualizer
 				SelectedItems.Add(ItemName);
 			}
 		}
+
+		if (ImGui::IsItemHovered())
+			ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, FImGui::GetSlateColorU32(EStyleColor::Hover));
+		else if (bWasSelected)
+			ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg1, FImGui::GetSlateColorU32(EStyleColor::Secondary));
+
 		return bIsSelected;
 	}
 
@@ -632,9 +638,15 @@ namespace ImGuiStatsVizualizer
 
 			if (!bCullNextSection && ImGui::CollapsingHeader(*StatGroupData->DisplayName, ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				ImGui::PushStyleColor(ImGuiCol_Header, FImGui::GetSlateColorVec4(EStyleColor::PrimaryPress) * ImVec4(1.f, 1.f, 1.f, 0.5f));
-				ImGui::PushStyleColor(ImGuiCol_HeaderActive, ImGui::GetColorU32(ImGuiCol_HeaderActive, 0.5f));
-				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, FImGui::GetSlateColorVec4(EStyleColor::PrimaryHover) * ImVec4(1.f, 1.f, 1.f, 0.5f));
+				FImGuiScopedStyleEdit RowStyle
+				{
+					ImGuiStyleVar_SelectableRounding, 0.f,
+
+					// selectable colors are handled manually by setting row bg color (https://github.com/ocornut/imgui/issues/4678#issuecomment-6490908778)
+					ImGuiCol_Header, ImVec4(0.f, 0.f, 0.f, 0.f),
+					ImGuiCol_HeaderActive, ImVec4(0.f, 0.f, 0.f, 0.f),
+					ImGuiCol_HeaderHovered, ImVec4(0.f, 0.f, 0.f, 0.f),
+				};
 
 				constexpr ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable;
 
@@ -747,8 +759,6 @@ namespace ImGuiStatsVizualizer
 					}
 				}
 #endif //#if RHI_NEW_GPU_PROFILER
-
-				ImGui::PopStyleColor(3);
 			}
 		}
 	}

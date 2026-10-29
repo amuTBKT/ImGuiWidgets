@@ -815,7 +815,7 @@ namespace ImGuiTextureViewer
 		ImGui::SetNextItemWidth(450.f * GlobalScale);
 		ImGui::SetNextWindowSize(ImVec2(450.f * GlobalScale, 200.f * GlobalScale), ImGuiCond_Always);
 		ImGui::SetNextWindowFlags(ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, true);
-		FImGui::PushComboListViewDropdownStyle(Context, /*bDarkTheme*/true);
+		FImGui::PushComboListViewDropdownStyle(Context, /*bNormalDropdown=*/false, /*bDrawBorder=*/false);
 		ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
 		const bool bShowTextureList = FImGui::BeginCombo(Context, "##TextureList", InOutSelectedTextureName.IsEmpty() ? "Select a Texture..." : *InOutSelectedTextureName, ComboButtonStyle);
 		ImGui::PopStyleVar();
@@ -857,8 +857,8 @@ namespace ImGuiTextureViewer
 				FImGuiScopedStyleEdit ListViewStyle
 				{
 					ImGuiCol_Header,		FImGui::GetSlateColorVec4(Context, EStyleColor::SelectInactive),
-					ImGuiCol_HeaderActive,	FImGui::GetSlateColorVec4(Context, EStyleColor::Select),
-					ImGuiCol_HeaderHovered, FImGui::GetSlateColorVec4(Context, EStyleColor::Select)
+					ImGuiCol_HeaderActive,	FImGui::GetSlateColorVec4(Context, EStyleColor::Primary),
+					ImGuiCol_HeaderHovered, FImGui::GetSlateColorVec4(Context, EStyleColor::Primary)
 				};
 
 				for (const auto& TextureName : AvailableTextures)
@@ -1034,7 +1034,7 @@ namespace ImGuiTextureViewer
 
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(80.f * GlobalScale);
-			FImGui::PushComboListViewDropdownStyle(Context, /*bDarkTheme*/true);
+			FImGui::PushComboListViewDropdownStyle(Context);
 			ImGui::SetNextWindowSize(ImVec2(0.f, 160.f * GlobalScale), ImGuiCond_Always);
 			if (FImGui::BeginCombo(Context, "##Zoom", BuildPreviewText("%i%%", int32(InOutTexturePreviewOptions.CanvasScale * 100.f)), ComboButtonStyle))
 			{
@@ -1108,7 +1108,7 @@ namespace ImGuiTextureViewer
 
 			ImGui::SetNextItemWidth(150.f * GlobalScale);
 			ImGui::BeginDisabled(InTextureInfo.NumMips <= 1);
-			FImGui::PushComboListViewDropdownStyle(Context, /*bDarkTheme*/true);
+			FImGui::PushComboListViewDropdownStyle(Context);
 			if (FImGui::BeginCombo(Context, "##Mip", BuildPreviewText("Mip %i - %ix%i", InOutTexturePreviewOptions.CurrentMip, InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip), InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip)), ComboButtonStyle))
 			{
 				FImGui::BeginComboListViewDropdownBody(Context);
@@ -1157,7 +1157,7 @@ namespace ImGuiTextureViewer
 				static const char* FaceNames[6] = { "X+", "X-", "Y+", "Y-", "Z+", "Z-" };
 
 				ImGui::SetNextItemWidth(128.f * GlobalScale);
-				FImGui::PushComboListViewDropdownStyle(Context, /*bDarkTheme*/true);
+				FImGui::PushComboListViewDropdownStyle(Context);
 				if (FImGui::BeginCombo(Context, "##Face", BuildPreviewText("Face %s", FaceNames[InOutTexturePreviewOptions.CurrentArraySlice % 6]), ComboButtonStyle))
 				{
 					FImGui::BeginComboListViewDropdownBody(Context);
@@ -1189,7 +1189,7 @@ namespace ImGuiTextureViewer
 			{
 				ImGui::SetNextItemWidth(128.f * GlobalScale);
 				ImGui::BeginDisabled(ArraySize <= 1);
-				FImGui::PushComboListViewDropdownStyle(Context, /*bDarkTheme*/true);
+				FImGui::PushComboListViewDropdownStyle(Context);
 				if (FImGui::BeginCombo(Context, "##Slice", BuildPreviewText("Slice %i", InOutTexturePreviewOptions.CurrentArraySlice), ComboButtonStyle))
 				{
 					FImGui::BeginComboListViewDropdownBody(Context);

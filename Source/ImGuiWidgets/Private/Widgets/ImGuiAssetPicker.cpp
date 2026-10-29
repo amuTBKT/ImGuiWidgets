@@ -692,6 +692,8 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImGui::SetNextWindowSize(ImVec2(0.f, FMath::Max(AssetViewerPopupHeight, AssetViewerPopupHeightMin)), ImGuiCond_Always);
 		if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 		{
+			ImGui::PushStyleColor(ImGuiCol_Border, FImGui::GetSlateColorVec4(Context, EStyleColor::InputOutline));
+
 			bool bFilterAvailableAssets = false;
 
 			// reset filter text and set focus when asset viewer is triggered
@@ -811,13 +813,13 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					ImGui::EndListBox();
 					ImGui::PopStyleColor();
 				}
-				if (bIsListViewHighlighted)
+				/*if (bIsListViewHighlighted) --> can look weird with some themes so disabled for now
 				{
 					ImGui::GetWindowDrawList()->AddRect(
 						ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
 						ImGui::GetColorU32(ImGuiCol_NavCursor),
 						ImGui::GetStyle().FrameRounding, 1.f);
-				}
+				}*/
 			}
 			ImGui::EndGroup();
 
@@ -829,9 +831,9 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					{
 						auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("FilterBar.BasicFilterButton"));
 						Style.SetPadding(FMargin(4.f, 2.f, 2.f, 4.f));
-						Style.UncheckedImage.OutlineSettings.Color = FSlateColor(EStyleColor::DropdownOutline);
-						Style.UncheckedHoveredImage.OutlineSettings.Color = FSlateColor(EStyleColor::DropdownOutline);
-						Style.UncheckedPressedImage.OutlineSettings.Color = FSlateColor(EStyleColor::DropdownOutline);
+						Style.UncheckedImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
+						Style.UncheckedHoveredImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
+						Style.UncheckedPressedImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
 						return Style;
 					}();
 				auto AddButton = [&](const char* Label, bool& bInOutState, const FImGuiImageBindingParams& ImageParams, const char* ToolTip)
@@ -885,6 +887,8 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			{
 				ImGui::CloseCurrentPopup();
 			}
+
+			ImGui::PopStyleColor();
 
 			ImGui::EndPopup();
 		}
