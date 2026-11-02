@@ -357,7 +357,7 @@ namespace ImGuiTextureViewer
 		{
 			RenderCaptureInterface::FScopedCapture RenderCapture(false, &RHICmdList, TEXT("HistogramMinMax"));
 
-			auto* ShaderMap = GetGlobalShaderMap(GetMaxSupportedFeatureLevel(GMaxRHIShaderPlatform));
+			auto* ShaderMap = GetGlobalShaderMap(GMaxRHIShaderPlatform);
 
 			// tile min max
 			{
@@ -443,7 +443,7 @@ namespace ImGuiTextureViewer
 			FRHIGPUBufferReadback Readback(IMGUI_FNAME("TexDisplay::MinMaxReadback"));
 			uint32 NumBytes = sizeof(FVector4f) * 2;
 			Readback.EnqueueCopy(RHICmdList, GPixelValueDestBuffer->VertexBufferRHI, NumBytes);
-			RHICmdList.BlockUntilGPUIdle();
+			RHICmdList.SubmitAndBlockUntilGPUIdle();
 			RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
 
 			if (const uint8* SrcRawBuffer = (const uint8*)Readback.Lock(NumBytes))
@@ -551,7 +551,7 @@ namespace ImGuiTextureViewer
 		auto WriteBuffer = ((InPreviewOptions.TextureInspectorRect.Z - InPreviewOptions.TextureInspectorRect.X) > 0) ? GetReadbackBufferForWriting() : nullptr;
 		if (WriteBuffer)
 		{
-			auto* ShaderMap = GetGlobalShaderMap(GetMaxSupportedFeatureLevel(GMaxRHIShaderPlatform));
+			auto* ShaderMap = GetGlobalShaderMap(GMaxRHIShaderPlatform);
 
 			FTextureDisplay_CopyPixelValueCS::FPermutationDomain PermutationVector;
 			PermutationVector.Set<FTextureDisplay_CopyPixelValueCS::FResourceType>(ResType);
@@ -642,7 +642,7 @@ namespace ImGuiTextureViewer
 			TextureVisShowFlags |= (PreviewParams.Options.bSRGB) ? uint32(ETexDisplay_ShowFlag::sRGBMask) : 0u;
 		}
 
-		auto* ShaderMap = GetGlobalShaderMap(GetMaxSupportedFeatureLevel(GMaxRHIShaderPlatform));
+		auto* ShaderMap = GetGlobalShaderMap(GMaxRHIShaderPlatform);
 
 		TShaderMapRef<FScreenVS> VertexShader(ShaderMap);
 
@@ -785,11 +785,6 @@ namespace ImGuiTextureViewer
 	static bool IsTextureOverrideValid()
 	{
 		return !GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName.IsEmpty();
-	}
-
-	static bool DarkComboPopupSelectable()
-	{
-
 	}
 
 	static bool DrawTextureList(FImGuiTickContext* Context, FAnsiString& InOutSelectedTextureName)

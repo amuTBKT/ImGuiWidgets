@@ -6,15 +6,20 @@
 #include "Editor.h"
 #include "AssetThumbnail.h"
 #include "ClassIconFinder.h"
-#include "ICollectionManager.h"
 #include "ContentBrowserModule.h"
-#include "CollectionManagerModule.h"
 #include "Styling/SlateIconFinder.h"
 #include "IContentBrowserSingleton.h"
 #include "DragAndDrop/AssetDragDropOp.h"
 #include "Subsystems/AssetEditorSubsystem.h"
 #include "ThumbnailRendering/ThumbnailManager.h"
+
+#include "ICollectionManager.h"
+#include "CollectionManagerModule.h"
+#include "Runtime/Launch/Resources/Version.h"
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 505) //(Version > 5.5)
+#include "ICollectionContainer.h"
 #endif
+#endif //#if WITH_EDITOR
 
 #include "Misc/Paths.h"
 #include "ImGuiSubsystem.h"
@@ -543,6 +548,10 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		else
 		{
+			if (!bListViewEntry)
+			{
+				ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetCursorScreenPos(), ImGui::GetCursorScreenPos() + ImVec2(IconSize, IconSize), ImGui::GetColorU32(FImGui::GetSlateColorU32(EStyleColor::Recessed)), ImGui::GetStyle().ImageRounding);
+			}
 			ImGui::Image(DefaultClassIcon.Id, ImVec2(IconSize, IconSize), DefaultClassIcon.UV0, DefaultClassIcon.UV1);
 		}
 
@@ -692,7 +701,9 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImGui::SetNextWindowSize(ImVec2(0.f, FMath::Max(AssetViewerPopupHeight, AssetViewerPopupHeightMin)), ImGuiCond_Always);
 		if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 		{
-			ImGui::PushStyleColor(ImGuiCol_Border, FImGui::GetSlateColorVec4(Context, EStyleColor::InputOutline));
+			// same color as Menu.Separator (doesn't work well for light themes)
+			ImGui::PushStyleColor(ImGuiCol_Border, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
+			ImGui::PushStyleColor(ImGuiCol_Separator, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
 
 			bool bFilterAvailableAssets = false;
 
@@ -723,18 +734,20 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 				FImGuiScopedStyleEdit ListViewStyle
 				{
-					ImGuiCol_Header,		MoveTemp(RowColor_Header),
-					ImGuiCol_HeaderActive,	MoveTemp(RowColor_Active),
-					ImGuiCol_HeaderHovered, MoveTemp(RowColor_Hovered),
-					ImGuiCol_TableRowBg,	MoveTemp(RowColor_EvenBg),
-					ImGuiCol_TableRowBgAlt, MoveTemp(RowColor_OddBg),
-					ImGuiCol_ScrollbarBg,	MoveTemp(RowColor_EvenBg),
+					ImGuiCol_Header,		RowColor_Header,
+					ImGuiCol_HeaderActive,	RowColor_Active,
+					ImGuiCol_HeaderHovered, RowColor_Hovered,
+					ImGuiCol_TableRowBg,	RowColor_EvenBg,
+					ImGuiCol_TableRowBgAlt, RowColor_OddBg,
+					ImGuiCol_ScrollbarBg,	RowColor_EvenBg,
 				};
 
 				bool bIsListViewHighlighted = false;
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2.f);
 				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, ImGui::GetContentRegionAvail().y)))
 				{
+					ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.f);
+
 					auto Add_AssetListEntry = [&](int32 AssetIndex, int32 RowIndex)
 						{
 							FNameBuilder AssetName{ AvailableAssets[AssetIndex].AssetName };
@@ -795,13 +808,19 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					}
 
 					ImGui::PushStyleColor(ImGuiCol_NavCursor, RowColor_EvenBg);
+					int32 RowIndex = 0;
 					while (Clipper.Step())
 					{
-						for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
+						for (RowIndex = Clipper.DisplayStart; RowIndex < Clipper.DisplayEnd; RowIndex++)
 						{
-							Add_AssetListEntry(FilteredAssetIndices[Index], Index);
+							Add_AssetListEntry(FilteredAssetIndices[RowIndex], RowIndex);
 						}
+						RowIndex -= 1;
 					}
+					ImGui::GetWindowDrawList()->AddRectFilled(
+						ImGui::GetCursorScreenPos() - ImGui::GetStyle().ItemSpacing * 0.5f,
+						ImGui::GetCursorScreenPos() + ImGui::GetContentRegionAvail() + ImGui::GetStyle().ItemSpacing * 0.5f,
+						ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
 					ImGui::PopStyleColor();
 
 					if ((Context->ImguiContext->NavCursorVisible && Context->ImguiContext->NavId == ImGui::GetCurrentWindow()->ChildId) || ImGui::IsWindowFocused())
@@ -888,7 +907,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::CloseCurrentPopup();
 			}
 
-			ImGui::PopStyleColor();
+			ImGui::PopStyleColor(2);
 
 			ImGui::EndPopup();
 		}
@@ -1049,7 +1068,11 @@ void FImGuiAssetPicker::FilterAvailableAssets()
 	PackedAssetPathFilter = AssetPickerUtils::GetPackedAssetPathFilter();
 
 #if WITH_EDITOR
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 505) //(Version > 5.5)
+	const ICollectionContainer* CollectionManager = AssetPickerUtils::bSearchAssetCollections ? &FCollectionManagerModule::GetModule().Get().GetProjectCollectionContainer().Get() : nullptr;
+#else
 	const ICollectionManager* CollectionManager = AssetPickerUtils::bSearchAssetCollections ? &FCollectionManagerModule::GetModule().Get() : nullptr;
+#endif
 #endif
 
 	TArray<UClass*> ResolvedFilterClasses;

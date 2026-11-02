@@ -585,7 +585,9 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		int32 NewSelectedIndex = INDEX_NONE;
 		if (ImGui::BeginPopup(ClassViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 		{
-			ImGui::PushStyleColor(ImGuiCol_Border, FImGui::GetSlateColorVec4(Context, EStyleColor::InputOutline));
+			// same color as Menu.Separator (doesn't work well for light themes)
+			ImGui::PushStyleColor(ImGuiCol_Border, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
+			ImGui::PushStyleColor(ImGuiCol_Separator, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
 
 			bool bFilterAvailableClasses = false;
 
@@ -615,18 +617,20 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 				FImGuiScopedStyleEdit ListViewStyle
 				{
-					ImGuiCol_Header,		MoveTemp(RowColor_Header),
-					ImGuiCol_HeaderActive,	MoveTemp(RowColor_Active),
-					ImGuiCol_HeaderHovered, MoveTemp(RowColor_Hovered),
-					ImGuiCol_TableRowBg,	MoveTemp(RowColor),
-					ImGuiCol_TableRowBgAlt, MoveTemp(RowColor),
-					ImGuiCol_ScrollbarBg,	MoveTemp(RowColor),
+					ImGuiCol_Header,		RowColor_Header,
+					ImGuiCol_HeaderActive,	RowColor_Active,
+					ImGuiCol_HeaderHovered, RowColor_Hovered,
+					ImGuiCol_TableRowBg,	RowColor,
+					ImGuiCol_TableRowBgAlt, RowColor,
+					ImGuiCol_ScrollbarBg,	RowColor,
 				};
 
 				bool bIsListViewHighlighted = false;
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2.f);
 				if (ImGui::BeginListBox("##ClassList", ImVec2(ClassViewerWidth, FMath::Max(ClassViewerRowHeightWithSpacing, ClassViewerPopupHeight - ImGui::GetItemRectSize().y))))
 				{
+					ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.f);
+
 					auto Add_ListEntry = [&](int32 ClassIndex, int32 RowIndex)
 					{
 						const bool bWasSelected = (ClassIndex == LastSelectedClassIndex);
@@ -672,13 +676,19 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					}
 
 					ImGui::PushStyleColor(ImGuiCol_NavCursor, RowColor);
+					int32 RowIndex = 0;
 					while (Clipper.Step())
 					{
-						for (int32 Index = Clipper.DisplayStart; Index < Clipper.DisplayEnd; Index++)
+						for (RowIndex = Clipper.DisplayStart; RowIndex < Clipper.DisplayEnd; RowIndex++)
 						{
-							Add_ListEntry(FilteredClassIndices[Index], Index);
+							Add_ListEntry(FilteredClassIndices[RowIndex], RowIndex);
 						}
+						RowIndex -= 1;
 					}
+					ImGui::GetWindowDrawList()->AddRectFilled(
+						ImGui::GetCursorScreenPos() - ImGui::GetStyle().ItemSpacing * 0.5f,
+						ImGui::GetCursorScreenPos() + ImGui::GetContentRegionAvail() + ImGui::GetStyle().ItemSpacing * 0.5f,
+						ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
 					ImGui::PopStyleColor();
 
 					if ((Context->ImguiContext->NavCursorVisible && Context->ImguiContext->NavId == ImGui::GetCurrentWindow()->ChildId) || ImGui::IsWindowFocused())
@@ -715,7 +725,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				ImGui::CloseCurrentPopup();
 			}
 
-			ImGui::PopStyleColor();
+			ImGui::PopStyleColor(2);
 
 			ImGui::EndPopup();
 		}

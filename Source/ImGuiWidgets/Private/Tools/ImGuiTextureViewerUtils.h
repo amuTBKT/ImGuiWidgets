@@ -3,6 +3,7 @@
 #pragma once
 
 #include "SceneView.h"
+#include "RenderUtils.h"
 #include "SceneViewExtension.h"
 #include "RenderGraphBuilder.h"
 #include "RenderGraphResources.h"

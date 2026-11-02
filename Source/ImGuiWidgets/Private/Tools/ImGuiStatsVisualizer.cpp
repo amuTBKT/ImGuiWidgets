@@ -10,6 +10,7 @@
 #include "ImGuiSubsystem.h"
 #include "Stats/StatsData.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #if WITH_EDITOR
 #include "Editor.h"
@@ -721,7 +722,7 @@ namespace ImGuiStatsVizualizer
 					}
 				}
 
-#if RHI_NEW_GPU_PROFILER
+#if ((ENGINE_MAJOR_VERSION * 100u + ENGINE_MINOR_VERSION) > 507) || (defined(RHI_NEW_GPU_PROFILER) && RHI_NEW_GPU_PROFILER)
 				// display gpu stats
 				if (!bCullNextSection && StatGroup.GpuStatsAggregate.Num())
 				{
@@ -758,7 +759,7 @@ namespace ImGuiStatsVizualizer
 						ImGui::EndTable();
 					}
 				}
-#endif //#if RHI_NEW_GPU_PROFILER
+#endif // RHI_NEW_GPU_PROFILER
 			}
 		}
 	}
