@@ -6,6 +6,7 @@
 #include "SceneViewExtension.h"
 #include "RenderGraphBuilder.h"
 #include "RenderGraphResources.h"
+#include "RenderUtils.h"
 #include "Runtime/Launch/Resources/Version.h"
 
 // copied from Voxel core (https://github.com/VoxelPlugin/VoxelCore/blob/master/Source/VoxelCore/Public/VoxelMinimal/VoxelMacros.h)
