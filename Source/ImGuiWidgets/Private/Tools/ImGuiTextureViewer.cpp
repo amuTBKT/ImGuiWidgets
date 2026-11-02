@@ -787,11 +787,6 @@ namespace ImGuiTextureViewer
 		return !GetTextureInfo(/*bOnRenderThread=*/false).TextureOverrideName.IsEmpty();
 	}
 
-	static bool DarkComboPopupSelectable()
-	{
-
-	}
-
 	static bool DrawTextureList(FImGuiTickContext* Context, FAnsiString& InOutSelectedTextureName)
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
