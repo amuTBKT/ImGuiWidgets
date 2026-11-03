@@ -417,6 +417,7 @@ FImGuiClassPicker FImGuiClassPicker::MakeWidget(const FSoftClassPath& ClassPath,
 	FImGuiClassPicker Widget = {};
 	Widget.BaseClassPath = ClassPath;
 	Widget.OptionalFilters = OptionalFilters;
+	Widget.TextFilter = FImGuiTextFilter::MakeWidget(64u);
 	return Widget;
 }
 

@@ -128,7 +128,7 @@ private:
 	TWeakObjectPtr<UClass> BaseClassPtr;
 	TArray<FFilter> OptionalFilters;
 
-	FImGuiTextFilter TextFilter = FImGuiTextFilter::MakeWidget(32u);
+	FImGuiTextFilter TextFilter;
 
 	TArray<int32> FilteredClassIndices;
 	uint16 PackedClassFilter	 : 7 = 0;

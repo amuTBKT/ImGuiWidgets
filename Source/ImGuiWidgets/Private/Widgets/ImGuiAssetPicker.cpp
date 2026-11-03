@@ -433,6 +433,7 @@ FImGuiAssetPicker FImGuiAssetPicker::MakeWidget(const FSoftClassPath& ClassPath,
 	FImGuiAssetPicker Widget = {};
 	Widget.AssetClassPath = ClassPath;
 	Widget.OptionalFilters = MoveTemp(OptionalFilters);
+	Widget.TextFilter = FImGuiTextFilter::MakeWidget(64u);
 	return Widget;
 }
 
