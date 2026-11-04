@@ -6,16 +6,8 @@
 
 FImGuiTextFilter FImGuiTextFilter::MakeWidget(uint32 MaxLength)
 {
-	static const FSearchBoxStyle DefaultStyle = []()
-		{
-			auto Style = FAppStyle::Get().GetWidgetStyle<FSearchBoxStyle>(IMGUI_FNAME("SearchBox"));
-			// removed the HalfHeightRadius corners for now
-			Style.TextBoxStyle = FAppStyle::Get().GetWidgetStyle<FEditableTextBoxStyle>("NormalEditableTextBox");
-			return Style;
-		}();
-
 	FImGuiTextFilter Widget = {};
-	Widget.SlateStyle = DefaultStyle;
+	Widget.SlateStyle = FImGui::GetSearchBoxStyle();
 	Widget.FilterStringBuffer.Reserve(MaxLength);
 	Widget.FilterStringBuffer_ANSI.Reserve(MaxLength);
 	Widget.Reset();

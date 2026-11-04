@@ -422,11 +422,9 @@ namespace ImGuiStatsVizualizer
 				{
 					FImGuiNamedScope Scope{ GetTypeHash(StatDescription) };
 
-					static const FButtonStyle& ButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("ThinHoverOnlyButton"));
-
 					ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
 
-					if (FImGui::Button(FImGui::GetCurrentTickContext(), "BrowseToAsset", BrowseAssetIcon, ButtonStyle))
+					if (FImGui::Button(FImGui::GetCurrentTickContext(), "BrowseToAsset", BrowseAssetIcon, FImGui::GetHoverOnlyButtonStyle()))
 					{
 						TArray<UObject*> Objects = { Asset };
 						GEditor->SyncBrowserToObjects(Objects);
@@ -435,7 +433,7 @@ namespace ImGuiStatsVizualizer
 
 					ImGui::SameLine();
 
-					if (FImGui::Button(FImGui::GetCurrentTickContext(), "EditAsset", EditAssetIcon, ButtonStyle))
+					if (FImGui::Button(FImGui::GetCurrentTickContext(), "EditAsset", EditAssetIcon, FImGui::GetHoverOnlyButtonStyle()))
 					{
 						// NOTE: executing this immediately causes crashes when quering stats next frame
 						FFunctionGraphTask::CreateAndDispatchWhenReady(
@@ -833,9 +831,6 @@ namespace ImGuiStatsVizualizer
 	static void RenderStatsHeader(FImGuiTickContext* Context, int32& GroupIndexToRemove)
 	{
 		static const char* HeaderButtonDragDropPayloadType = "DND_STATGROUP_BUTTON";
-		static const FButtonStyle& SimpleButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("SimpleButton"));
-		static const FButtonStyle& PrimaryButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("PrimaryButton"));
-		static const FCheckBoxStyle& ToggleButtonStyle = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("FilterBar.BasicFilterButton"));
 
 		ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, ImGui::GetStyle().ItemSpacing.x * 0.5f);
 
@@ -845,7 +840,7 @@ namespace ImGuiStatsVizualizer
 			ImGui::PushStyleColor(ImGuiCol_DragDropTarget, IM_COL32(255, 0, 0, 255));
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
-			FImGui::Button(Context, "DeleteGroup", DeleteIcon, SimpleButtonStyle);
+			FImGui::Button(Context, "DeleteGroup", DeleteIcon, FImGui::GetSimpleButtonStyle());
 			bDeleteIconHovered = ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly);
 			if (ImGui::BeginDragDropTarget())
 			{
@@ -863,7 +858,7 @@ namespace ImGuiStatsVizualizer
 		{
 			ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1, 1));
 
-			if (FImGui::Button(Context, "SaveSettings", SaveIcon, SimpleButtonStyle))
+			if (FImGui::Button(Context, "SaveSettings", SaveIcon, FImGui::GetSimpleButtonStyle()))
 			{
 				SaveWidgetSettings();
 			}
@@ -906,7 +901,7 @@ namespace ImGuiStatsVizualizer
 			}
 
 			bool bActive = GroupData.bIsActive;
-			if (FImGui::CheckBox(Context, GroupName, &bActive, ToggleButtonStyle))
+			if (FImGui::CheckBox(Context, GroupName, &bActive, FImGui::GetToggleButtonStyle()))
 			{
 				const FString StatCommand = FString::Printf(TEXT("stat %s -nodisplay"), *GroupData.NameForCommand);
 				GEngine->Exec(nullptr, *StatCommand);
@@ -929,7 +924,7 @@ namespace ImGuiStatsVizualizer
 					}
 				}
 
-				if (FImGui::Button(Context, "Remove Group", PrimaryButtonStyle))
+				if (FImGui::Button(Context, "Remove Group", FImGui::GetSecondaryButtonStyle()))
 				{
 					GroupIndexToRemove = GroupIndex;
 				}

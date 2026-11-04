@@ -307,8 +307,6 @@ namespace ImGuiMaterialStats
 		const FImGuiImageBindingParams EditIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Edit"), ImGui::GetTextLineHeight());
 		const FImGuiImageBindingParams AnalyzeIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Statistics"), ImGui::GetTextLineHeight());
 
-		static const FButtonStyle& SimpleButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("SimpleButton"));
-
 		bool bIsAnyWindowCompilingMaterial = false;
 		for (FMaterialWindowState& MaterialWindowState : MaterialWindowStates)
 		{
@@ -480,7 +478,7 @@ namespace ImGuiMaterialStats
 					{
 						static const FCheckBoxStyle& ToggleButtonStyle = []()
 							{
-								auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("FilterBar.BasicFilterButton"));
+								FCheckBoxStyle Style = FImGui::GetToggleButtonStyle();
 								Style.SetPadding(FMargin(4.f));
 								return Style;
 							}();
@@ -562,7 +560,7 @@ namespace ImGuiMaterialStats
 												ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2());
 
 												ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.f);
-												if (FImGui::Button(Context, "BrowseToDir", BrowseIcon, SimpleButtonStyle))
+												if (FImGui::Button(Context, "BrowseToDir", BrowseIcon, FImGui::GetSimpleButtonStyle()))
 												{
 													FPlatformProcess::ExploreFolder(*Shader.ShaderFilePath);
 												}
@@ -570,7 +568,7 @@ namespace ImGuiMaterialStats
 
 												ImGui::SameLine();
 
-												if (FImGui::Button(Context, "EditFile", EditIcon, SimpleButtonStyle))
+												if (FImGui::Button(Context, "EditFile", EditIcon, FImGui::GetSimpleButtonStyle()))
 												{
 													FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderFilePath);
 												}
@@ -580,7 +578,7 @@ namespace ImGuiMaterialStats
 
 #if 0
 												ImGui::BeginDisabled(ImGuiShaderAnalyzer::CanAnalyzeShader(Shader.ShaderType) == false);
-												if (FImGui::Button(Context, "Analyze", AnalyzeIcon, SimpleButtonStyle))
+												if (FImGui::Button(Context, "Analyze", AnalyzeIcon, FImGui::GetSimpleButtonStyle()))
 												{
 													ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
 												}

@@ -791,14 +791,7 @@ namespace ImGuiTextureViewer
 	{
 		UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 
-		static const FSearchBoxStyle SearchBoxStyle = []()
-			{
-				auto Style = FAppStyle::Get().GetWidgetStyle<FSearchBoxStyle>(IMGUI_FNAME("SearchBox"));
-				Style.TextBoxStyle = FAppStyle::Get().GetWidgetStyle<FEditableTextBoxStyle>("NormalEditableTextBox");
-				return Style;
-			}();
-		static FImGuiTextFilter SearchFilter = FImGuiTextFilter::MakeWidget(64u).SetStyle(SearchBoxStyle);
-		static const FComboButtonStyle ComboButtonStyle = FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton"));
+		static FImGuiTextFilter SearchFilter = FImGuiTextFilter::MakeWidget(64u).SetStyle(FImGui::GetSearchBoxStyle());
 
 		const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 		const FAnsiString PreviouslySelectedTextureName = InOutSelectedTextureName;
@@ -812,7 +805,7 @@ namespace ImGuiTextureViewer
 		ImGui::SetNextWindowFlags(ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse, true);
 		FImGui::PushComboListViewDropdownStyle(Context, /*bNormalDropdown=*/false, /*bDrawBorder=*/false);
 		ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-		const bool bShowTextureList = FImGui::BeginCombo(Context, "##TextureList", InOutSelectedTextureName.IsEmpty() ? "Select a Texture..." : *InOutSelectedTextureName, ComboButtonStyle);
+		const bool bShowTextureList = FImGui::BeginCombo(Context, "##TextureList", InOutSelectedTextureName.IsEmpty() ? "Select a Texture..." : *InOutSelectedTextureName, FImGui::GetComboButtonStyle());
 		ImGui::PopStyleVar();
 		const float ComboBoxHeight = ImGui::GetTextLineHeightWithSpacing();
 		const bool bIsComboxBoxHovered = ImGui::IsItemHovered();
@@ -930,15 +923,13 @@ namespace ImGuiTextureViewer
 
 		ImGui::EndDisabled();
 
-		static const FButtonStyle HoverButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("ThinHoverOnlyButton"));
-
 		// copy textue name widget
 		{
 			ImGui::SameLine();
 
 			ImGui::BeginDisabled(PreviouslySelectedTextureName.IsEmpty());
 			const FImGuiImageBindingParams CopyIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Clipboard"), ComboBoxHeight);
-			if (FImGui::Button(Context, "CopyTextureName", CopyIcon, HoverButtonStyle, ImVec4()))
+			if (FImGui::Button(Context, "CopyTextureName", CopyIcon, FImGui::GetHoverOnlyButtonStyle(), ImVec4()))
 			{
 				ImGui::SetClipboardText(*PreviouslySelectedTextureName);
 			}
@@ -952,7 +943,7 @@ namespace ImGuiTextureViewer
 			ImGui::SameLine();
 
 			const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ResetToDefault"), ComboBoxHeight);
-			if (FImGui::Button(Context, "ResetTexture", ResetToDefaultIcon, HoverButtonStyle, ImVec4()))
+			if (FImGui::Button(Context, "ResetTexture", ResetToDefaultIcon, FImGui::GetHoverOnlyButtonStyle(), ImVec4()))
 			{
 				InOutSelectedTextureName.Reset();
 				if (bIsUsingTextureOverride)
@@ -976,24 +967,21 @@ namespace ImGuiTextureViewer
 
 		static const FButtonStyle ButtonStyle = []()
 			{
-				auto Style = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("Button"));
+				FButtonStyle Style = FImGui::GetButtonStyle();
 				Style.NormalPadding = FMargin(4.f, 1.5f, 4.f, 1.5f);
 				Style.PressedPadding = FMargin(4.f, 2.5f, 4.f, 0.5f);
 				return Style;
 			}();
-		static const FComboButtonStyle ComboButtonStyle = FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton"));
 		static const FCheckBoxStyle RadioButtonStyle = []()
 			{
-				auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("RadioButton"));
+				FCheckBoxStyle Style = FImGui::GetRadioButtonStyle();
 				Style.Padding.Top = 1.f;
 				Style.Padding.Bottom = 1.f;
 				return Style;
 			}();
-		static const FCheckBoxStyle CheckBoxStyle = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("CheckBox"));
-		static const FButtonStyle HoverButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("ThinHoverOnlyButton"));
-		static FCheckBoxStyle ToggleButtonStyle = []()
+		static const FCheckBoxStyle ToggleButtonStyle = []()
 			{
-				auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("FilterBar.BasicFilterButton"));
+				FCheckBoxStyle Style = FImGui::GetToggleButtonStyle();
 				Style.SetPadding(FMargin(8.f, 4.f, 8.f, 3.f));
 				return Style;
 			}();
@@ -1031,7 +1019,7 @@ namespace ImGuiTextureViewer
 			ImGui::SetNextItemWidth(80.f * GlobalScale);
 			FImGui::PushComboListViewDropdownStyle(Context);
 			ImGui::SetNextWindowSize(ImVec2(0.f, 160.f * GlobalScale), ImGuiCond_Always);
-			if (FImGui::BeginCombo(Context, "##Zoom", BuildPreviewText("%i%%", int32(InOutTexturePreviewOptions.CanvasScale * 100.f)), ComboButtonStyle))
+			if (FImGui::BeginCombo(Context, "##Zoom", BuildPreviewText("%i%%", int32(InOutTexturePreviewOptions.CanvasScale * 100.f)), FImGui::GetComboButtonStyle()))
 			{
 				FImGui::BeginComboListViewDropdownBody(Context);
 				static const int32 AvailableZoomLevels[] = { 10, 25, 75, 50, 100, 200, 400, 800 };
@@ -1104,7 +1092,7 @@ namespace ImGuiTextureViewer
 			ImGui::SetNextItemWidth(150.f * GlobalScale);
 			ImGui::BeginDisabled(InTextureInfo.NumMips <= 1);
 			FImGui::PushComboListViewDropdownStyle(Context);
-			if (FImGui::BeginCombo(Context, "##Mip", BuildPreviewText("Mip %i - %ix%i", InOutTexturePreviewOptions.CurrentMip, InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip), InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip)), ComboButtonStyle))
+			if (FImGui::BeginCombo(Context, "##Mip", BuildPreviewText("Mip %i - %ix%i", InOutTexturePreviewOptions.CurrentMip, InTextureInfo.GetSizeX(InOutTexturePreviewOptions.CurrentMip), InTextureInfo.GetSizeY(InOutTexturePreviewOptions.CurrentMip)), FImGui::GetComboButtonStyle()))
 			{
 				FImGui::BeginComboListViewDropdownBody(Context);
 				for (uint8 MipIndex = 0; MipIndex < InTextureInfo.NumMips; MipIndex++)
@@ -1153,7 +1141,7 @@ namespace ImGuiTextureViewer
 
 				ImGui::SetNextItemWidth(128.f * GlobalScale);
 				FImGui::PushComboListViewDropdownStyle(Context);
-				if (FImGui::BeginCombo(Context, "##Face", BuildPreviewText("Face %s", FaceNames[InOutTexturePreviewOptions.CurrentArraySlice % 6]), ComboButtonStyle))
+				if (FImGui::BeginCombo(Context, "##Face", BuildPreviewText("Face %s", FaceNames[InOutTexturePreviewOptions.CurrentArraySlice % 6]), FImGui::GetComboButtonStyle()))
 				{
 					FImGui::BeginComboListViewDropdownBody(Context);
 					for (int32 FaceIndex = 0; FaceIndex < ArraySize; FaceIndex++)
@@ -1185,7 +1173,7 @@ namespace ImGuiTextureViewer
 				ImGui::SetNextItemWidth(128.f * GlobalScale);
 				ImGui::BeginDisabled(ArraySize <= 1);
 				FImGui::PushComboListViewDropdownStyle(Context);
-				if (FImGui::BeginCombo(Context, "##Slice", BuildPreviewText("Slice %i", InOutTexturePreviewOptions.CurrentArraySlice), ComboButtonStyle))
+				if (FImGui::BeginCombo(Context, "##Slice", BuildPreviewText("Slice %i", InOutTexturePreviewOptions.CurrentArraySlice), FImGui::GetComboButtonStyle()))
 				{
 					FImGui::BeginComboListViewDropdownBody(Context);
 					for (int32 SliceIndex = 0; SliceIndex < ArraySize; SliceIndex++)
@@ -1227,7 +1215,7 @@ namespace ImGuiTextureViewer
 		// srgb control
 		{
 			ImGui::BeginDisabled(IsStencilFormat(InTextureInfo.Format));
-			ImGui::Text("sRGB"); ImGui::SameLine(); FImGui::CheckBox(Context, "##sRGB", &InOutTexturePreviewOptions.bSRGB, CheckBoxStyle);
+			ImGui::Text("sRGB"); ImGui::SameLine(); FImGui::CheckBox(Context, "##sRGB", &InOutTexturePreviewOptions.bSRGB, FImGui::GetCheckBoxStyle());
 			ImGui::EndDisabled();
 		}
 
@@ -1293,7 +1281,7 @@ namespace ImGuiTextureViewer
 			ImGui::SameLine();
 			{
 				const FImGuiImageBindingParams ZoomToTextureIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Find"), CurrentLineHeight);
-				if (FImGui::Button(Context, "AutoFitRange", ZoomToTextureIcon, HoverButtonStyle, ImVec4()))
+				if (FImGui::Button(Context, "AutoFitRange", ZoomToTextureIcon, FImGui::GetHoverOnlyButtonStyle(), ImVec4()))
 				{
 					InOutTexturePreviewOptions.bRequestMinMaxTextureValues = true;
 				}
@@ -1303,7 +1291,7 @@ namespace ImGuiTextureViewer
 			ImGui::SameLine();
 			{
 				const FImGuiImageBindingParams ZoomToFitIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.FrameSelected"), CurrentLineHeight);
-				if (FImGui::Button(Context, "ZoomToCurrentRange", ZoomToFitIcon, HoverButtonStyle, ImVec4()))
+				if (FImGui::Button(Context, "ZoomToCurrentRange", ZoomToFitIcon, FImGui::GetHoverOnlyButtonStyle(), ImVec4()))
 				{
 					InOutTexturePreviewOptions.RangeMin = InOutTexturePreviewOptions.RangeValueMin;
 					InOutTexturePreviewOptions.RangeMax = InOutTexturePreviewOptions.RangeValueMax;
@@ -1314,7 +1302,7 @@ namespace ImGuiTextureViewer
 			ImGui::SameLine();
 			{
 				const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ResetToDefault"), CurrentLineHeight);
-				if (FImGui::Button(Context, "ResetRange", ResetToDefaultIcon, HoverButtonStyle, ImVec4()))
+				if (FImGui::Button(Context, "ResetRange", ResetToDefaultIcon, FImGui::GetHoverOnlyButtonStyle(), ImVec4()))
 				{
 					InOutTexturePreviewOptions.RangeMin = 0.;
 					InOutTexturePreviewOptions.RangeMax = 1.;

@@ -17,6 +17,63 @@
 
 namespace FImGui
 {
+	FORCEINLINE const FButtonStyle& GetButtonStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FButtonStyle>("Button");
+		return Style;
+	}
+	FORCEINLINE const FButtonStyle& GetPrimaryButtonStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FButtonStyle>("PrimaryButton");
+		return Style;
+	}
+	FORCEINLINE const FButtonStyle& GetSecondaryButtonStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SecondaryButton");
+		return Style;
+	}
+	FORCEINLINE const FButtonStyle& GetSimpleButtonStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FButtonStyle>("SimpleButton");
+		return Style;
+	}
+	FORCEINLINE const FButtonStyle& GetHoverOnlyButtonStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FButtonStyle>("ThinHoverOnlyButton");
+		return Style;
+	}
+	FORCEINLINE const FCheckBoxStyle& GetToggleButtonStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>("FilterBar.BasicFilterButton");
+		return Style;
+	}
+	FORCEINLINE const FCheckBoxStyle& GetRadioButtonStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>("RadioButton");
+		return Style;
+	}
+	FORCEINLINE const FCheckBoxStyle& GetCheckBoxStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>("CheckBox");
+		return Style;
+	}
+	FORCEINLINE const FComboButtonStyle& GetComboButtonStyle()
+	{
+		static const auto Style = FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>("ComboButton");
+		return Style;
+	}
+	FORCEINLINE const FSearchBoxStyle& GetSearchBoxStyle()
+	{
+		static const FSearchBoxStyle Style = []()
+			{
+				auto SearchBoxStyle = FAppStyle::Get().GetWidgetStyle<FSearchBoxStyle>(IMGUI_FNAME("SearchBox"));
+				// removed the HalfHeightRadius corners for now
+				SearchBoxStyle.TextBoxStyle = FAppStyle::Get().GetWidgetStyle<FEditableTextBoxStyle>("NormalEditableTextBox");
+				return SearchBoxStyle;
+			}();
+		return Style;
+	}
+
 	IMGUIWIDGETS_API void DrawWarningMessageBox(FImGuiTickContext* context, float padding, const ImVec4& col, const char* message);
 
 	IMGUIWIDGETS_API void DrawHighlightArea(FImGuiTickContext* context, ImVec2 p_min, ImVec2 p_max, float border_size = 1.f, float border_uv_scale = 1.f, ImU32 tint_col = 0xFFFFFFFF);

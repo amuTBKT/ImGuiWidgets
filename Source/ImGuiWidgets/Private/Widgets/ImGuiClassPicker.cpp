@@ -501,7 +501,6 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
-	static const FButtonStyle& SimpleButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("SimpleButton"));
 
 	auto Add_ClassViewer = [&](FSoftObjectPtr& InOutSoftClassPtr) -> ImVec2
 	{
@@ -548,10 +547,9 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImVec2 ComboBoxSize;
 		bool bIsComboBoxVisible;
 		{
-			static const FComboButtonStyle& ComboButtonStyle = FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton"));
 			ImGui::SetNextItemWidth(ClassViewerComboxBoxWidth);
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-			if (FImGui::ComboButton(Context, "##PopupButton", PreviewText, ComboButtonStyle))
+			if (FImGui::ComboButton(Context, "##PopupButton", PreviewText, FImGui::GetComboButtonStyle()))
 			{
 				ImGui::OpenPopup(ClassViewerPopupName);
 			}
@@ -743,7 +741,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.UseSelectedAsset"), IconSize);
-		if (FImGui::Button(Context, "UseSelectedAsset", UseSelectedAssetIcon, SimpleButtonStyle))
+		if (FImGui::Button(Context, "UseSelectedAsset", UseSelectedAssetIcon, FImGui::GetSimpleButtonStyle()))
 		{
 			FSoftObjectPtr ClassPtr = ClassPickerUtils::GetSelectedClassOfType(BaseClassPath);
 			if (!ClassPtr.IsNull())
@@ -759,7 +757,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.BrowseToAsset"), IconSize);
 		const bool bIsInvalidAsset = InSoftClassPtr.IsNull() || (!SelectedClassData || !SelectedClassData->bIsAsset);
 		ImGui::BeginDisabled(bIsInvalidAsset);
-		if (FImGui::Button(Context, "BrowseToAsset", BrowseToAssetIcon, SimpleButtonStyle))
+		if (FImGui::Button(Context, "BrowseToAsset", BrowseToAssetIcon, FImGui::GetSimpleButtonStyle()))
 		{
 			ClassPickerUtils::SyncContentBrowserToAsset(InSoftClassPtr, BaseClassPath);
 		}
@@ -778,7 +776,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	auto Add_CreateBlueprintButton = [&](FSoftObjectPtr& InOutSoftClassPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams CreateNewBlueprintIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.PlusCircle"), IconSize);
-		if (FImGui::Button(Context, "CreateNewBP", CreateNewBlueprintIcon, SimpleButtonStyle))
+		if (FImGui::Button(Context, "CreateNewBP", CreateNewBlueprintIcon, FImGui::GetSimpleButtonStyle()))
 		{
 			UBlueprint* Blueprint = FKismetEditorUtilities::CreateBlueprintFromClass(FText::FromString("Create New Blueprint"), const_cast<UClass*>(BaseClass), FString::Printf(TEXT("New%s"), *BaseClassPath.GetAssetName()));
 
@@ -802,7 +800,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	{
 		const FImGuiImageBindingParams ClearValueIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.Cross"), IconSize);
 		ImGui::BeginDisabled(InOutSoftClassPtr.IsNull());
-		if (FImGui::Button(Context, "ClearValue", ClearValueIcon, SimpleButtonStyle))
+		if (FImGui::Button(Context, "ClearValue", ClearValueIcon, FImGui::GetSimpleButtonStyle()))
 		{
 			InOutSoftClassPtr.Reset();
 		}

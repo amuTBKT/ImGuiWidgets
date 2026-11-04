@@ -516,10 +516,9 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
-	static const FButtonStyle& SimpleButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("SimpleButton"));
 	static const FButtonStyle& HoverButtonStyle = []()
 		{
-			auto Style = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("ThinHoverOnlyButton"));
+			FButtonStyle Style = FImGui::GetHoverOnlyButtonStyle();
 			Style.NormalPadding.Top = 1.5f;
 			Style.NormalPadding.Bottom = 1.5f;
 			Style.PressedPadding.Top = 2.5f;
@@ -581,7 +580,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	auto Add_UseSelectedAssetButton = [&](FSoftObjectPtr& InOutSoftAssetPtr, float IconSize)
 	{
 		const FImGuiImageBindingParams UseSelectedAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.UseSelectedAsset"), IconSize);
-		if (FImGui::Button(Context, "UseSelectedAsset", UseSelectedAssetIcon, SimpleButtonStyle))
+		if (FImGui::Button(Context, "UseSelectedAsset", UseSelectedAssetIcon, FImGui::GetSimpleButtonStyle()))
 		{
 			FSoftObjectPtr AssetPtr = (AssetPickerUtils::GetSelectedAssetOfType(AssetClass));
 			if (!AssetPtr.IsNull())
@@ -597,7 +596,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		const FImGuiImageBindingParams BrowseToAssetIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.BrowseToAsset"), IconSize);
 		const bool bIsInvalidAsset = InSoftAssetPtr.IsNull();
 		ImGui::BeginDisabled(bIsInvalidAsset);
-		if (FImGui::Button(Context, "BrowseToAsset", BrowseToAssetIcon, SimpleButtonStyle))
+		if (FImGui::Button(Context, "BrowseToAsset", BrowseToAssetIcon, FImGui::GetSimpleButtonStyle()))
 		{
 			AssetPickerUtils::SyncContentBrowserToAsset(FAssetData(InSoftAssetPtr.ToSoftObjectPath().GetLongPackageName(), InSoftAssetPtr.ToSoftObjectPath().GetAssetPathString(), AssetClassPath.GetAssetPath()));
 		}
@@ -617,7 +616,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	{
 		const FImGuiImageBindingParams ResetToDefaultIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ResetToDefault"), IconSize);
 
-		if (FImGui::Button(Context, "ResetToDefault", ResetToDefaultIcon, bDrawCompactWidget ? SimpleButtonStyle : HoverButtonStyle))
+		if (FImGui::Button(Context, "ResetToDefault", ResetToDefaultIcon, bDrawCompactWidget ? FImGui::GetSimpleButtonStyle() : HoverButtonStyle))
 		{
 			InOutSoftAssetPtr.Reset();
 		}
@@ -663,10 +662,9 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		ImVec2 ComboBoxSize;
 		bool bIsComboBoxVisible;
 		{
-			static const FComboButtonStyle& ComboButtonStyle = FAppStyle::Get().GetWidgetStyle<FComboButtonStyle>(IMGUI_FNAME("ComboButton"));
 			ImGui::SetNextItemWidth(AssetViewerComboxBoxWidth);
 			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-			if (FImGui::ComboButton(Context, "##PopupButton", TCHAR_TO_UTF8(*PreviewText), ComboButtonStyle))
+			if (FImGui::ComboButton(Context, "##PopupButton", TCHAR_TO_UTF8(*PreviewText), FImGui::GetComboButtonStyle()))
 			{
 				ImGui::OpenPopup(AssetViewerPopupName);
 			}
@@ -849,7 +847,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			{
 				static const FCheckBoxStyle& ToggleButtonStyle = []()
 					{
-						auto Style = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("FilterBar.BasicFilterButton"));
+						FCheckBoxStyle Style = FImGui::GetToggleButtonStyle();
 						Style.SetPadding(FMargin(4.f, 2.f, 2.f, 4.f));
 						Style.UncheckedImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
 						Style.UncheckedHoveredImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);

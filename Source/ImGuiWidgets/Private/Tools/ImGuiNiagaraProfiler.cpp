@@ -325,8 +325,7 @@ namespace ImGuiNiagaraProfiler
 
 		if (ImGui::BeginChild("Header", ImVec2(0.f, 0.f), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
 		{
-			static const FCheckBoxStyle CheckBoxStyle = FAppStyle::Get().GetWidgetStyle<FCheckBoxStyle>(IMGUI_FNAME("CheckBox"));
-			FImGui::CheckBox("Enable profiling", &bIsCapturing, CheckBoxStyle);
+			FImGui::CheckBox("Enable profiling", &bIsCapturing, FImGui::GetCheckBoxStyle());
 
 			ImGui::BeginDisabled(!bIsCapturing);
 			ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.75f);
@@ -338,12 +337,11 @@ namespace ImGuiNiagaraProfiler
 				UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 				const FImGuiImageBindingParams CollapseAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.CollapseAll"), ImGui::GetTextLineHeightWithSpacing());
 				const FImGuiImageBindingParams ExpandAllIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ExpandAll"), ImGui::GetTextLineHeightWithSpacing());
-				static const FButtonStyle& SimpleButtonStyle = FAppStyle::Get().GetWidgetStyle<FButtonStyle>(IMGUI_FNAME("SimpleButton"));
 
 				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(1.f, 1.f));
 				ImGui::PushStyleVarX(ImGuiStyleVar_ItemSpacing, 2.f);
 
-				if (FImGui::Button(Context, "CollapseAll", CollapseAllIcon, SimpleButtonStyle))
+				if (FImGui::Button(Context, "CollapseAll", CollapseAllIcon, FImGui::GetSimpleButtonStyle()))
 				{
 					bExpandAll = false;
 				}
@@ -351,7 +349,7 @@ namespace ImGuiNiagaraProfiler
 
 				ImGui::SameLine();
 
-				if (FImGui::Button(Context, "ExpandAll", ExpandAllIcon, SimpleButtonStyle))
+				if (FImGui::Button(Context, "ExpandAll", ExpandAllIcon, FImGui::GetSimpleButtonStyle()))
 				{
 					bExpandAll = true;
 				}
