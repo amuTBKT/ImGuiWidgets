@@ -7,12 +7,25 @@
 #include "UObject/SoftObjectPtr.h"
 #include "UObject/WeakObjectPtr.h"
 
+enum class EImGuiClassPickerFlags
+{
+	None		 = 0,
+	ShowListOnly = 1 << 0,	// Draw only asset list box, can be used with ImGui::BeginMenu
+};
+ENUM_CLASS_FLAGS(EImGuiClassPickerFlags);
+
 class FImGuiClassPicker
 {
 public:
 	using FFilter = TVariant<FImGuiAllowedClassFilter, FImGuiDisallowedClassFilter, FImGuiRequiredInterfaceFilter, FImGuiDisallowAbstractClassFilter>;
 
 	[[nodiscard]] IMGUIWIDGETS_API static FImGuiClassPicker MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters = {});
+
+	FORCEINLINE FImGuiClassPicker& SetMaxRowsVisible(uint8 Count)
+	{
+		MaxRowsVisible = Count;
+		return *this;
+	}
 
 	template <typename TImGuiFilterType>
 	[[nodiscard]] FORCEINLINE FImGuiClassPicker& AddFilter(TImGuiFilterType Filter)
@@ -51,7 +64,7 @@ public:
 	}
 
 	template <typename TClassType>
-	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TSoftClassPtr<TClassType>& InOutSelectedClassPtr)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TSoftClassPtr<TClassType>& InOutSelectedClassPtr, EImGuiClassPickerFlags Flags = EImGuiClassPickerFlags::None)
 	{
 		const UClass* BaseClass = GetBaseClass();
 		if (!BaseClass)
@@ -61,7 +74,7 @@ public:
 		}
 
 		FSoftObjectPtr SelectedClass{ InOutSelectedClassPtr.ToSoftObjectPath() };
-		if (DrawInternal(Context, Label, SelectedClass))
+		if (DrawInternal(Context, Label, SelectedClass, Flags))
 		{
 			InOutSelectedClassPtr = TSoftClassPtr<TClassType>{ SelectedClass.ToSoftObjectPath() };
 			return true;
@@ -69,7 +82,7 @@ public:
 		return false;
 	}
 
-	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, UClass*& InOutSelectedClassPtr)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, UClass*& InOutSelectedClassPtr, EImGuiClassPickerFlags Flags = EImGuiClassPickerFlags::None)
 	{
 		const UClass* BaseClass = GetBaseClass();
 		if (!BaseClass)
@@ -79,7 +92,7 @@ public:
 		}
 
 		FSoftObjectPtr SelectedClass{ InOutSelectedClassPtr };
-		if (DrawInternal(Context, Label, SelectedClass))
+		if (DrawInternal(Context, Label, SelectedClass, Flags))
 		{
 			InOutSelectedClassPtr = Cast<UClass>(SelectedClass.LoadSynchronous());
 			return true;
@@ -87,10 +100,10 @@ public:
 		return false;
 	}
 
-	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TWeakObjectPtr<UClass>& InOutSelectedClassPtr)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TWeakObjectPtr<UClass>& InOutSelectedClassPtr, EImGuiClassPickerFlags Flags = EImGuiClassPickerFlags::None)
 	{
 		UClass* SelectedClass = InOutSelectedClassPtr.Get();
-		if (Draw(Context, Label, SelectedClass))
+		if (Draw(Context, Label, SelectedClass, Flags))
 		{
 			InOutSelectedClassPtr = SelectedClass;
 			return true;
@@ -100,7 +113,7 @@ public:
 
 private:
 	IMGUIWIDGETS_API void DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage);
-	IMGUIWIDGETS_API bool DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass);
+	IMGUIWIDGETS_API bool DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass, EImGuiClassPickerFlags Flags);
 	void FilterAvailableClasses();
 
 	const UClass* GetBaseClass()
@@ -131,8 +144,9 @@ private:
 	FImGuiTextFilter TextFilter;
 
 	TArray<int32> FilteredClassIndices;
-	uint16 PackedClassFilter	 : 7 = 0;
-	uint16 bIsBaseClassValid	 : 1 = true;
+	uint32 PackedClassFilter	 : 7 = 0;
+	uint32 bIsBaseClassValid	 : 1 = true;
+	uint32 MaxRowsVisible		 : 8 = 10;
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedClassIndex = INDEX_NONE;
 	int32 LastSelectedClassIndexInFilteredList = INDEX_NONE;

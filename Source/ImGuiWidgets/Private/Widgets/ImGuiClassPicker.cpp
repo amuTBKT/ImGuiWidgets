@@ -431,7 +431,7 @@ void FImGuiClassPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char
 	FImGui::DrawWarningMessageBox(Context, 4.f, ImVec4(1.f, 0.f, 0.f, 1.f), *StringBuilder);
 }
 
-bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass)
+bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedClass, EImGuiClassPickerFlags Flags)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("ClassPicker::Draw"), STAT_ImGuiClassPicker_Draw, STATGROUP_ImGui);
 	LLM_SCOPE_BYNAME("ImGui/ClassPicker/DrawWidget");
@@ -502,16 +502,171 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	UImGuiSubsystem* ImGuiSubsystem = UImGuiSubsystem::Get();
 	const float GlobalScale = ImGui::GetStyle().FontScaleMain;
 
+	// configuration
+	const float ClassViewerWidth = 320.f * GlobalScale;
+	const char* ClassViewerPopupName = "ClassViewerPopup";
+	const float ClassViewerRowHeight = ImGui::GetFontSize();
+
+	const float ClassViewerRowHeightWithSpacing = (ClassViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale);
+	const float ClassViewerDesiredHeight = FMath::Min((int32)MaxRowsVisible, FilteredClassIndices.Num()) * ClassViewerRowHeightWithSpacing + ClassViewerRowHeightWithSpacing * 0.25f;
+
+	auto Add_ClassListBox = [&](FSoftObjectPtr& InOutSoftClassPtr, bool bIsComboBoxVisible)
+		{
+			// same color as Menu.Separator (doesn't work well for light themes)
+			ImGui::PushStyleColor(ImGuiCol_Border, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
+			ImGui::PushStyleColor(ImGuiCol_Separator, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
+
+			int32 NewSelectedIndex = INDEX_NONE;
+			bool bFilterAvailableClasses = false;
+
+			// reset filter text and set focus when class viewer is triggered
+			if (ImGui::IsWindowAppearing())
+			{
+				if (TextFilter.IsActive())
+				{
+					bFilterAvailableClasses = true;
+				}
+				TextFilter.Reset();
+			}
+
+			ImGui::BeginGroup();
+			{
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.f);
+				ImGui::SetNextItemWidth(ClassViewerWidth);
+				if (TextFilter.Draw(Context, "Filter", "Search", /*bSetFocus=*/ImGui::IsWindowAppearing()))
+				{
+					bFilterAvailableClasses = true;
+				}
+
+				ImVec4 RowColor = FImGui::GetSlateColorVec4(Context, EStyleColor::Recessed);
+				ImVec4 RowColor_Active = FImGui::GetSlateColorVec4(Context, EStyleColor::Select);
+				ImVec4 RowColor_Hovered = FImGui::GetSlateColorVec4(Context, EStyleColor::SelectHover);
+				ImVec4 RowColor_Header = FImGui::GetSlateColorVec4(Context, EStyleColor::SelectInactive);
+
+				FImGuiScopedStyleEdit ListViewStyle
+				{
+					ImGuiCol_Header,		RowColor_Header,
+					ImGuiCol_HeaderActive,	RowColor_Active,
+					ImGuiCol_HeaderHovered, RowColor_Hovered,
+					ImGuiCol_TableRowBg,	RowColor,
+					ImGuiCol_TableRowBgAlt, RowColor,
+					ImGuiCol_ScrollbarBg,	RowColor,
+				};
+
+				float ListBoxMinHeight = 2.f * ClassViewerRowHeightWithSpacing;
+
+				bool bIsListViewHighlighted = false;
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y + 2.f);
+				if (ImGui::BeginListBox("##ClassList", ImVec2(ClassViewerWidth, FMath::Max(ListBoxMinHeight, ClassViewerDesiredHeight))))
+				{
+					ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.f);
+
+					auto Add_ListEntry = [&](int32 ClassIndex, int32 RowIndex)
+						{
+							const bool bWasSelected = (ClassIndex == LastSelectedClassIndex);
+							{
+								FImGuiNamedScope Scope{ ClassIndex };
+
+								if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, ClassViewerRowHeight)))
+								{
+									NewSelectedIndex = ClassIndex;
+								}
+								if (bWasSelected)
+								{
+									ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::ColorConvertFloat4ToU32(RowColor_Header));
+								}
+								else if (!bWasSelected && !ImGui::IsItemHovered())
+								{
+									ImGui::GetWindowDrawList()->AddRectFilled(
+										ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
+										ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
+								}
+
+								FImGui::SetItemTooltip("%s", *AvailableClasses[ClassIndex].ObjectPath);
+							}
+
+							ImGui::SameLine();
+							ImGui::TextUnformatted(*AvailableClasses[ClassIndex].DisplayName);
+
+							// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
+							if (bWasSelected || ((RowIndex == 0) && (LastSelectedClassIndex == INDEX_NONE)))
+							{
+								// scroll to item when popup is opened
+								if (ImGui::IsWindowAppearing())
+								{
+									ImGui::ScrollToItem();
+								}
+								ImGui::SetItemDefaultFocus();
+							}
+						};
+
+					ImGuiListClipper Clipper;
+					Clipper.Begin(FilteredClassIndices.Num());
+					if (LastSelectedClassIndexInFilteredList != INDEX_NONE)
+					{
+						Clipper.IncludeItemByIndex(LastSelectedClassIndexInFilteredList);
+					}
+
+					ImGui::PushStyleColor(ImGuiCol_NavCursor, RowColor);
+					int32 RowIndex = 0;
+					while (Clipper.Step())
+					{
+						for (RowIndex = Clipper.DisplayStart; RowIndex < Clipper.DisplayEnd; RowIndex++)
+						{
+							Add_ListEntry(FilteredClassIndices[RowIndex], RowIndex);
+						}
+						RowIndex -= 1;
+					}
+					ImGui::GetWindowDrawList()->AddRectFilled(
+						ImGui::GetCursorScreenPos() - ImGui::GetStyle().ItemSpacing * 0.5f,
+						ImGui::GetCursorScreenPos() + ImGui::GetContentRegionAvail() + ImGui::GetStyle().ItemSpacing * 0.5f,
+						ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
+					ImGui::PopStyleColor();
+
+					if ((Context->ImguiContext->NavCursorVisible && Context->ImguiContext->NavId == ImGui::GetCurrentWindow()->ChildId))// || ImGui::IsWindowFocused())
+					{
+						bIsListViewHighlighted = true;
+					}
+
+					ImGui::PushStyleColor(ImGuiCol_NavCursor, 0);
+					ImGui::EndListBox();
+					ImGui::PopStyleColor();
+				}
+				if (bIsListViewHighlighted)
+				{
+					ImGui::GetWindowDrawList()->AddRect(
+						ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
+						ImGui::GetColorU32(ImGuiCol_NavCursor),
+						ImGui::GetStyle().FrameRounding, 1.f);
+				}
+			}
+			ImGui::EndGroup();
+
+			if (bFilterAvailableClasses)
+			{
+				FilterAvailableClasses();
+			}
+
+			bool bClosePopup = (NewSelectedIndex != INDEX_NONE);
+			bClosePopup |= !bIsComboBoxVisible;
+			// force close the popup when dragging assets over the window
+			const ImGuiHoveredFlags HoverFlags = ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
+			bClosePopup |= (Context->DragDropOperation.IsValid() && ImGui::IsWindowHovered(HoverFlags));
+			if (bClosePopup)
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			if (NewSelectedIndex != INDEX_NONE)
+			{
+				InOutSoftClassPtr = { AvailableClasses[NewSelectedIndex].ClassPath };
+			}
+
+			ImGui::PopStyleColor(2);
+		};
+
 	auto Add_ClassViewer = [&](FSoftObjectPtr& InOutSoftClassPtr) -> ImVec2
 	{
-		// configuration
-		const float ClassViewerWidth = 320.f * GlobalScale;
-		const char* ClassViewerPopupName = "ClassViewerPopup";
-		const float ClassViewerMaxRowsVisible = 10;
-		const float ClassViewerRowHeight = ImGui::GetFontSize();
-
-		const float ClassViewerRowHeightWithSpacing = (ClassViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale);
-		const float ClassViewerDesiredHeight = FMath::Min(ClassViewerMaxRowsVisible, FilteredClassIndices.Num()) * ClassViewerRowHeightWithSpacing + ClassViewerRowHeightWithSpacing * 1.5f;
 		const float ClassViewerComboxBoxWidth = FMath::Clamp(256.f * GlobalScale, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - 100.f * GlobalScale);
 		constexpr int32 PreviewTextCapacity = 64;
 		const int32 PreviewTextMaxLength = FMath::Clamp(FMath::CeilToInt(1.75f * ClassViewerComboxBoxWidth / ImGui::GetFontSize()) - 1, 4, PreviewTextCapacity);
@@ -581,157 +736,11 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			ImGuiCol_Border,				FImGui::GetSlateColorVec4(Context, EStyleColor::DropdownOutline)
 		};
 
-		int32 NewSelectedIndex = INDEX_NONE;
 		if (ImGui::BeginPopup(ClassViewerPopupName, ImGuiWindowFlags_NoScrollbar))
 		{
-			// same color as Menu.Separator (doesn't work well for light themes)
-			ImGui::PushStyleColor(ImGuiCol_Border, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
-			ImGui::PushStyleColor(ImGuiCol_Separator, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
-
-			bool bFilterAvailableClasses = false;
-
-			// reset filter text and set focus when class viewer is triggered
-			if (ImGui::IsWindowAppearing())
-			{
-				if (TextFilter.IsActive())
-				{
-					bFilterAvailableClasses = true;
-				}
-				TextFilter.Reset();
-			}
-
-			ImGui::BeginGroup();
-			{
-				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 1.f);
-				ImGui::SetNextItemWidth(ClassViewerWidth);
-				if (TextFilter.Draw(Context, "Filter", "Search", /*bSetFocus=*/ImGui::IsWindowAppearing()))
-				{
-					bFilterAvailableClasses = true;
-				}
-
-				ImVec4 RowColor = FImGui::GetSlateColorVec4(Context, EStyleColor::Recessed);
-				ImVec4 RowColor_Active = FImGui::GetSlateColorVec4(Context, EStyleColor::Select);
-				ImVec4 RowColor_Hovered = FImGui::GetSlateColorVec4(Context, EStyleColor::SelectHover);
-				ImVec4 RowColor_Header = FImGui::GetSlateColorVec4(Context, EStyleColor::SelectInactive);
-
-				FImGuiScopedStyleEdit ListViewStyle
-				{
-					ImGuiCol_Header,		RowColor_Header,
-					ImGuiCol_HeaderActive,	RowColor_Active,
-					ImGuiCol_HeaderHovered, RowColor_Hovered,
-					ImGuiCol_TableRowBg,	RowColor,
-					ImGuiCol_TableRowBgAlt, RowColor,
-					ImGuiCol_ScrollbarBg,	RowColor,
-				};
-
-				bool bIsListViewHighlighted = false;
-				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2.f);
-				if (ImGui::BeginListBox("##ClassList", ImVec2(ClassViewerWidth, FMath::Max(ClassViewerRowHeightWithSpacing, ClassViewerPopupHeight - ImGui::GetItemRectSize().y))))
-				{
-					ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.f);
-
-					auto Add_ListEntry = [&](int32 ClassIndex, int32 RowIndex)
-					{
-						const bool bWasSelected = (ClassIndex == LastSelectedClassIndex);
-						{
-							FImGuiNamedScope Scope{ ClassIndex };
-
-							if (ImGui::Selectable("", bWasSelected, ImGuiSelectableFlags_None, ImVec2(0, ClassViewerRowHeight)))
-							{
-								NewSelectedIndex = ClassIndex;
-							}
-							if (bWasSelected)
-							{
-								ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImGui::ColorConvertFloat4ToU32(RowColor_Header));
-							}
-							else if (!bWasSelected && !ImGui::IsItemHovered())
-							{
-								ImGui::GetWindowDrawList()->AddRectFilled(
-									ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
-									ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
-							}
-						}
-
-						ImGui::SameLine();
-						ImGui::TextUnformatted(*AvailableClasses[ClassIndex].DisplayName);
-
-						// Set the initial focus when opening the combo (scrolling + keyboard navigation focus)
-						if (bWasSelected || ((RowIndex == 0) && (LastSelectedClassIndex == INDEX_NONE)))
-						{
-							// scroll to item when popup is opened
-							if (ImGui::IsWindowAppearing())
-							{
-								ImGui::ScrollToItem();
-							}
-							ImGui::SetItemDefaultFocus();
-						}
-					};
-
-					ImGuiListClipper Clipper;
-					Clipper.Begin(FilteredClassIndices.Num());
-					if (LastSelectedClassIndexInFilteredList != INDEX_NONE)
-					{
-						Clipper.IncludeItemByIndex(LastSelectedClassIndexInFilteredList);
-					}
-
-					ImGui::PushStyleColor(ImGuiCol_NavCursor, RowColor);
-					int32 RowIndex = 0;
-					while (Clipper.Step())
-					{
-						for (RowIndex = Clipper.DisplayStart; RowIndex < Clipper.DisplayEnd; RowIndex++)
-						{
-							Add_ListEntry(FilteredClassIndices[RowIndex], RowIndex);
-						}
-						RowIndex -= 1;
-					}
-					ImGui::GetWindowDrawList()->AddRectFilled(
-						ImGui::GetCursorScreenPos() - ImGui::GetStyle().ItemSpacing * 0.5f,
-						ImGui::GetCursorScreenPos() + ImGui::GetContentRegionAvail() + ImGui::GetStyle().ItemSpacing * 0.5f,
-						ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
-					ImGui::PopStyleColor();
-
-					if ((Context->ImguiContext->NavCursorVisible && Context->ImguiContext->NavId == ImGui::GetCurrentWindow()->ChildId) || ImGui::IsWindowFocused())
-					{
-						bIsListViewHighlighted = true;
-					}
-
-					ImGui::PushStyleColor(ImGuiCol_NavCursor, 0);
-					ImGui::EndListBox();
-					ImGui::PopStyleColor();
-				}
-				/*if (bIsListViewHighlighted) --> can look weird with some themes so disabled for now
-				{
-					ImGui::GetWindowDrawList()->AddRect(
-						ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
-						ImGui::GetColorU32(ImGuiCol_NavCursor),
-						ImGui::GetStyle().FrameRounding, 1.f);
-				}*/
-			}
-			ImGui::EndGroup();
-
-			if (bFilterAvailableClasses)
-			{
-				FilterAvailableClasses();
-			}
-
-			bool bClosePopup = (NewSelectedIndex != INDEX_NONE);
-			bClosePopup |= !bIsComboBoxVisible;
-			// force close the popup when dragging assets over the window
-			const ImGuiHoveredFlags HoverFlags = ImGuiHoveredFlags_RootWindow|ImGuiHoveredFlags_AllowWhenBlockedByPopup|ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
-			bClosePopup |= (Context->DragDropOperation.IsValid() && ImGui::IsWindowHovered(HoverFlags));
-			if (bClosePopup)
-			{
-				ImGui::CloseCurrentPopup();
-			}
-
-			ImGui::PopStyleColor(2);
+			Add_ClassListBox(InOutSoftClassPtr, bIsComboBoxVisible);
 
 			ImGui::EndPopup();
-		}
-
-		if (NewSelectedIndex != INDEX_NONE)
-		{
-			InOutSoftClassPtr = { AvailableClasses[NewSelectedIndex].ClassPath };
 		}
 
 		return ComboBoxSize;
@@ -811,6 +820,11 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	ImRect AssetDragDropArea;
 	{
 		ImGui::BeginGroup();
+		if (EnumHasAnyFlags(Flags, EImGuiClassPickerFlags::ShowListOnly))
+		{
+			Add_ClassListBox(SelectedSoftClassPtr, true);
+		}
+		else
 		{
 			if (FCStringAnsi::Strstr(Label, "##") == nullptr)
 			{

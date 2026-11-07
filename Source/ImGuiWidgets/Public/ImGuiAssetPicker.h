@@ -7,12 +7,26 @@
 #include "UObject/WeakObjectPtr.h"
 #include "UObject/SoftObjectPtr.h"
 
+enum class EImGuiAssetPickerFlags
+{
+	None			= 0,
+	DisablePreview	= 1 << 0,	// Draw compact widget without asset thumbnail
+	ShowListOnly	= 1 << 1,	// Draw only asset list box, can be used with ImGui::BeginMenu
+};
+ENUM_CLASS_FLAGS(EImGuiAssetPickerFlags);
+
 class FImGuiAssetPicker
 {
 public:
 	using FFilter = TVariant<FImGuiAssetTagFilter, FImGuiAllowedClassFilter, FImGuiDisallowedClassFilter>;
 
 	[[nodiscard]] IMGUIWIDGETS_API static FImGuiAssetPicker MakeWidget(const FSoftClassPath& ClassPath, TArray<FFilter> OptionalFilters = {});
+
+	FORCEINLINE FImGuiAssetPicker& SetMaxRowsVisible(uint8 Count)
+	{
+		MaxRowsVisible = Count;
+		return *this;
+	}
 
 	template <typename TImGuiFilterType>
 	[[nodiscard]] FORCEINLINE FImGuiAssetPicker& AddFilter(TImGuiFilterType Filter)
@@ -51,22 +65,22 @@ public:
 	}
 
 	template <typename TAssetType>
-	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TSoftObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TSoftObjectPtr<TAssetType>& InOutSelectedAssetPtr, EImGuiAssetPickerFlags Flags = EImGuiAssetPickerFlags::None)
 	{
 		const UClass* AssetClass = GetAssetClass();
 		if (!AssetClass)
 		{
-			DrawInvalidWidget(Context, Label, "'AssetType' unset!", bDrawCompactWidget);
+			DrawInvalidWidget(Context, Label, "'AssetType' unset!", Flags);
 			return false;
 		}
 		if (TAssetType::StaticClass() != AssetClass)
 		{
-			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", bDrawCompactWidget);
+			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", Flags);
 			return false;
 		}
 
 		FSoftObjectPtr SelectedAsset{ InOutSelectedAssetPtr.ToSoftObjectPath() };
-		if (DrawInternal(Context, Label, SelectedAsset, bDrawCompactWidget))
+		if (DrawInternal(Context, Label, SelectedAsset, Flags))
 		{
 			InOutSelectedAssetPtr = TSoftObjectPtr<TAssetType>{ SelectedAsset.ToSoftObjectPath() };
 			return true;
@@ -75,22 +89,22 @@ public:
 	}
 
 	template <typename TAssetType>
-	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TAssetType*& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TAssetType*& InOutSelectedAssetPtr, EImGuiAssetPickerFlags Flags = EImGuiAssetPickerFlags::None)
 	{
 		const UClass* AssetClass = GetAssetClass();
 		if (!AssetClass)
 		{
-			DrawInvalidWidget(Context, Label, "'AssetType' unset!", bDrawCompactWidget);
+			DrawInvalidWidget(Context, Label, "'AssetType' unset!", Flags);
 			return false;
 		}
 		if (TAssetType::StaticClass() != AssetClass)
 		{
-			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", bDrawCompactWidget);
+			DrawInvalidWidget(Context, Label, "Draw() called with unsupported asset type!", Flags);
 			return false;
 		}
 
 		FSoftObjectPtr SelectedAsset{ InOutSelectedAssetPtr };
-		if (DrawInternal(Context, Label, SelectedAsset, bDrawCompactWidget))
+		if (DrawInternal(Context, Label, SelectedAsset, Flags))
 		{
 			InOutSelectedAssetPtr = Cast<TAssetType>(SelectedAsset.LoadSynchronous());
 			return true;
@@ -99,10 +113,10 @@ public:
 	}
 
 	template <typename TAssetType>
-	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TWeakObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TWeakObjectPtr<TAssetType>& InOutSelectedAssetPtr, EImGuiAssetPickerFlags Flags = EImGuiAssetPickerFlags::None)
 	{
 		TAssetType* SelectedAsset = InOutSelectedAssetPtr.Get();
-		if (Draw(Context, Label, SelectedAsset, bDrawCompactWidget))
+		if (Draw(Context, Label, SelectedAsset, Flags))
 		{
 			InOutSelectedAssetPtr = SelectedAsset;
 			return true;
@@ -111,10 +125,10 @@ public:
 	}
 
 	template <typename TAssetType>
-	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TObjectPtr<TAssetType>& InOutSelectedAssetPtr, bool bDrawCompactWidget = false)
+	FORCEINLINE bool Draw(FImGuiTickContext* Context, const char* Label, TObjectPtr<TAssetType>& InOutSelectedAssetPtr, EImGuiAssetPickerFlags Flags = EImGuiAssetPickerFlags::None)
 	{
 		TAssetType* SelectedAsset = InOutSelectedAssetPtr.Get();
-		if (Draw(Context, Label, SelectedAsset, bDrawCompactWidget))
+		if (Draw(Context, Label, SelectedAsset, Flags))
 		{
 			InOutSelectedAssetPtr = SelectedAsset;
 			return true;
@@ -123,8 +137,8 @@ public:
 	}
 
 private:
-	IMGUIWIDGETS_API void DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage, bool bDrawCompactWidget);
-	IMGUIWIDGETS_API bool DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawCompactWidget);
+	IMGUIWIDGETS_API void DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage, EImGuiAssetPickerFlags Flags);
+	IMGUIWIDGETS_API bool DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, EImGuiAssetPickerFlags Flags);
 	void FilterAvailableAssets();
 
 	const UClass* GetAssetClass()
@@ -157,7 +171,7 @@ private:
 	TArray<int32> FilteredAssetIndices;
 	uint32 PackedAssetPathFilter : 7 = 0;
 	uint32 bIsAssetTypeValid	 : 1 = true;
-	uint32 AssetViewerMinSizeFactor : 8 = 5;
+	uint32 MaxRowsVisible		 : 8 = 8;
 	uint32 ContainerRevisionId = UINT32_MAX;
 	int32 LastSelectedAssetIndex = INDEX_NONE;
 	int32 LastSelectedAssetIndexInFilteredList = INDEX_NONE;

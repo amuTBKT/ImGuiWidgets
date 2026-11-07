@@ -437,17 +437,17 @@ FImGuiAssetPicker FImGuiAssetPicker::MakeWidget(const FSoftClassPath& ClassPath,
 	return Widget;
 }
 
-void FImGuiAssetPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage, bool bDrawCompactWidget)
+void FImGuiAssetPicker::DrawInvalidWidget(FImGuiTickContext* Context, const char* Label, const char* ErrorMessage, EImGuiAssetPickerFlags Flags)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 	LLM_SCOPE_BYNAME("ImGui/AssetPicker/DrawWidget");
 
 	TAnsiStringBuilder<128> StringBuilder;
 	StringBuilder.Appendf("AssetPicker('%s') : %s", Label, ErrorMessage);
-	FImGui::DrawWarningMessageBox(Context, bDrawCompactWidget ? 4.f : 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *StringBuilder);
+	FImGui::DrawWarningMessageBox(Context, EnumHasAnyFlags(Flags, EImGuiAssetPickerFlags::DisablePreview) ? 4.f : 16.f, ImVec4(1.f, 0.f, 0.f, 1.f), *StringBuilder);
 }
 
-bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, bool bDrawCompactWidget)
+bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Label, FSoftObjectPtr& InOutSelectedAsset, EImGuiAssetPickerFlags Flags)
 {
 	DECLARE_SCOPE_CYCLE_COUNTER(TEXT("AssetPicker::Draw"), STAT_ImGuiAssetPicker_Draw, STATGROUP_ImGui);
 	LLM_SCOPE_BYNAME("ImGui/AssetPicker/DrawWidget");
@@ -463,6 +463,8 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	FImGuiTickScope TickScope{ Context };
 
 	FImGuiNamedScope WidgetScope{ Label };
+
+	const bool bDrawCompactWidget = EnumHasAnyFlags(Flags, EImGuiAssetPickerFlags::DisablePreview);
 
 	auto& AssetContainer = AssetPickerUtils::GetAssetContainer(AssetClassPath);
 	const auto& AvailableAssets = AssetContainer.GetAvailableAssets();
@@ -626,84 +628,21 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 	};
 
-	auto Add_AssetViewer = [&](FSoftObjectPtr& InOutSoftAssetPtr) -> ImVec2
-	{
-		// configuration
-		const float AssetViewerWidth = 400.f * GlobalScale;
-		const float AssetViewerMaxRowsVisible = 8;
-		const float AssetViewerRowHeight = ImGui::GetFontSize() * 2.f + ImGui::GetStyle().ItemSpacing.y * 1.5f * GlobalScale;
-		const char* AssetViewerPopupName = "AssetViewerPopup";
+	// configuration
+	const float AssetViewerWidth = 400.f * GlobalScale;
+	const float AssetViewerRowHeight = ImGui::GetFontSize() * 2.f + ImGui::GetStyle().ItemSpacing.y * 1.5f * GlobalScale;
+	const char* AssetViewerPopupName = "AssetViewerPopup";
 
-		const float AssetViewerRowHeightWithSpacing = (AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale);
-		const float AssetViewerDesiredHeight = FMath::Min(AssetViewerMaxRowsVisible, FilteredAssetIndices.Num()) * AssetViewerRowHeightWithSpacing + AssetViewerRowHeightWithSpacing * 1.5f;
-		const float AssetViewerComboxBoxWidth = FMath::Clamp(256.f * GlobalScale, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - (bDrawCompactWidget ? 75.f : 32.f) * GlobalScale);
-		constexpr int32 PreviewTextCapacity = 64;
-		const int32 PreviewTextMaxLength = FMath::Clamp(FMath::CeilToInt(1.75f * AssetViewerComboxBoxWidth / ImGui::GetFontSize()) - 1, 4, PreviewTextCapacity);
+	const float AssetViewerRowHeightWithSpacing = (AssetViewerRowHeight + ImGui::GetStyle().ItemSpacing.y * GlobalScale);
+	const float AssetViewerDesiredHeight = FMath::Min((int32)MaxRowsVisible, FilteredAssetIndices.Num()) * AssetViewerRowHeightWithSpacing + AssetViewerRowHeightWithSpacing * 0.25f;
 
-		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
-		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y;
-		const float MonitorDisplayHeight = Context->bIsDrawingRemotely ? ImGui::GetIO().DisplaySize.y : ImGui::GetCurrentContext()->PlatformMonitorsFullWorkRect.Max.y;
-		const float AvailableSpaceBelow = (MonitorDisplayHeight - ImGui::GetCursorScreenPos().y);
-		float AssetViewerPopupHeight = ((AvailableSpaceBelow > AssetViewerDesiredHeight) ? AvailableSpaceBelow : AvailableSpaceAbove) * 0.8f;
-		AssetViewerPopupHeight = FMath::Min(AssetViewerPopupHeight, AssetViewerDesiredHeight);
-		float AssetViewerPopupHeightMin = ((float)AssetViewerMinSizeFactor * AssetViewerRowHeightWithSpacing) + ImGui::GetStyle().WindowPadding.y * 2.f;
-
-		FString PreviewText = !InOutSoftAssetPtr.IsNull() ? InOutSoftAssetPtr.GetAssetName() : FString(TEXT("None"));
-		if (PreviewText.Len() >= PreviewTextMaxLength)
-		{
-			PreviewText.MidInline(0, PreviewTextMaxLength);
-
-			// PreviewTextMaxLen...
-			PreviewText[PreviewTextMaxLength - 1] = TCHAR('.');
-			PreviewText[PreviewTextMaxLength - 2] = TCHAR('.');
-			PreviewText[PreviewTextMaxLength - 3] = TCHAR('.');
-		}
-
-		ImVec2 ComboBoxSize;
-		bool bIsComboBoxVisible;
-		{
-			ImGui::SetNextItemWidth(AssetViewerComboxBoxWidth);
-			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
-			if (FImGui::ComboButton(Context, "##PopupButton", TCHAR_TO_UTF8(*PreviewText), FImGui::GetComboButtonStyle()))
-			{
-				ImGui::OpenPopup(AssetViewerPopupName);
-			}
-			ImGui::PopStyleVar();
-			if (!SelectedSoftAssetPtr.IsNull() && ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
-			{
-				FImGui::SetItemTooltip("%s", TCHAR_TO_UTF8_PATH(*SelectedSoftAssetPtr.GetLongPackageName()));
-			}
-			ComboBoxSize = ImGui::GetItemRectSize();
-			bIsComboBoxVisible = ImGui::IsItemVisible();
-		}
-
-		if ((AvailableSpaceBelow > AssetViewerPopupHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
-		{
-			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y - ImGui::GetStyle().ItemSpacing.y * 0.5f), ImGuiCond_Always, ImVec2(0.f, 0.f));
-		}
-		else
-		{
-			const float OffsetY = ComboBoxSize.y + ImGui::GetStyle().ItemSpacing.y * 1.5f;
-			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y - OffsetY), ImGuiCond_Always, ImVec2(0.f, 1.f));
-		}
-
-		FImGuiScopedStyleEdit PopupStyle
-		{
-			ImGuiStyleVar_WindowPadding,	ImVec2(2.f, 2.f),
-			ImGuiStyleVar_PopupBorderSize,	1.f,
-			ImGuiCol_FrameBg,				ImGui::GetColorU32(0xFF1A1A1A),
-			ImGuiCol_PopupBg,				FImGui::GetSlateColorVec4(Context, EStyleColor::Dropdown) * ImVec4(1.f, 1.f, 1.f, 0.94f),
-			ImGuiCol_Border,				FImGui::GetSlateColorVec4(Context, EStyleColor::DropdownOutline)
-		};
-
-		int32 NewSelectedIndex = INDEX_NONE;
-		ImGui::SetNextWindowSize(ImVec2(0.f, FMath::Max(AssetViewerPopupHeight, AssetViewerPopupHeightMin)), ImGuiCond_Always);
-		if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
+	auto Add_AssetListBox = [&](FSoftObjectPtr& InOutSoftAssetPtr, bool bIsComboBoxVisible)
 		{
 			// same color as Menu.Separator (doesn't work well for light themes)
 			ImGui::PushStyleColor(ImGuiCol_Border, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
 			ImGui::PushStyleColor(ImGuiCol_Separator, FImGui::GetSlateColorVec4(Context, EStyleColor::White25));
 
+			int32 NewSelectedIndex = INDEX_NONE;
 			bool bFilterAvailableAssets = false;
 
 			// reset filter text and set focus when asset viewer is triggered
@@ -741,9 +680,11 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					ImGuiCol_ScrollbarBg,	RowColor_EvenBg,
 				};
 
+				float ListBoxMinHeight = 4.f * AssetViewerRowHeightWithSpacing;
+
 				bool bIsListViewHighlighted = false;
-				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 2.f);
-				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, ImGui::GetContentRegionAvail().y)))
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y + 2.f);
+				if (ImGui::BeginListBox("##AssetList", ImVec2(AssetViewerWidth, FMath::Max(ListBoxMinHeight, AssetViewerDesiredHeight))))
 				{
 					ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 1.f);
 
@@ -822,7 +763,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 						ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
 					ImGui::PopStyleColor();
 
-					if ((Context->ImguiContext->NavCursorVisible && Context->ImguiContext->NavId == ImGui::GetCurrentWindow()->ChildId) || ImGui::IsWindowFocused())
+					if ((Context->ImguiContext->NavCursorVisible && Context->ImguiContext->NavId == ImGui::GetCurrentWindow()->ChildId))// || ImGui::IsWindowFocused())
 					{
 						bIsListViewHighlighted = true;
 					}
@@ -831,65 +772,67 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					ImGui::EndListBox();
 					ImGui::PopStyleColor();
 				}
-				/*if (bIsListViewHighlighted) --> can look weird with some themes so disabled for now
+				if (bIsListViewHighlighted)
 				{
 					ImGui::GetWindowDrawList()->AddRect(
 						ImGui::GetItemRectMin(), ImGui::GetItemRectMax(),
 						ImGui::GetColorU32(ImGuiCol_NavCursor),
 						ImGui::GetStyle().FrameRounding, 1.f);
-				}*/
-			}
-			ImGui::EndGroup();
-
-			ImGui::SameLine();
-			ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(-7.f, 1.f));
-			ImGui::BeginGroup();
-			{
-				static const FCheckBoxStyle& ToggleButtonStyle = []()
-					{
-						FCheckBoxStyle Style = FImGui::GetToggleButtonStyle();
-						Style.SetPadding(FMargin(4.f, 2.f, 2.f, 4.f));
-						Style.UncheckedImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
-						Style.UncheckedHoveredImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
-						Style.UncheckedPressedImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
-						return Style;
-					}();
-				auto AddButton = [&](const char* Label, bool& bInOutState, const FImGuiImageBindingParams& ImageParams, const char* ToolTip)
-					{
-						bool bValueChanged = FImGui::ToggleButton(Context, Label, &bInOutState, ImageParams, ToggleButtonStyle);
-						FImGui::SetItemTooltip("%s", ToolTip);
-						return bValueChanged;
-					};
-
-				const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ProjectFolder"), 16.f * GlobalScale);
-				const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.EngineFolder"), 16.f * GlobalScale);
-				const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.PluginFolder"), 16.f * GlobalScale);
-				const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.DeveloperFolder"), 16.f * GlobalScale);
-				const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.AssetCollection"), 16.f * GlobalScale);
-				const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.LocalizedFolder"), 16.f * GlobalScale);
-
-				bool bFilterSettingsChanged = false;
-				bFilterSettingsChanged |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectContent, ProjectContentIcon, "Show Project Content?");
-				bFilterSettingsChanged |= AddButton("ToggleEngineContent", AssetPickerUtils::bShowEngineContent, EngineContentIcon, "Show Engine Content?");
-				bFilterSettingsChanged |= AddButton("TogglePluginContent", AssetPickerUtils::bShowPluginContent, PluginContentIcon, "Show Plugin Content?");
-				ImGui::Spacing();
-				ImGui::Separator();
-				ImGui::Spacing();
-				bFilterSettingsChanged |= AddButton("ToggleDeveloperContent", AssetPickerUtils::bShowDeveloperContent, DeveloperContentIcon, "Show Developer Folder Content?");
-#if WITH_EDITOR
-				bFilterSettingsChanged |= AddButton("SearchCollectionNames", AssetPickerUtils::bSearchAssetCollections, AssetCollectionsIcon, "Search Collection Names?");
-#endif
-				bFilterSettingsChanged |= AddButton("ToggleLocalizedContent", AssetPickerUtils::bShowLocalizedContent, LocalizedContentIcon, "Show Localized Content?");
-
-				bFilterAvailableAssets |= bFilterSettingsChanged;
-
-				if (bFilterSettingsChanged)
-				{
-					AssetPickerUtils::SaveSettings();
 				}
 			}
 			ImGui::EndGroup();
-			AssetViewerMinSizeFactor = FMath::DivideAndRoundUp(ImGui::GetItemRectSize().y, AssetViewerRowHeightWithSpacing);
+
+			// filter buttons
+			{
+				ImGui::SameLine();
+				ImGui::SetCursorPos(ImGui::GetCursorPos() + ImVec2(-ImGui::GetStyle().ItemSpacing.x + 2.f, 1.f));
+				ImGui::BeginGroup();
+				{
+					static const FCheckBoxStyle& ToggleButtonStyle = []()
+						{
+							FCheckBoxStyle Style = FImGui::GetToggleButtonStyle();
+							Style.SetPadding(FMargin(4.f, 2.f, 2.f, 4.f));
+							Style.UncheckedImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
+							Style.UncheckedHoveredImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
+							Style.UncheckedPressedImage.OutlineSettings.Color = FSlateColor(EStyleColor::InputOutline);
+							return Style;
+						}();
+					auto AddButton = [&](const char* Label, bool& bInOutState, const FImGuiImageBindingParams& ImageParams, const char* ToolTip)
+						{
+							bool bValueChanged = FImGui::ToggleButton(Context, Label, &bInOutState, ImageParams, ToggleButtonStyle);
+							FImGui::SetItemTooltip("%s", ToolTip);
+							return bValueChanged;
+						};
+
+					const FImGuiImageBindingParams ProjectContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.ProjectFolder"), 16.f * GlobalScale);
+					const FImGuiImageBindingParams EngineContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.EngineFolder"), 16.f * GlobalScale);
+					const FImGuiImageBindingParams PluginContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.PluginFolder"), 16.f * GlobalScale);
+					const FImGuiImageBindingParams DeveloperContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.DeveloperFolder"), 16.f * GlobalScale);
+					const FImGuiImageBindingParams AssetCollectionsIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.AssetCollection"), 16.f * GlobalScale);
+					const FImGuiImageBindingParams LocalizedContentIcon = ImGuiSubsystem->RegisterOneFrameResource(IMGUI_ICON_BRUSH("ImIcon.LocalizedFolder"), 16.f * GlobalScale);
+
+					bool bFilterSettingsChanged = false;
+					bFilterSettingsChanged |= AddButton("ToggleProjectContent", AssetPickerUtils::bShowProjectContent, ProjectContentIcon, "Show Project Content?");
+					bFilterSettingsChanged |= AddButton("ToggleEngineContent", AssetPickerUtils::bShowEngineContent, EngineContentIcon, "Show Engine Content?");
+					bFilterSettingsChanged |= AddButton("TogglePluginContent", AssetPickerUtils::bShowPluginContent, PluginContentIcon, "Show Plugin Content?");
+					ImGui::Spacing();
+					ImGui::Separator();
+					ImGui::Spacing();
+					bFilterSettingsChanged |= AddButton("ToggleDeveloperContent", AssetPickerUtils::bShowDeveloperContent, DeveloperContentIcon, "Show Developer Folder Content?");
+#if WITH_EDITOR
+					bFilterSettingsChanged |= AddButton("SearchCollectionNames", AssetPickerUtils::bSearchAssetCollections, AssetCollectionsIcon, "Search Collection Names?");
+#endif
+					bFilterSettingsChanged |= AddButton("ToggleLocalizedContent", AssetPickerUtils::bShowLocalizedContent, LocalizedContentIcon, "Show Localized Content?");
+
+					bFilterAvailableAssets |= bFilterSettingsChanged;
+
+					if (bFilterSettingsChanged)
+					{
+						AssetPickerUtils::SaveSettings();
+					}
+				}
+				ImGui::EndGroup();
+			}
 
 			if (bFilterAvailableAssets)
 			{
@@ -899,21 +842,85 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			bool bClosePopup = (NewSelectedIndex != INDEX_NONE);
 			bClosePopup |= !bIsComboBoxVisible;
 			// force close the popup when dragging assets over the window
-			const ImGuiHoveredFlags HoverFlags = ImGuiHoveredFlags_RootWindow|ImGuiHoveredFlags_AllowWhenBlockedByPopup|ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
+			const ImGuiHoveredFlags HoverFlags = ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem;
 			bClosePopup |= (Context->DragDropOperation.IsValid() && ImGui::IsWindowHovered(HoverFlags));
 			if (bClosePopup)
 			{
 				ImGui::CloseCurrentPopup();
 			}
 
-			ImGui::PopStyleColor(2);
+			if (NewSelectedIndex != INDEX_NONE)
+			{
+				InOutSoftAssetPtr = FSoftObjectPtr(AvailableAssets[NewSelectedIndex].ToSoftObjectPath());
+			}
 
-			ImGui::EndPopup();
+			ImGui::PopStyleColor(2);
+		};
+
+	auto Add_AssetViewer = [&](FSoftObjectPtr& InOutSoftAssetPtr) -> ImVec2
+	{
+		const float AssetViewerComboxBoxWidth = FMath::Clamp(256.f * GlobalScale, 70.f * GlobalScale, ImGui::GetContentRegionAvail().x - (bDrawCompactWidget ? 75.f : 32.f) * GlobalScale);
+		constexpr int32 PreviewTextCapacity = 64;
+		const int32 PreviewTextMaxLength = FMath::Clamp(FMath::CeilToInt(1.75f * AssetViewerComboxBoxWidth / ImGui::GetFontSize()) - 1, 4, PreviewTextCapacity);
+
+		const float AssetViewerPopupPosX = ImGui::GetCursorScreenPos().x;
+		const float AvailableSpaceAbove = ImGui::GetCursorScreenPos().y;
+		const float MonitorDisplayHeight = Context->bIsDrawingRemotely ? ImGui::GetIO().DisplaySize.y : ImGui::GetCurrentContext()->PlatformMonitorsFullWorkRect.Max.y;
+		const float AvailableSpaceBelow = (MonitorDisplayHeight - ImGui::GetCursorScreenPos().y);
+
+		FString PreviewText = !InOutSoftAssetPtr.IsNull() ? InOutSoftAssetPtr.GetAssetName() : FString(TEXT("None"));
+		if (PreviewText.Len() >= PreviewTextMaxLength)
+		{
+			PreviewText.MidInline(0, PreviewTextMaxLength);
+
+			// PreviewTextMaxLen...
+			PreviewText[PreviewTextMaxLength - 1] = TCHAR('.');
+			PreviewText[PreviewTextMaxLength - 2] = TCHAR('.');
+			PreviewText[PreviewTextMaxLength - 3] = TCHAR('.');
 		}
 
-		if (NewSelectedIndex != INDEX_NONE)
+		ImVec2 ComboBoxSize;
+		bool bIsComboBoxVisible;
 		{
-			InOutSoftAssetPtr = FSoftObjectPtr(AvailableAssets[NewSelectedIndex].ToSoftObjectPath());
+			ImGui::SetNextItemWidth(AssetViewerComboxBoxWidth);
+			ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.f, 0.5f));
+			if (FImGui::ComboButton(Context, "##PopupButton", TCHAR_TO_UTF8(*PreviewText), FImGui::GetComboButtonStyle()))
+			{
+				ImGui::OpenPopup(AssetViewerPopupName);
+			}
+			ImGui::PopStyleVar();
+			if (!SelectedSoftAssetPtr.IsNull() && ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
+			{
+				FImGui::SetItemTooltip("%s", TCHAR_TO_UTF8_PATH(*SelectedSoftAssetPtr.GetLongPackageName()));
+			}
+			ComboBoxSize = ImGui::GetItemRectSize();
+			bIsComboBoxVisible = ImGui::IsItemVisible();
+		}
+
+		if (((AvailableSpaceBelow - ImGui::GetFontSize() * 5.f) > AssetViewerDesiredHeight) || (AvailableSpaceBelow > AvailableSpaceAbove))
+		{
+			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y - ImGui::GetStyle().ItemSpacing.y * 0.5f), ImGuiCond_Always, ImVec2(0.f, 0.f));
+		}
+		else
+		{
+			const float OffsetY = ComboBoxSize.y + ImGui::GetStyle().ItemSpacing.y * 1.5f;
+			ImGui::SetNextWindowPos(ImVec2(AssetViewerPopupPosX, ImGui::GetCursorScreenPos().y - OffsetY), ImGuiCond_Always, ImVec2(0.f, 1.f));
+		}
+
+		FImGuiScopedStyleEdit PopupStyle
+		{
+			ImGuiStyleVar_WindowPadding,	ImVec2(2.f, 2.f),
+			ImGuiStyleVar_PopupBorderSize,	1.f,
+			ImGuiCol_FrameBg,				ImGui::GetColorU32(0xFF1A1A1A),
+			ImGuiCol_PopupBg,				FImGui::GetSlateColorVec4(Context, EStyleColor::Dropdown) * ImVec4(1.f, 1.f, 1.f, 0.94f),
+			ImGuiCol_Border,				FImGui::GetSlateColorVec4(Context, EStyleColor::DropdownOutline)
+		};
+
+		if (ImGui::BeginPopup(AssetViewerPopupName, ImGuiWindowFlags_NoScrollbar))
+		{
+			Add_AssetListBox(InOutSoftAssetPtr, bIsComboBoxVisible);
+
+			ImGui::EndPopup();
 		}
 
 		return ComboBoxSize;
@@ -922,7 +929,11 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 	ImRect AssetDragDropArea;
 	{
 		ImGui::BeginGroup();
-		if (bDrawCompactWidget)
+		if (EnumHasAnyFlags(Flags, EImGuiAssetPickerFlags::ShowListOnly))
+		{
+			Add_AssetListBox(SelectedSoftAssetPtr, true);
+		}
+		else if (bDrawCompactWidget)
 		{
 			if (FCStringAnsi::Strstr(Label, "##") == nullptr)
 			{
