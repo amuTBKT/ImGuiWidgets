@@ -429,7 +429,7 @@ namespace ImGuiStatsVizualizer
 						TArray<UObject*> Objects = { Asset };
 						GEditor->SyncBrowserToObjects(Objects);
 					}
-					FImGui::SetItemTooltip("%s", "Browse to asset");
+					FImGui::SetItemTooltip("Browse to asset");
 
 					ImGui::SameLine();
 
@@ -451,7 +451,7 @@ namespace ImGuiStatsVizualizer
 								}
 							}, TStatId(), NULL, ENamedThreads::GameThread);
 					}
-					FImGui::SetItemTooltip("%s", "Edit asset");
+					FImGui::SetItemTooltip("Edit asset");
 
 					ImGui::PopStyleVar();
 				}
@@ -862,7 +862,7 @@ namespace ImGuiStatsVizualizer
 			{
 				SaveWidgetSettings();
 			}
-			FImGui::SetItemTooltip("%s", "Save Settings");
+			FImGui::SetItemTooltip("Save Settings");
 
 			ImGui::PopStyleVar();
 		}

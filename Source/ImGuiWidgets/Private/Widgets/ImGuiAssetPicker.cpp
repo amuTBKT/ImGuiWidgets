@@ -570,7 +570,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 		if (!InSoftAssetPtr.IsNull() && ImGui::IsItemHovered())
 		{
-			FImGui::SetTooltip("%s", TCHAR_TO_UTF8_PATH(*InSoftAssetPtr.GetLongPackageName()));
+			FImGui::SetTooltip(TCHAR_TO_UTF8_PATH(*InSoftAssetPtr.GetLongPackageName()));
 
 			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 			{
@@ -590,7 +590,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				InOutSoftAssetPtr = AssetPtr;
 			}
 		}
-		FImGui::SetItemTooltip("%s", "Use Selected Asset from Content Browser");
+		FImGui::SetItemTooltip("Use Selected Asset from Content Browser");
 	};
 
 	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftAssetPtr, float IconSize)
@@ -606,11 +606,11 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 		if (bIsInvalidAsset)
 		{
-			FImGui::SetItemTooltip("%s", "Browse to Asset in Content Browser");
+			FImGui::SetItemTooltip("Browse to Asset in Content Browser");
 		}
 		else
 		{
-			FImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_UTF8(*InSoftAssetPtr.GetAssetName()));
+			FImGui::SetItemTooltipf("Browse to '%s' in Content Browser", TCHAR_TO_UTF8(*InSoftAssetPtr.GetAssetName()));
 		}
 	};
 
@@ -624,7 +624,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		}
 		if (!InOutSoftAssetPtr.IsNull())
 		{
-			FImGui::SetItemTooltip("%s", "Reset");
+			FImGui::SetItemTooltip("Reset");
 		}
 	};
 
@@ -800,7 +800,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 					auto AddButton = [&](const char* Label, bool& bInOutState, const FImGuiImageBindingParams& ImageParams, const char* ToolTip)
 						{
 							bool bValueChanged = FImGui::ToggleButton(Context, Label, &bInOutState, ImageParams, ToggleButtonStyle);
-							FImGui::SetItemTooltip("%s", ToolTip);
+							FImGui::SetItemTooltip(ToolTip);
 							return bValueChanged;
 						};
 
@@ -891,7 +891,7 @@ bool FImGuiAssetPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			ImGui::PopStyleVar();
 			if (!SelectedSoftAssetPtr.IsNull() && ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
 			{
-				FImGui::SetItemTooltip("%s", TCHAR_TO_UTF8_PATH(*SelectedSoftAssetPtr.GetLongPackageName()));
+				FImGui::SetItemTooltip(TCHAR_TO_UTF8_PATH(*SelectedSoftAssetPtr.GetLongPackageName()));
 			}
 			ComboBoxSize = ImGui::GetItemRectSize();
 			bIsComboBoxVisible = ImGui::IsItemVisible();

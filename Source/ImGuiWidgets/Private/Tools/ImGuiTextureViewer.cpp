@@ -933,7 +933,7 @@ namespace ImGuiTextureViewer
 			{
 				ImGui::SetClipboardText(*PreviouslySelectedTextureName);
 			}
-			FImGui::SetItemTooltip("%s", "Copy texture name to clipboard");
+			FImGui::SetItemTooltip("Copy texture name to clipboard");
 			ImGui::EndDisabled();
 		}
 
@@ -951,7 +951,7 @@ namespace ImGuiTextureViewer
 					ClearTextureOverride_GameThread();
 				}
 			}
-			FImGui::SetItemTooltip("%s", bIsUsingTextureOverride ? "Clear Texture Override" : "Reset");
+			FImGui::SetItemTooltip(bIsUsingTextureOverride ? "Clear Texture Override" : "Reset");
 		}
 
 		return !InOutSelectedTextureName.Equals(PreviouslySelectedTextureName);
@@ -1235,7 +1235,7 @@ namespace ImGuiTextureViewer
 			}
 			if (!bIsEnabled)
 			{
-				FImGui::SetItemTooltip("%s", "Pick solid background color");
+				FImGui::SetItemTooltip("Pick solid background color");
 			}
 			else
 			{
@@ -1254,7 +1254,7 @@ namespace ImGuiTextureViewer
 				{
 					InOutTexturePreviewOptions.BackgroundColor.A = 0.f;
 				}
-				FImGui::SetItemTooltip("%s", "Show checker background");
+				FImGui::SetItemTooltip("Show checker background");
 
 				if (bIsActive)
 				{
@@ -1285,7 +1285,7 @@ namespace ImGuiTextureViewer
 				{
 					InOutTexturePreviewOptions.bRequestMinMaxTextureValues = true;
 				}
-				FImGui::SetItemTooltip("%s", "Set range based on texture Min/Max value");
+				FImGui::SetItemTooltip("Set range based on texture Min/Max value");
 			}
 
 			ImGui::SameLine();
@@ -1296,7 +1296,7 @@ namespace ImGuiTextureViewer
 					InOutTexturePreviewOptions.RangeMin = InOutTexturePreviewOptions.RangeValueMin;
 					InOutTexturePreviewOptions.RangeMax = InOutTexturePreviewOptions.RangeValueMax;
 				}
-				FImGui::SetItemTooltip("%s", "Fit to slider Min/Max range");
+				FImGui::SetItemTooltip("Fit to slider Min/Max range");
 			}
 
 			ImGui::SameLine();
@@ -1309,7 +1309,7 @@ namespace ImGuiTextureViewer
 					InOutTexturePreviewOptions.RangeValueMin = 0.;
 					InOutTexturePreviewOptions.RangeValueMax = 1.;
 				}
-				FImGui::SetItemTooltip("%s", "Reset");
+				FImGui::SetItemTooltip("Reset");
 			}
 		}
 		ImGui::Dummy(ImVec2(0.f, 4.f));

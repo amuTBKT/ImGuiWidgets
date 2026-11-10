@@ -489,7 +489,7 @@ namespace ImGuiMaterialStats
 								{
 									InOutState ^= BitsToToggle;
 								}
-								FImGui::SetItemTooltip("%s", ToolTip);
+								FImGui::SetItemTooltip(ToolTip);
 							};
 
 						ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
@@ -564,7 +564,7 @@ namespace ImGuiMaterialStats
 												{
 													FPlatformProcess::ExploreFolder(*Shader.ShaderFilePath);
 												}
-												FImGui::SetItemTooltip("%s", "Browse to shader file");
+												FImGui::SetItemTooltip("Browse to shader file");
 
 												ImGui::SameLine();
 
@@ -572,7 +572,7 @@ namespace ImGuiMaterialStats
 												{
 													FPlatformProcess::LaunchFileInDefaultExternalApplication(*Shader.ShaderFilePath);
 												}
-												FImGui::SetItemTooltip("%s", "Edit shader file");
+												FImGui::SetItemTooltip("Edit shader file");
 
 												ImGui::SameLine();
 
@@ -582,7 +582,7 @@ namespace ImGuiMaterialStats
 												{
 													ImGuiShaderAnalyzer::ShowShaderStats(Shader.ShaderType, Shader.ShaderEntryName, Shader.ShaderFilePath);
 												}
-												FImGui::SetItemTooltip("%s", "Analyze shader");
+												FImGui::SetItemTooltip("Analyze shader");
 												ImGui::EndDisabled();
 #endif
 

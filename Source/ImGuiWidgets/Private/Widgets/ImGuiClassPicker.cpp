@@ -582,7 +582,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 										ImGui::GetColorU32((RowIndex & 0x1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg));
 								}
 
-								FImGui::SetItemTooltip("%s", *AvailableClasses[ClassIndex].ObjectPath);
+								FImGui::SetItemTooltip(*AvailableClasses[ClassIndex].ObjectPath);
 							}
 
 							ImGui::SameLine();
@@ -711,7 +711,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 			ImGui::PopStyleVar();
 			if (SelectedClassData && ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal))
 			{
-				FImGui::SetItemTooltip("%s", *SelectedClassData->ObjectPath);
+				FImGui::SetItemTooltip(*SelectedClassData->ObjectPath);
 			}
 			ComboBoxSize = ImGui::GetItemRectSize();
 			bIsComboBoxVisible = ImGui::IsItemVisible();
@@ -758,7 +758,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				InOutSoftClassPtr = ClassPtr;
 			}
 		}
-		FImGui::SetItemTooltip("%s", "Use Selected Asset from Content Browser");
+		FImGui::SetItemTooltip("Use Selected Asset from Content Browser");
 	};
 
 	auto Add_BrowseToAssetButton = [&](const FSoftObjectPtr& InSoftClassPtr, float IconSize)
@@ -774,11 +774,11 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 
 		if (bIsInvalidAsset)
 		{
-			FImGui::SetItemTooltip("%s", "Browse to Asset in Content Browser");
+			FImGui::SetItemTooltip("Browse to Asset in Content Browser");
 		}
 		else
 		{
-			FImGui::SetItemTooltip("Browse to '%s' in Content Browser", TCHAR_TO_UTF8(*InSoftClassPtr.GetAssetName()));
+			FImGui::SetItemTooltipf("Browse to '%s' in Content Browser", TCHAR_TO_UTF8(*InSoftClassPtr.GetAssetName()));
 		}
 	};
 
@@ -801,7 +801,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 				InOutSoftClassPtr = FSoftObjectPtr{ GeneratedClassPath };
 			}
 		}
-		FImGui::SetItemTooltip("%s", "Create New Blueprint");
+		FImGui::SetItemTooltip("Create New Blueprint");
 	};
 #endif
 
@@ -813,7 +813,7 @@ bool FImGuiClassPicker::DrawInternal(FImGuiTickContext* Context, const char* Lab
 		{
 			InOutSoftClassPtr.Reset();
 		}
-		FImGui::SetItemTooltip("%s", "Clear");
+		FImGui::SetItemTooltip("Clear");
 		ImGui::EndDisabled();
 	};
 
